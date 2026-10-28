@@ -864,3 +864,4 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
     </div>
   );
 }
+

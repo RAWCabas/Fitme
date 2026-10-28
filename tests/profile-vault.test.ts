@@ -139,3 +139,4 @@ describe("Profile Vault: Schemas & Service", () => {
     expect(profileB.skills[0].name).toBe("Angular");
   });
 });
+

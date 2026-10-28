@@ -37,3 +37,4 @@ export function getProfileRepo(): ProfileRepo {
 export function setProfileRepo(repo: ProfileRepo | null): void {
   instance = repo;
 }
+

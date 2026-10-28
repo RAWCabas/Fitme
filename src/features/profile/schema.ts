@@ -75,3 +75,4 @@ export type Project = z.infer<typeof projectSchema>;
 export type SkillCategory = z.infer<typeof skillCategorySchema>;
 export type SkillItem = z.infer<typeof skillItemSchema>;
 export type Profile = z.infer<typeof profileSchema>;
+

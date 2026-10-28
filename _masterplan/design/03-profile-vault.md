@@ -83,3 +83,4 @@ Implement the Master Experience Vault feature: domain schemas, repository interf
 - [ ] Responsive Vault UI supports both desktop viewports and mobile touch targets.
 - [ ] `npm run check` passes with 0 lint, type, or test errors.
 - [ ] Commit message: `feat(vault): implement master experience vault with granular item toggles`
+
