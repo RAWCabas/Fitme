@@ -1,4 +1,5 @@
 import { z, ZodType } from "zod";
+import { BedrockRuntimeClient, InvokeModelCommand } from "@aws-sdk/client-bedrock-runtime";
 import { AppError } from "./errors";
 
 interface BedrockJsonParams<T> {
@@ -26,39 +27,33 @@ export async function invokeBedrockJson<T>({
   // If AWS credentials are provided, invoke Amazon Bedrock
   if (accessKeyId && secretAccessKey) {
     try {
-      const moduleName = "@aws-sdk/client-bedrock-runtime";
-      // Dynamic import with vite-ignore so tests pass even before cloud deployment
-      const sdk = await import(/* @vite-ignore */ moduleName).catch(() => null);
+      const client = new BedrockRuntimeClient({
+        region,
+        credentials: { accessKeyId, secretAccessKey },
+      });
 
-      if (sdk?.BedrockRuntimeClient && sdk?.InvokeModelCommand) {
-        const client = new sdk.BedrockRuntimeClient({
-          region,
-          credentials: { accessKeyId, secretAccessKey },
-        });
+      const payload = {
+        anthropic_version: "bedrock-2023-05-31",
+        max_tokens: 4096,
+        system: `${systemPrompt}\n\nIMPORTANT: You must respond ONLY with a valid JSON object matching the requested schema. Do not enclose in markdown blocks.`,
+        messages: [{ role: "user", content: userPrompt }],
+      };
 
-        const payload = {
-          anthropic_version: "bedrock-2023-05-31",
-          max_tokens: 4096,
-          system: `${systemPrompt}\n\nIMPORTANT: You must respond ONLY with a valid JSON object matching the requested schema. Do not enclose in markdown blocks.`,
-          messages: [{ role: "user", content: userPrompt }],
-        };
+      const command = new InvokeModelCommand({
+        modelId,
+        contentType: "application/json",
+        accept: "application/json",
+        body: JSON.stringify(payload),
+      });
 
-        const command = new sdk.InvokeModelCommand({
-          modelId,
-          contentType: "application/json",
-          accept: "application/json",
-          body: JSON.stringify(payload),
-        });
+      const response = await client.send(command);
+      const responseBody = new TextDecoder().decode(response.body);
+      const parsedBody = JSON.parse(responseBody);
+      const textContent = parsedBody.content?.[0]?.text || "";
 
-        const response = await client.send(command);
-        const responseBody = new TextDecoder().decode(response.body);
-        const parsedBody = JSON.parse(responseBody);
-        const textContent = parsedBody.content?.[0]?.text || "";
-
-        const cleanJson = extractJsonSubstring(textContent);
-        const rawObj = JSON.parse(cleanJson);
-        return schema.parse(rawObj);
-      }
+      const cleanJson = extractJsonSubstring(textContent);
+      const rawObj = JSON.parse(cleanJson);
+      return schema.parse(rawObj);
     } catch (err) {
       if (err instanceof z.ZodError) {
         throw AppError.badRequest(`AI output did not match expected schema: ${err.message}`);
