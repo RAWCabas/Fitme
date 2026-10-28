@@ -54,3 +54,4 @@ export function formatRelativeTime(dateInput: string | Date | null | undefined):
 
   return formatDisplayDate(date);
 }
+

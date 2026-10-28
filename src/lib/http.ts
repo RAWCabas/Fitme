@@ -32,3 +32,4 @@ export function errorResponse(error: unknown): NextResponse<{ error: string }> {
 
   return NextResponse.json({ error: "Internal server error" }, { status: 500 });
 }
+

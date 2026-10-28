@@ -95,3 +95,4 @@ describe("Foundation: Health Endpoint & Config", () => {
     expect(body.timestamp).toBeDefined();
   });
 });
+

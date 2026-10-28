@@ -46,3 +46,4 @@ Create the core foundation utilities: typed errors (`AppError`), HTTP response h
 - [ ] All foundation unit tests pass in Vitest.
 - [ ] `npm run check` passes with 0 lint, typecheck, or test errors.
 - [ ] Commit message: `feat(foundation): add errors, http helpers, dates, and health check`
+
