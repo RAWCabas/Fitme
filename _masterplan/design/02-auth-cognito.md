@@ -58,3 +58,4 @@ Implement multi-tenant user authentication with Amazon Cognito support, session 
 - [ ] Responsive navigation verified on desktop and mobile layout.
 - [ ] `npm run check` passes with 0 lint, type, or test errors.
 - [ ] Commit message: `feat(auth): implement cognito auth session, login/register UI, and responsive shell`
+
