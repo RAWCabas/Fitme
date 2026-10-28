@@ -42,12 +42,16 @@ function decodeSession(value: string): AuthSession | null {
  * Retrieves the current authenticated session from cookies, or null if unauthenticated.
  */
 export async function getSession(): Promise<AuthSession | null> {
-  const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get(SESSION_COOKIE_NAME);
-  if (!sessionCookie?.value) {
+  try {
+    const cookieStore = await cookies();
+    const sessionCookie = cookieStore.get(SESSION_COOKIE_NAME);
+    if (!sessionCookie?.value) {
+      return null;
+    }
+    return decodeSession(sessionCookie.value);
+  } catch {
     return null;
   }
-  return decodeSession(sessionCookie.value);
 }
 
 /**
@@ -82,4 +86,3 @@ export async function clearSessionCookie(): Promise<void> {
   const cookieStore = await cookies();
   cookieStore.delete(SESSION_COOKIE_NAME);
 }
-

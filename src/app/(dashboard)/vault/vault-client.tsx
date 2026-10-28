@@ -14,7 +14,9 @@ import {
   Check, 
   Globe, 
   MapPin, 
-  Calendar 
+  Calendar,
+  Sparkles,
+  UploadCloud
 } from "lucide-react";
 import { Profile, WorkExperience, Project, SkillItem, SkillCategory } from "@/features/profile/schema";
 
@@ -27,6 +29,11 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
   const [activeTab, setActiveTab] = useState<"experiences" | "projects" | "skills" | "contact">("experiences");
   const [loading, setLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  // Resume Import Modal State
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importText, setImportText] = useState("");
+  const [importing, setImporting] = useState(false);
 
   // New Experience Form State
   const [showExpForm, setShowExpForm] = useState(false);
@@ -62,6 +69,40 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
   function flashSuccess(msg: string) {
     setSuccessMessage(msg);
     setTimeout(() => setSuccessMessage(null), 3000);
+  }
+
+  // Handle AI Resume Import
+  async function handleImportResume(e: React.FormEvent) {
+    e.preventDefault();
+    if (!importText.trim()) return;
+    setImporting(true);
+
+    try {
+      const res = await fetch("/api/mcp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          method: "tools/call",
+          params: {
+            name: "fitme_import_resume",
+            arguments: { rawText: importText },
+          },
+        }),
+      });
+
+      const data = await res.json();
+      if (data.result?.structuredContent?.profile) {
+        setProfile(data.result.structuredContent.profile);
+        setShowImportModal(false);
+        setImportText("");
+        flashSuccess("Resume successfully parsed and imported into vault!");
+      }
+    } catch (err) {
+      console.error("Failed to import resume", err);
+    } finally {
+      setImporting(false);
+    }
   }
 
   // Toggle Experience Visibility
@@ -305,56 +346,115 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
         </div>
       )}
 
-      {/* Responsive Tab Bar */}
-      <div className="flex items-center gap-1.5 p-1 rounded-xl bg-card border overflow-x-auto no-scrollbar">
-        <button
-          onClick={() => setActiveTab("experiences")}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-colors ${
-            activeTab === "experiences"
-              ? "bg-primary text-primary-foreground shadow-sm"
-              : "text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          <Briefcase className="w-4 h-4" />
-          <span>Experiences ({profile.experiences.length})</span>
-        </button>
+      {/* Action Header with Quick Import */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        {/* Responsive Tab Bar */}
+        <div className="flex items-center gap-1.5 p-1 rounded-xl bg-card border overflow-x-auto no-scrollbar">
+          <button
+            onClick={() => setActiveTab("experiences")}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-colors ${
+              activeTab === "experiences"
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Briefcase className="w-4 h-4" />
+            <span>Experiences ({profile.experiences.length})</span>
+          </button>
 
-        <button
-          onClick={() => setActiveTab("projects")}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-colors ${
-            activeTab === "projects"
-              ? "bg-primary text-primary-foreground shadow-sm"
-              : "text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          <Code2 className="w-4 h-4" />
-          <span>Projects ({profile.projects.length})</span>
-        </button>
+          <button
+            onClick={() => setActiveTab("projects")}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-colors ${
+              activeTab === "projects"
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Code2 className="w-4 h-4" />
+            <span>Projects ({profile.projects.length})</span>
+          </button>
 
-        <button
-          onClick={() => setActiveTab("skills")}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-colors ${
-            activeTab === "skills"
-              ? "bg-primary text-primary-foreground shadow-sm"
-              : "text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          <Wrench className="w-4 h-4" />
-          <span>Skills ({profile.skills.length})</span>
-        </button>
+          <button
+            onClick={() => setActiveTab("skills")}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-colors ${
+              activeTab === "skills"
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Wrench className="w-4 h-4" />
+            <span>Skills ({profile.skills.length})</span>
+          </button>
 
+          <button
+            onClick={() => setActiveTab("contact")}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-colors ${
+              activeTab === "contact"
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <User className="w-4 h-4" />
+            <span>Contact & Profile</span>
+          </button>
+        </div>
+
+        {/* AI Resume Import Button */}
         <button
-          onClick={() => setActiveTab("contact")}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-colors ${
-            activeTab === "contact"
-              ? "bg-primary text-primary-foreground shadow-sm"
-              : "text-muted-foreground hover:text-foreground"
-          }`}
+          onClick={() => setShowImportModal(true)}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border bg-card hover:bg-muted text-sm font-semibold transition-colors shadow-sm self-start sm:self-auto shrink-0"
         >
-          <User className="w-4 h-4" />
-          <span>Contact & Profile</span>
+          <Sparkles className="w-4 h-4 text-primary" />
+          <span>Import with AI</span>
         </button>
       </div>
+
+      {/* AI Resume Import Modal */}
+      {showImportModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in">
+          <div className="w-full max-w-xl p-6 rounded-2xl border bg-card shadow-xl space-y-4">
+            <div className="space-y-1">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-semibold">
+                <UploadCloud className="w-3.5 h-3.5" />
+                Bedrock Resume Importer
+              </div>
+              <h2 className="text-xl font-bold">Import Resume Text</h2>
+              <p className="text-xs text-muted-foreground">
+                Paste your current resume text or markdown below. Amazon Bedrock will parse and extract your past roles, side projects, metrics, and skills into your Master Vault.
+              </p>
+            </div>
+
+            <form onSubmit={handleImportResume} className="space-y-4">
+              <textarea
+                required
+                rows={10}
+                placeholder="Paste complete resume text here..."
+                value={importText}
+                onChange={(e) => setImportText(e.target.value)}
+                className="w-full p-3 text-xs sm:text-sm font-mono rounded-xl border bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
+              />
+
+              <div className="flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowImportModal(false)}
+                  className="px-4 py-2 text-xs font-semibold rounded-lg border hover:bg-muted"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={importing || !importText.trim()}
+                  className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                >
+                  {importing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                  <span>{importing ? "Parsing with AI..." : "Parse & Populate Vault"}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* TAB 1: WORK EXPERIENCES */}
       {activeTab === "experiences" && (
@@ -441,7 +541,7 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
           {/* Experience List */}
           {profile.experiences.length === 0 ? (
             <div className="text-center py-12 rounded-xl border border-dashed bg-card/50 text-muted-foreground text-sm">
-              No work experiences added yet. Click &quot;Add Role&quot; or import your resume.
+              No work experiences added yet. Click &quot;Add Role&quot; or click &quot;Import with AI&quot; above.
             </div>
           ) : (
             <div className="space-y-3">
@@ -864,4 +964,3 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
     </div>
   );
 }
-
