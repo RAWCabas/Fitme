@@ -64,3 +64,4 @@ Implement the AI Fit Engine: domain schemas for Job Opportunities and Tailored R
 - [ ] Status transitions validate allowed states (`draft` ➔ `sent` ➔ `interview` ➔ `job_offer` ➔ `rejected`).
 - [ ] `npm run check` passes with 0 lint, type, or test errors.
 - [ ] Commit message: `feat(tailor): implement bedrock fit engine and ats scoring`
+

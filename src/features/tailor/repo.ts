@@ -77,3 +77,4 @@ export function getTailorRepo(): TailorRepo {
 export function setTailorRepo(repo: TailorRepo | null): void {
   instance = repo;
 }
+

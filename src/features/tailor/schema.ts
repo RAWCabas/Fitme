@@ -92,3 +92,4 @@ export const onDemandBoosterSchema = z.strictObject({
 });
 
 export type OnDemandBoosters = z.infer<typeof onDemandBoosterSchema>;
+
