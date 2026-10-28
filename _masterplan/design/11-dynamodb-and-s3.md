@@ -39,3 +39,4 @@ Implement the single-table DynamoDB repositories (`fitme-main`) with strict Cogn
 - [ ] S3 presigned URL helpers handle uploads and downloads.
 - [ ] `npm run check` passes with 0 lint, type, or test errors.
 - [ ] Semantic commit message: `feat(aws): implement dynamodb single-table repositories and s3 presigned storage`
+

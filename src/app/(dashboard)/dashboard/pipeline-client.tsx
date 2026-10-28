@@ -383,3 +383,4 @@ export function PipelineClient({ initialResumes, jobs, userName }: PipelineClien
     </div>
   );
 }
+

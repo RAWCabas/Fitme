@@ -42,3 +42,4 @@ Build the on-demand application accelerators powered by Bedrock: tailored Cover 
 - [ ] API routes enforce user authentication and handle errors cleanly with `AppError`.
 - [ ] `npm run check` passes with 0 lint, type, or test errors.
 - [ ] Semantic commit message: `feat(boosters): add on-demand cover letter and interview cheat sheet generators`
+

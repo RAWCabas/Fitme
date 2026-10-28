@@ -34,3 +34,4 @@ Build the Quick-Fill application clipboard assistant: slide-out drawer on Deskto
 - [ ] Visual copy feedback (checkmark / "Copied") appears on click.
 - [ ] `npm run check` passes with 0 lint, type, or test errors.
 - [ ] Commit message: `feat(quickfill): build desktop drawer and mobile bottom sheet clipboard tray`
+

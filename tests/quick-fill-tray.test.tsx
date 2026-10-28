@@ -121,3 +121,4 @@ describe("Quick-Fill Clipboard Tray", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 });
+

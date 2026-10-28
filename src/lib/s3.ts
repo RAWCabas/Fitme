@@ -58,3 +58,4 @@ export async function getDownloadPresignedUrl(key: string): Promise<string> {
     return `https://${RESUME_BUCKET_NAME}.s3.amazonaws.com/${encodeURIComponent(key)}?mock-download=true`;
   }
 }
+

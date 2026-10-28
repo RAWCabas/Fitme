@@ -52,3 +52,4 @@ export async function GET(
     return errorResponse(error);
   }
 }
+

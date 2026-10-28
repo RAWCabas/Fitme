@@ -152,3 +152,4 @@ export function getDynamoDocClient(): IDynamoDocClient {
 export function setDynamoDocClient(client: IDynamoDocClient | null): void {
   activeDocClient = client;
 }
+

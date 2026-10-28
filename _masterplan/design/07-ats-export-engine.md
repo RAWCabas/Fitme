@@ -41,3 +41,4 @@ Build the clean ATS-friendly Resume Exporter: Markdown generator, clean single-c
 - [ ] Fit Studio UI allows switching typography preset and exporting to Markdown and PDF.
 - [ ] `npm run check` passes with 0 lint, type, or test errors.
 - [ ] Semantic commit message: `feat(export): add ats-clean pdf and markdown exporters with typography presets`
+

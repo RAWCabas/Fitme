@@ -240,3 +240,4 @@ describe("On-Demand Boosters: API Endpoints", () => {
     expect(data.followUpEmail).toContain("Subject:");
   });
 });
+

@@ -39,3 +39,4 @@ Build the responsive Fit Studio user interface: side-by-side split view on deskt
 - [ ] Status selector allows updating resume lifecycle status.
 - [ ] `npm run check` passes with 0 lint, type, or test errors.
 - [ ] Commit message: `feat(studio): build responsive fit studio with desktop split view and mobile tabs`
+

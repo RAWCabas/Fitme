@@ -35,3 +35,4 @@ Build the Application Pipeline Dashboard: dynamic lifecycle metrics, follow-up a
 - [ ] Cards display company, role, ATS fit score, and status selector.
 - [ ] `npm run check` passes with 0 lint, type, or test errors.
 - [ ] Semantic commit message: `feat(dashboard): build application pipeline board and aging reminders`
+

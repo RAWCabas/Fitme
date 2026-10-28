@@ -133,3 +133,4 @@ export class DynamoTailorRepo implements TailorRepo {
     return await this.saveTailoredResume(resume);
   }
 }
+

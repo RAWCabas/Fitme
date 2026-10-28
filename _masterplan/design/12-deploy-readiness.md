@@ -28,3 +28,4 @@ Configure AWS Amplify Hosting build pipeline (`amplify.yml`), production build o
 - [ ] `npm run build` compiles with 0 errors.
 - [ ] `npm run check` passes with 0 lint, type, or test errors.
 - [ ] Commit message: `feat(deploy): configure amplify cicd pipeline and production build readiness`
+
