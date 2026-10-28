@@ -1,4 +1,6 @@
 import { Profile } from "./schema";
+import { getDataStore } from "@/lib/config";
+import { DynamoProfileRepo } from "./dynamo-repo";
 
 export interface ProfileRepo {
   getProfile(userId: string): Promise<Profile | null>;
@@ -29,7 +31,7 @@ let instance: ProfileRepo | null = null;
 
 export function getProfileRepo(): ProfileRepo {
   if (!instance) {
-    instance = new MemoryProfileRepo();
+    instance = getDataStore() === "dynamo" ? new DynamoProfileRepo() : new MemoryProfileRepo();
   }
   return instance;
 }

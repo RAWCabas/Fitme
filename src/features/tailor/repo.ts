@@ -1,6 +1,8 @@
 import { AppError } from "@/lib/errors";
 import { nowIso } from "@/lib/dates";
+import { getDataStore } from "@/lib/config";
 import { JobOpportunity, TailoredResume, ResumeStatus } from "./schema";
+import { DynamoTailorRepo } from "./dynamo-repo";
 
 export interface TailorRepo {
   saveJobOpportunity(job: JobOpportunity): Promise<JobOpportunity>;
@@ -69,7 +71,7 @@ let instance: TailorRepo | null = null;
 
 export function getTailorRepo(): TailorRepo {
   if (!instance) {
-    instance = new MemoryTailorRepo();
+    instance = getDataStore() === "dynamo" ? new DynamoTailorRepo() : new MemoryTailorRepo();
   }
   return instance;
 }
