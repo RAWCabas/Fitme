@@ -11,7 +11,9 @@ import {
   ArrowLeft,
   Building,
   MapPin,
-  TrendingUp
+  TrendingUp,
+  Printer,
+  FileCode
 } from "lucide-react";
 import { Profile } from "@/features/profile/schema";
 import { JobOpportunity, TailoredResume, PageBudget, TypographyPreset, ResumeStatus } from "@/features/tailor/schema";
@@ -151,6 +153,16 @@ export function StudioClient({ profile }: StudioClientProps) {
     }
   }
 
+  function handleExportMarkdown() {
+    if (!tailoredResume) return;
+    window.open(`/api/export/${tailoredResume.id}/markdown`, "_blank");
+  }
+
+  function handleExportPdf() {
+    if (!tailoredResume) return;
+    window.open(`/api/export/${tailoredResume.id}/html?preset=${preset}&print=true`, "_blank");
+  }
+
   return (
     <div className="space-y-6">
       {/* VIEW 1: JOB INGESTION & SETUP (When no resume is active) */}
@@ -285,8 +297,20 @@ export function StudioClient({ profile }: StudioClientProps) {
               </div>
             </div>
 
-            {/* Status Selector & Page Budget Switch */}
-            <div className="flex items-center gap-2 self-start sm:self-auto">
+            {/* Export Toolbar, Status Selector & Page Budget Switch */}
+            <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+              {/* Preset Selector */}
+              <select
+                value={preset}
+                onChange={(e) => setPreset(e.target.value as TypographyPreset)}
+                className="px-2.5 py-1.5 text-xs font-semibold rounded-lg border bg-background"
+                title="ATS Typography Preset"
+              >
+                <option value="modern_standard">Modern Standard</option>
+                <option value="classic_ivy">Classic Ivy</option>
+                <option value="tech_minimalist">Tech Minimalist</option>
+              </select>
+
               <div className="flex items-center gap-1 p-0.5 rounded-lg border bg-muted text-xs font-semibold">
                 <button
                   onClick={() => handleBudgetSwitch("1_page")}
@@ -321,12 +345,33 @@ export function StudioClient({ profile }: StudioClientProps) {
                     : "bg-background text-foreground"
                 }`}
               >
-                <option value="draft">Draft (In Progress)</option>
-                <option value="sent">Sent (Applied)</option>
-                <option value="interview">Interview Scheduled</option>
-                <option value="job_offer">Job Offer Received</option>
-                <option value="rejected">Archived / Rejected</option>
+                <option value="draft">Draft</option>
+                <option value="sent">Sent</option>
+                <option value="interview">Interview</option>
+                <option value="job_offer">Offer</option>
+                <option value="rejected">Archived</option>
               </select>
+
+              {/* Export Buttons */}
+              <button
+                type="button"
+                onClick={handleExportMarkdown}
+                title="Download as ATS-clean Markdown"
+                className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold rounded-lg border bg-background hover:bg-muted transition-colors"
+              >
+                <FileCode className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Markdown</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleExportPdf}
+                title="Print or Save to ATS PDF"
+                className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors shadow-sm"
+              >
+                <Printer className="w-3.5 h-3.5" />
+                <span>PDF / Print</span>
+              </button>
             </div>
           </div>
 
@@ -454,7 +499,9 @@ export function StudioClient({ profile }: StudioClientProps) {
 
             {/* RIGHT COLUMN: Tailored Resume Preview (Desktop: 7 cols, Mobile: tab 'resume') */}
             <div className={`md:col-span-7 space-y-4 ${mobileTab !== "resume" ? "hidden md:block" : ""}`}>
-              <div className="p-6 md:p-8 rounded-2xl border bg-card shadow-sm space-y-6">
+              <div className={`p-6 md:p-8 rounded-2xl border bg-card shadow-sm space-y-6 ${
+                preset === "classic_ivy" ? "font-serif" : ""
+              }`}>
                 {/* Resume Header */}
                 <div className="text-center space-y-1 border-b pb-4">
                   <h1 className="text-2xl font-bold tracking-tight">{profile.contact.fullName}</h1>
