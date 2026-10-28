@@ -1,7 +1,7 @@
 import crypto from "crypto";
 import { AppError } from "@/lib/errors";
 import { nowIso } from "@/lib/dates";
-import { getProfileRepo } from "./repo";
+import { getProfileRepo, ProfileRepo } from "./repo";
 import { 
   Profile, 
   profileSchema, 
@@ -15,7 +15,15 @@ import {
 } from "./schema";
 
 export class ProfileService {
-  constructor(private repo = getProfileRepo()) {}
+  private customRepo?: ProfileRepo;
+
+  constructor(repo?: ProfileRepo) {
+    this.customRepo = repo;
+  }
+
+  private get repo(): ProfileRepo {
+    return this.customRepo || getProfileRepo();
+  }
 
   /**
    * Retrieves the user's master profile, initializing a clean one if it does not exist.
@@ -280,4 +288,3 @@ export class ProfileService {
 }
 
 export const profileService = new ProfileService();
-
