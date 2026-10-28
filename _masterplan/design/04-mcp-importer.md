@@ -45,3 +45,4 @@ Implement the Amazon Bedrock structured AI extraction wrapper (`src/lib/bedrock.
 - [ ] UI allows pasting a resume to trigger the importer.
 - [ ] `npm run check` passes with 0 lint, type, or test errors.
 - [ ] Commit message: `feat(mcp): implement bedrock resume extractor and mcp import tool`
+
