@@ -3,6 +3,8 @@ import { getTailorRepo } from "@/features/tailor/repo";
 import { JobOpportunity } from "@/features/tailor/schema";
 import { PipelineClient } from "./pipeline-client";
 
+export const dynamic = "force-dynamic";
+
 export default async function DashboardPage() {
   const session = await requireSession();
   const repo = getTailorRepo();

@@ -4,6 +4,8 @@ import { profileService } from "@/features/profile/service";
 import { DashboardNav } from "./dashboard-nav";
 import { QuickFillTray } from "@/components/quick-fill-tray";
 
+export const dynamic = "force-dynamic";
+
 export default async function DashboardLayout({
   children,
 }: {

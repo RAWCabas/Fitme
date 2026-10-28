@@ -2,6 +2,8 @@ import { requireSession } from "@/lib/auth/session";
 import { profileService } from "@/features/profile/service";
 import { StudioClient } from "./studio-client";
 
+export const dynamic = "force-dynamic";
+
 export default async function StudioPage() {
   const session = await requireSession();
   const profile = await profileService.getOrCreateProfile(session.userId, session.email, session.name);

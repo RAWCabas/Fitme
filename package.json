@@ -12,6 +12,11 @@
     "check": "tsc --noEmit && next lint && vitest run"
   },
   "dependencies": {
+    "@aws-sdk/client-bedrock-runtime": "^3.1158.0",
+    "@aws-sdk/client-dynamodb": "^3.1158.0",
+    "@aws-sdk/client-s3": "^3.1158.0",
+    "@aws-sdk/lib-dynamodb": "^3.1158.0",
+    "@aws-sdk/s3-request-presigner": "^3.1158.0",
     "clsx": "^2.1.1",
     "lucide-react": "^1.16.0",
     "next": "^15.1.7",
@@ -38,4 +43,3 @@
     "vitest": "^3.0.7"
   }
 }
-
