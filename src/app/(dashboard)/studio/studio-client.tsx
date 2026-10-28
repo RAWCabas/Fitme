@@ -13,7 +13,10 @@ import {
   MapPin,
   TrendingUp,
   Printer,
-  FileCode
+  FileCode,
+  X,
+  Copy,
+  Check
 } from "lucide-react";
 import { Profile } from "@/features/profile/schema";
 import { JobOpportunity, TailoredResume, PageBudget, TypographyPreset, ResumeStatus } from "@/features/tailor/schema";
@@ -44,6 +47,19 @@ export function StudioClient({ profile }: StudioClientProps) {
 
   // Status updating
   const [statusUpdating, setStatusUpdating] = useState(false);
+
+  // On-Demand AI Boosters state
+  const [showBoosters, setShowBoosters] = useState(false);
+  const [boosterTab, setBoosterTab] = useState<"cover_letter" | "outreach" | "cheat_sheet">("cover_letter");
+  const [coverLetter, setCoverLetter] = useState<string | null>(null);
+  const [outreachNote, setOutreachNote] = useState<string | null>(null);
+  const [cheatSheet, setCheatSheet] = useState<{
+    predictedQuestions: { question: string; context: string; suggestedApproach: string }[];
+    talkingPointsForGaps: string[];
+    questionsToAskInterviewer: string[];
+  } | null>(null);
+  const [generatingBooster, setGeneratingBooster] = useState(false);
+  const [copiedBooster, setCopiedBooster] = useState<string | null>(null);
 
   // Submit Job Description & Tailor
   async function handleAnalyzeAndTailor(e: React.FormEvent) {
@@ -117,7 +133,6 @@ export function StudioClient({ profile }: StudioClientProps) {
 
       if (res.ok) {
         const { boostedBullet } = await res.json();
-        // Update bullet in local tailored resume
         const updatedExperiences = [...tailoredResume.tailoredExperiences];
         updatedExperiences[boostingBullet.roleIndex].bullets[boostingBullet.bulletIndex].content = boostedBullet;
         updatedExperiences[boostingBullet.roleIndex].bullets[boostingBullet.bulletIndex].hasMetrics = true;
@@ -161,6 +176,68 @@ export function StudioClient({ profile }: StudioClientProps) {
   function handleExportPdf() {
     if (!tailoredResume) return;
     window.open(`/api/export/${tailoredResume.id}/html?preset=${preset}&print=true`, "_blank");
+  }
+
+  async function handleGenerateCoverLetter() {
+    if (!tailoredResume) return;
+    setGeneratingBooster(true);
+    try {
+      const res = await fetch("/api/boosters/cover-letter", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ resumeId: tailoredResume.id }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setCoverLetter(data.coverLetter);
+      }
+    } finally {
+      setGeneratingBooster(false);
+    }
+  }
+
+  async function handleGenerateOutreach() {
+    if (!tailoredResume) return;
+    setGeneratingBooster(true);
+    try {
+      const res = await fetch("/api/boosters/outreach", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ resumeId: tailoredResume.id }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setOutreachNote(data.recruiterOutreach);
+      }
+    } finally {
+      setGeneratingBooster(false);
+    }
+  }
+
+  async function handleGenerateCheatSheet() {
+    if (!tailoredResume) return;
+    setGeneratingBooster(true);
+    try {
+      const res = await fetch("/api/boosters/cheat-sheet", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ resumeId: tailoredResume.id }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setCheatSheet(data.cheatSheet);
+      }
+    } finally {
+      setGeneratingBooster(false);
+    }
+  }
+
+  function handleCopyText(key: string, text: string) {
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(text);
+      setCopiedBooster(key);
+      setTimeout(() => setCopiedBooster(null), 1500);
+    }
   }
 
   return (
@@ -265,7 +342,7 @@ export function StudioClient({ profile }: StudioClientProps) {
       {/* VIEW 2: INTERACTIVE TAILORING STUDIO (Split-view Desktop & Tabbed Mobile) */}
       {tailoredResume && activeJob && (
         <div className="space-y-4">
-          {/* Top Bar: Company, Role, Status, and Page Budget */}
+          {/* Top Bar: Company, Role, Status, Presets, and Exports */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 sm:p-5 rounded-2xl border bg-card shadow-sm">
             <div className="flex items-center gap-3">
               <button
@@ -371,6 +448,17 @@ export function StudioClient({ profile }: StudioClientProps) {
               >
                 <Printer className="w-3.5 h-3.5" />
                 <span>PDF / Print</span>
+              </button>
+
+              {/* AI Boosters Trigger Button */}
+              <button
+                type="button"
+                onClick={() => setShowBoosters(true)}
+                title="Open AI Application Boosters"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-purple-500/10 text-purple-600 border border-purple-500/20 hover:bg-purple-500/20 transition-colors shadow-sm"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>AI Boosters</span>
               </button>
             </div>
           </div>
@@ -665,6 +753,205 @@ export function StudioClient({ profile }: StudioClientProps) {
                     </button>
                   </div>
                 </form>
+              </div>
+            </div>
+          )}
+
+          {/* ON-DEMAND AI BOOSTERS MODAL */}
+          {showBoosters && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in">
+              <div className="w-full max-w-2xl max-h-[85vh] p-6 rounded-2xl border bg-card shadow-2xl flex flex-col space-y-4">
+                <div className="flex items-center justify-between border-b pb-3">
+                  <div className="space-y-0.5">
+                    <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-purple-500/10 text-purple-600 text-xs font-semibold">
+                      <Sparkles className="w-3.5 h-3.5" />
+                      AI Application Boosters
+                    </div>
+                    <h3 className="text-lg font-bold">On-Demand Tailored Assets</h3>
+                  </div>
+                  <button
+                    onClick={() => setShowBoosters(false)}
+                    className="p-1 rounded-lg border hover:bg-muted text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {/* Booster Tabs */}
+                <div className="flex items-center gap-1 p-1 rounded-xl bg-muted text-xs font-semibold">
+                  <button
+                    onClick={() => setBoosterTab("cover_letter")}
+                    className={`flex-1 py-1.5 rounded-lg transition-colors ${
+                      boosterTab === "cover_letter" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"
+                    }`}
+                  >
+                    Cover Letter
+                  </button>
+                  <button
+                    onClick={() => setBoosterTab("outreach")}
+                    className={`flex-1 py-1.5 rounded-lg transition-colors ${
+                      boosterTab === "outreach" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"
+                    }`}
+                  >
+                    Recruiter Outreach
+                  </button>
+                  <button
+                    onClick={() => setBoosterTab("cheat_sheet")}
+                    className={`flex-1 py-1.5 rounded-lg transition-colors ${
+                      boosterTab === "cheat_sheet" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"
+                    }`}
+                  >
+                    Interview Cheat Sheet
+                  </button>
+                </div>
+
+                {/* Booster Content Area */}
+                <div className="flex-1 overflow-y-auto space-y-4 pr-1">
+                  {/* COVER LETTER */}
+                  {boosterTab === "cover_letter" && (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs text-muted-foreground">
+                          Generates a 3-paragraph tailored cover letter strictly referencing your verified Vault experiences.
+                        </p>
+                        <button
+                          onClick={handleGenerateCoverLetter}
+                          disabled={generatingBooster}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 shrink-0"
+                        >
+                          {generatingBooster ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+                          <span>{coverLetter ? "Regenerate" : "Generate Letter"}</span>
+                        </button>
+                      </div>
+
+                      {coverLetter && (
+                        <div className="relative p-4 rounded-xl border bg-muted/30 text-xs sm:text-sm text-foreground whitespace-pre-wrap leading-relaxed space-y-2">
+                          <button
+                            onClick={() => handleCopyText("coverLetter", coverLetter)}
+                            className="absolute top-3 right-3 inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-background border text-xs font-semibold shadow-sm hover:bg-muted"
+                          >
+                            {copiedBooster === "coverLetter" ? (
+                              <>
+                                <Check className="w-3 h-3 text-emerald-600" />
+                                <span className="text-emerald-600">Copied</span>
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="w-3 h-3" />
+                                <span>Copy</span>
+                              </>
+                            )}
+                          </button>
+                          <div>{coverLetter}</div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* RECRUITER OUTREACH */}
+                  {boosterTab === "outreach" && (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs text-muted-foreground">
+                          Generates a concise (&lt;100 words) connection note highlighting your top matching skills.
+                        </p>
+                        <button
+                          onClick={handleGenerateOutreach}
+                          disabled={generatingBooster}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 shrink-0"
+                        >
+                          {generatingBooster ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+                          <span>{outreachNote ? "Regenerate" : "Generate Note"}</span>
+                        </button>
+                      </div>
+
+                      {outreachNote && (
+                        <div className="relative p-4 rounded-xl border bg-muted/30 text-xs sm:text-sm text-foreground whitespace-pre-wrap leading-relaxed">
+                          <button
+                            onClick={() => handleCopyText("outreach", outreachNote)}
+                            className="absolute top-3 right-3 inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-background border text-xs font-semibold shadow-sm hover:bg-muted"
+                          >
+                            {copiedBooster === "outreach" ? (
+                              <>
+                                <Check className="w-3 h-3 text-emerald-600" />
+                                <span className="text-emerald-600">Copied</span>
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="w-3 h-3" />
+                                <span>Copy</span>
+                              </>
+                            )}
+                          </button>
+                          <p className="pr-16">{outreachNote}</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* INTERVIEW CHEAT SHEET */}
+                  {boosterTab === "cheat_sheet" && (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs text-muted-foreground">
+                          Predicts technical questions and supplies STAR-method talking points for any missing ATS skills.
+                        </p>
+                        <button
+                          onClick={handleGenerateCheatSheet}
+                          disabled={generatingBooster}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 shrink-0"
+                        >
+                          {generatingBooster ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+                          <span>{cheatSheet ? "Regenerate" : "Generate Cheat Sheet"}</span>
+                        </button>
+                      </div>
+
+                      {cheatSheet && (
+                        <div className="space-y-4">
+                          {/* Predicted Questions */}
+                          <div className="space-y-2">
+                            <h4 className="text-xs font-bold uppercase tracking-wider text-primary">
+                              Predicted Technical & Behavioral Questions
+                            </h4>
+                            <div className="space-y-2">
+                              {cheatSheet.predictedQuestions.map((pq, idx) => (
+                                <div key={idx} className="p-3 rounded-xl border bg-card text-xs space-y-1">
+                                  <div className="font-bold text-foreground">Q: {pq.question}</div>
+                                  <div className="text-muted-foreground text-[11px] italic">{pq.context}</div>
+                                  <div className="text-foreground pt-1 border-t text-[11px]"><span className="font-semibold text-primary">Suggested Approach:</span> {pq.suggestedApproach}</div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Gap Talking Points */}
+                          <div className="space-y-2 pt-2 border-t">
+                            <h4 className="text-xs font-bold uppercase tracking-wider text-amber-600">
+                              Talking Points for Missing / Transferable Skills
+                            </h4>
+                            <ul className="space-y-1.5 text-xs text-muted-foreground list-disc list-inside">
+                              {cheatSheet.talkingPointsForGaps.map((tp, idx) => (
+                                <li key={idx} className="text-foreground">{tp}</li>
+                              ))}
+                            </ul>
+                          </div>
+
+                          {/* Questions to ask */}
+                          <div className="space-y-2 pt-2 border-t">
+                            <h4 className="text-xs font-bold uppercase tracking-wider text-primary">
+                              High-Signal Questions to Ask the Interviewer
+                            </h4>
+                            <ul className="space-y-1.5 text-xs text-muted-foreground list-disc list-inside">
+                              {cheatSheet.questionsToAskInterviewer.map((q, idx) => (
+                                <li key={idx} className="text-foreground">{q}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           )}
