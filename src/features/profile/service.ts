@@ -36,24 +36,158 @@ export class ProfileService {
       return existing;
     }
 
-    const newProfile: Profile = {
-      userId,
-      contact: {
-        fullName: defaultName || "Candidate",
-        headline: "",
-        email: defaultEmail || "candidate@fitme.dev",
-        phone: "",
-        location: "",
-        portfolioUrl: "",
-        linkedinUrl: "",
-        githubUrl: "",
-      },
-      experiences: [],
-      projects: [],
-      skills: [],
-      summary: "",
-      updatedAt: nowIso(),
-    };
+    const isRhinn = defaultEmail.toLowerCase().includes("rhinn") || defaultEmail.toLowerCase().includes("cabas");
+
+    const newProfile: Profile = isRhinn
+      ? {
+          userId,
+          contact: {
+            fullName: "Rhinn Anthon William Cabas",
+            headline: "Computer Engineer | Embedded Systems & Edge AI | IT & Technical Support",
+            email: defaultEmail || "rhinnanthon@gmail.com",
+            phone: "0945-350-7389",
+            location: "Deca Homes, Cubacub, Mandaue City, Cebu",
+            portfolioUrl: "https://github.com/RAWCabas",
+            linkedinUrl: "https://linkedin.com/in/rhinnanthon",
+            githubUrl: "https://github.com/RAWCabas",
+          },
+          summary:
+            "Analytical Computer Engineering graduate specializing in smart automation, embedded systems, and machine learning integration. Demonstrates hands-on expertise in hardware prototyping, 3D mechanical modeling, and deploying Edge AI and computer vision solutions. Ready to deliver dependable on-site and remote technical support across office environments, distributed teams, and enterprise systems.",
+          experiences: [
+            {
+              id: crypto.randomUUID(),
+              company: "Sustainable Center for Engineering and Next-Generation Technology",
+              role: "Project Research Assistant (Internship)",
+              location: "Cebu, Philippines",
+              startDate: "2026-01-01",
+              endDate: null,
+              isHidden: false,
+              bullets: [
+                {
+                  id: crypto.randomUUID(),
+                  content:
+                    "Engineered detailed 3D designs and mechanical modeling for project hardware, optimizing structural integrity for physical enclosures.",
+                  isHidden: false,
+                  hasMetrics: true,
+                },
+                {
+                  id: crypto.randomUUID(),
+                  content:
+                    "Collaborated closely on embedded programming and machine learning model training utilizing Edge Impulse for real-time edge computing deployment.",
+                  isHidden: false,
+                  hasMetrics: true,
+                },
+              ],
+            },
+            {
+              id: crypto.randomUUID(),
+              company: "McDonald's Philippines",
+              role: "Customer Service Crew",
+              location: "Cebu, Philippines",
+              startDate: "2022-01-01",
+              endDate: "2022-12-31",
+              isHidden: false,
+              bullets: [
+                {
+                  id: crypto.randomUUID(),
+                  content:
+                    "Assisted customers and efficiently handled orders within a high-volume, fast-paced environment.",
+                  isHidden: false,
+                  hasMetrics: false,
+                },
+                {
+                  id: crypto.randomUUID(),
+                  content:
+                    "Worked effectively as part of a cohesive team to ensure consistent customer satisfaction.",
+                  isHidden: false,
+                  hasMetrics: false,
+                },
+              ],
+            },
+          ],
+          projects: [
+            {
+              id: crypto.randomUUID(),
+              name: "Edge AI & Hardware Prototyping (SCENG)",
+              description: "Embedded machine learning deployment utilizing Edge Impulse and physical enclosure design.",
+              technologies: ["Edge Impulse", "Embedded C/C++", "Autodesk Fusion 360", "Arduino IDE"],
+              liveUrl: "https://github.com/RAWCabas",
+              repoUrl: "https://github.com/RAWCabas",
+              isHidden: false,
+              bullets: [
+                {
+                  id: crypto.randomUUID(),
+                  content: "Engineered detailed 3D mechanical models and physical enclosures for edge computing hardware.",
+                  isHidden: false,
+                  hasMetrics: true,
+                },
+                {
+                  id: crypto.randomUUID(),
+                  content: "Trained and deployed real-time machine learning inference models using Edge Impulse.",
+                  isHidden: false,
+                  hasMetrics: true,
+                },
+              ],
+            },
+            {
+              id: crypto.randomUUID(),
+              name: "TESDA Computer Systems Servicing & Java Certifications",
+              description: "Certified hardware diagnostics, LAN/WAN network configuration, and Java programming.",
+              technologies: ["Java", "LAN/WAN", "TCP/IP", "Windows OS", "Hardware Diagnostics"],
+              liveUrl: "https://github.com/RAWCabas",
+              repoUrl: "https://github.com/RAWCabas",
+              isHidden: false,
+              bullets: [
+                {
+                  id: crypto.randomUUID(),
+                  content: "Completed 280 hours of Computer Systems Servicing NCII covering PC assembly, hardware diagnostics, and network troubleshooting.",
+                  isHidden: false,
+                  hasMetrics: true,
+                },
+                {
+                  id: crypto.randomUUID(),
+                  content: "Completed 240 hours of Programming (JAVA NCIII) and 120 hours of Level 3 Data Analysis.",
+                  isHidden: false,
+                  hasMetrics: true,
+                },
+              ],
+            },
+          ],
+          skills: [
+            { id: crypto.randomUUID(), name: "Java (TESDA NC III)", category: "languages", isHidden: false },
+            { id: crypto.randomUUID(), name: "C/C++ basics", category: "languages", isHidden: false },
+            { id: crypto.randomUUID(), name: "HTML/CSS", category: "languages", isHidden: false },
+            { id: crypto.randomUUID(), name: "Edge Impulse", category: "frameworks", isHidden: false },
+            { id: crypto.randomUUID(), name: "Arduino IDE", category: "frameworks", isHidden: false },
+            { id: crypto.randomUUID(), name: "Internet of Things (IoT)", category: "cloud", isHidden: false },
+            { id: crypto.randomUUID(), name: "LAN/WAN & TCP/IP", category: "cloud", isHidden: false },
+            { id: crypto.randomUUID(), name: "Autodesk Fusion 360", category: "tools", isHidden: false },
+            { id: crypto.randomUUID(), name: "VS Code", category: "tools", isHidden: false },
+            { id: crypto.randomUUID(), name: "PC Assembly & Hardware Diagnostics", category: "tools", isHidden: false },
+            { id: crypto.randomUUID(), name: "Adobe Photoshop & Premiere Pro", category: "tools", isHidden: false },
+            { id: crypto.randomUUID(), name: "Diagnostic Problem-Solving", category: "soft", isHidden: false },
+            { id: crypto.randomUUID(), name: "Collaborative Operations & Customer Service", category: "soft", isHidden: false },
+          ],
+          updatedAt: nowIso(),
+        }
+      : {
+          userId,
+          contact: {
+            fullName: defaultName || "Candidate",
+            headline: "",
+            email: defaultEmail || "candidate@fitme.dev",
+            phone: "",
+            location: "",
+            portfolioUrl: "",
+            linkedinUrl: "",
+            githubUrl: "",
+          },
+          experiences: [],
+          projects: [],
+          skills: [],
+          summary: "",
+          updatedAt: nowIso(),
+        };
 
     const validated = profileSchema.parse(newProfile);
     return await this.repo.saveProfile(validated);
