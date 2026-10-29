@@ -1,4 +1,5 @@
 import { AppError } from "@/lib/errors";
+import { getAwsRegion } from "@/lib/config";
 import { AuthSession } from "./session";
 
 interface CognitoAuthParams {
@@ -14,7 +15,7 @@ interface CognitoAuthParams {
 export async function cognitoSignIn({ email, password }: CognitoAuthParams): Promise<AuthSession> {
   const userPoolId = process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID;
   const clientId = process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID;
-  const region = process.env.AWS_REGION || "us-east-1";
+  const region = getAwsRegion();
 
   if (!email || !password) {
     throw AppError.badRequest("Email and password are required");
@@ -78,7 +79,7 @@ export async function cognitoSignIn({ email, password }: CognitoAuthParams): Pro
 export async function cognitoSignUp({ email, password, name }: CognitoAuthParams): Promise<AuthSession> {
   const userPoolId = process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID;
   const clientId = process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID;
-  const region = process.env.AWS_REGION || "us-east-1";
+  const region = getAwsRegion();
 
   if (!email || !password) {
     throw AppError.badRequest("Email and password are required");

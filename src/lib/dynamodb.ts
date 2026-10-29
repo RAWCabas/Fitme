@@ -1,4 +1,4 @@
-import { getDataStore } from "@/lib/config";
+import { getDataStore, getAwsRegion, getAwsCredentials } from "@/lib/config";
 
 export const DYNAMO_TABLE_NAME = process.env.DYNAMODB_TABLE_NAME || "fitme-main";
 
@@ -124,13 +124,10 @@ export function getDynamoDocClient(): IDynamoDocClient {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { DynamoDBDocumentClient, GetCommand, PutCommand, QueryCommand, DeleteCommand } = require("@aws-sdk/lib-dynamodb");
 
-    const credentials = (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) ? {
-      accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-    } : undefined;
+    const credentials = getAwsCredentials();
 
     const ddbClient = new DynamoDBClient({ 
-      region: process.env.AWS_REGION || "us-east-1",
+      region: getAwsRegion(),
       credentials,
     });
     const docClient = DynamoDBDocumentClient.from(ddbClient);

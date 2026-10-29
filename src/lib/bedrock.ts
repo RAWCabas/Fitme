@@ -1,5 +1,6 @@
 import { z, ZodType } from "zod";
 import { BedrockRuntimeClient, InvokeModelCommand } from "@aws-sdk/client-bedrock-runtime";
+import { getAwsRegion, getAwsCredentials } from "./config";
 import { AppError } from "./errors";
 
 interface BedrockJsonParams<T> {
@@ -19,17 +20,16 @@ export async function invokeBedrockJson<T>({
   schema,
   fallbackGenerator,
 }: BedrockJsonParams<T>): Promise<T> {
-  const accessKeyId = process.env.AWS_ACCESS_KEY_ID;
-  const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
-  const region = process.env.AWS_REGION || "us-east-1";
+  const credentials = getAwsCredentials();
+  const region = getAwsRegion();
   const modelId = process.env.BEDROCK_MODEL_ID || "anthropic.claude-3-5-haiku-20241022-v1:0";
 
   // If AWS credentials are provided, invoke Amazon Bedrock
-  if (accessKeyId && secretAccessKey) {
+  if (credentials) {
     try {
       const client = new BedrockRuntimeClient({
         region,
-        credentials: { accessKeyId, secretAccessKey },
+        credentials,
       });
 
       const payload = {
