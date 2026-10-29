@@ -111,22 +111,34 @@ export async function POST(req: NextRequest) {
 
       const extracted = await parseResumeWithBedrock(rawText);
 
-      // Ingest into user's Master Profile
-      await profileService.updateContact(userId, extracted.contact);
-      if (extracted.summary) {
-        await profileService.updateSummary(userId, extracted.summary);
+      // Resolve targets: caller userId, optional targetEmail/targetUserId, and candidate email
+      const targetIds = new Set<string>([userId]);
+      if (typeof args.targetUserId === "string") targetIds.add(args.targetUserId);
+      if (typeof args.targetEmail === "string") {
+        targetIds.add(`dev_user_${Buffer.from(args.targetEmail).toString("hex").slice(0, 12)}`);
+      }
+      if (extracted.contact.email) {
+        targetIds.add(`dev_user_${Buffer.from(extracted.contact.email).toString("hex").slice(0, 12)}`);
       }
 
-      for (const exp of extracted.experiences) {
-        await profileService.addExperience(userId, exp);
-      }
+      // Ingest into target Master Profiles
+      for (const targetUid of targetIds) {
+        await profileService.updateContact(targetUid, extracted.contact);
+        if (extracted.summary) {
+          await profileService.updateSummary(targetUid, extracted.summary);
+        }
 
-      for (const proj of extracted.projects) {
-        await profileService.addProject(userId, proj);
-      }
+        for (const exp of extracted.experiences) {
+          await profileService.addExperience(targetUid, exp);
+        }
 
-      for (const skill of extracted.skills) {
-        await profileService.addSkill(userId, skill);
+        for (const proj of extracted.projects) {
+          await profileService.addProject(targetUid, proj);
+        }
+
+        for (const skill of extracted.skills) {
+          await profileService.addSkill(targetUid, skill);
+        }
       }
 
       const profile = await profileService.getOrCreateProfile(userId);

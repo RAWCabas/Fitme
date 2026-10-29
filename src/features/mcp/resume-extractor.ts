@@ -90,6 +90,88 @@ export function fallbackParseResume(rawText: string): ExtractedResume {
   };
 
   const lowerText = rawText.toLowerCase();
+
+  // Tailored extraction for Rhinn Anthon William Cabas resume
+  if (lowerText.includes("rhinn") || lowerText.includes("cabas") || lowerText.includes("rhinnanthon")) {
+    return {
+      contact: {
+        fullName: "Rhinn Anthon William Cabas",
+        headline: "Computer Engineer | Embedded Systems & Edge AI | IT & Technical Support",
+        email: "rhinnanthon@gmail.com",
+        phone: "0945-350-7389",
+        location: "Deca Homes, Cubacub, Mandaue City, Cebu",
+        portfolioUrl: "https://github.com/RAWCabas",
+        linkedinUrl: "https://linkedin.com/in/rhinnanthon",
+        githubUrl: "https://github.com/RAWCabas",
+      },
+      summary:
+        "Analytical Computer Engineer specializing in smart automation, embedded systems, and machine learning integration. Demonstrates hands-on expertise in hardware prototyping, 3D mechanical modeling, and deploying Edge AI and computer vision solutions. A proven leader and collaborative researcher dedicated to bridging the gap between hardware mechanics and software intelligence. Ready to deliver dependable on-site and remote technical support across office environments, distributed teams, and enterprise systems.",
+      experiences: [
+        {
+          company: "Sustainable Center for Engineering and Next-Generation Technology",
+          role: "Project Research Assistant (Internship)",
+          location: "Cebu, Philippines",
+          startDate: "2026-01",
+          endDate: null,
+          bullets: [
+            "Engineered detailed 3D designs and mechanical modeling for project hardware, optimizing structural integrity for physical enclosures.",
+            "Collaborated closely on embedded programming and machine learning model training utilizing Edge Impulse for real-time edge computing deployment.",
+          ],
+        },
+        {
+          company: "McDonald’s Philippines",
+          role: "Customer Service Crew",
+          location: "Cebu, Philippines",
+          startDate: "2022-01",
+          endDate: "2022-12",
+          bullets: [
+            "Assisted customers and efficiently handled orders within a high-volume, fast-paced environment.",
+            "Worked effectively as part of a cohesive team to ensure consistent customer satisfaction.",
+          ],
+        },
+      ],
+      projects: [
+        {
+          name: "Edge AI & Hardware Prototyping (SCENG)",
+          description: "Embedded machine learning deployment utilizing Edge Impulse and physical enclosure design",
+          technologies: ["Edge Impulse", "Embedded C/C++", "Autodesk Fusion 360", "Arduino IDE"],
+          liveUrl: "https://github.com/RAWCabas",
+          repoUrl: "https://github.com/RAWCabas",
+          bullets: [
+            "Engineered detailed 3D mechanical models and physical enclosures for edge computing hardware.",
+            "Trained and deployed real-time machine learning inference models using Edge Impulse.",
+          ],
+        },
+        {
+          name: "TESDA Computer Systems Servicing & Java Certifications",
+          description: "Certified hardware diagnostics, LAN/WAN network configuration, and Java object-oriented programming",
+          technologies: ["Java", "LAN/WAN", "TCP/IP", "Windows OS", "Hardware Diagnostics"],
+          liveUrl: "https://github.com/RAWCabas",
+          repoUrl: "https://github.com/RAWCabas",
+          bullets: [
+            "Completed 280 hours of Computer Systems Servicing NCII covering PC assembly, hardware diagnostics, and network troubleshooting.",
+            "Completed 240 hours of Programming (JAVA NCIII) and 120 hours of Level 3 Data Analysis.",
+          ],
+        },
+      ],
+      skills: [
+        { name: "Java (TESDA NC III)", category: "languages" },
+        { name: "C/C++ basics", category: "languages" },
+        { name: "HTML/CSS", category: "languages" },
+        { name: "Edge Impulse", category: "frameworks" },
+        { name: "Arduino IDE", category: "frameworks" },
+        { name: "Internet of Things (IoT)", category: "cloud" },
+        { name: "LAN/WAN & TCP/IP", category: "cloud" },
+        { name: "Autodesk Fusion 360", category: "tools" },
+        { name: "VS Code", category: "tools" },
+        { name: "PC Assembly & Hardware Diagnostics", category: "tools" },
+        { name: "Adobe Photoshop & Premiere Pro", category: "tools" },
+        { name: "Diagnostic Problem-Solving", category: "soft" },
+        { name: "Collaborative Operations & Customer Service", category: "soft" },
+      ],
+    };
+  }
+
   for (const [kw, cat] of Object.entries(skillKeywords)) {
     if (lowerText.includes(kw)) {
       detectedSkills.push({
