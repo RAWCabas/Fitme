@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { errorResponse, jsonResponse } from "@/lib/http";
 import { requireSession } from "@/lib/auth/session";
 import { getTailorRepo } from "@/features/tailor/repo";
+import { tailorService } from "@/features/tailor/service";
 import { AppError } from "@/lib/errors";
 
 export async function GET(
@@ -15,6 +16,22 @@ export async function GET(
     if (!resume) throw AppError.notFound("Tailored resume not found");
 
     return jsonResponse(resume);
+  } catch (error) {
+    return errorResponse(error);
+  }
+}
+
+export async function PUT(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await requireSession();
+    const { id } = await params;
+    const body = await req.json();
+
+    const updated = await tailorService.updateTailoredResume(session.userId, id, body);
+    return jsonResponse(updated);
   } catch (error) {
     return errorResponse(error);
   }

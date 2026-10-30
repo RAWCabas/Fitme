@@ -310,13 +310,16 @@ export class ProfileService {
   }
 
   /**
-   * Updates contact information.
+   * Updates contact information and optional executive summary.
    */
   async updateContact(userId: string, input: unknown): Promise<Profile> {
     const profile = await this.getOrCreateProfile(userId);
     const parsedContact = contactInfoSchema.parse(input);
 
     profile.contact = parsedContact;
+    if (typeof input === "object" && input !== null && "summary" in input) {
+      profile.summary = String((input as Record<string, unknown>).summary).trim();
+    }
     profile.updatedAt = nowIso();
 
     return await this.repo.saveProfile(profile);
@@ -394,6 +397,42 @@ export class ProfileService {
   }
 
   /**
+   * Updates an existing work experience.
+   */
+  async updateExperience(userId: string, experienceId: string, input: unknown): Promise<WorkExperience> {
+    const profile = await this.getOrCreateProfile(userId);
+    const existingIdx = profile.experiences.findIndex((e) => e.id === experienceId);
+    if (existingIdx === -1) throw AppError.notFound("Experience not found");
+
+    const existing = profile.experiences[existingIdx];
+    const raw = typeof input === "object" && input !== null ? (input as Record<string, unknown>) : {};
+
+    const updatedData = {
+      ...existing,
+      ...raw,
+      id: experienceId,
+      bullets: Array.isArray(raw.bullets)
+        ? raw.bullets.map((b: unknown) => {
+            const bulletObj = typeof b === "object" && b !== null ? (b as Record<string, unknown>) : { content: String(b) };
+            return {
+              id: bulletObj.id || crypto.randomUUID(),
+              content: String(bulletObj.content || "").trim(),
+              isHidden: Boolean(bulletObj.isHidden),
+              hasMetrics: Boolean(bulletObj.hasMetrics),
+            };
+          })
+        : existing.bullets,
+    };
+
+    const validated = workExperienceSchema.parse(updatedData);
+    profile.experiences[existingIdx] = validated;
+    profile.updatedAt = nowIso();
+
+    await this.repo.saveProfile(profile);
+    return validated;
+  }
+
+  /**
    * Adds a new project.
    */
   async addProject(userId: string, input: unknown): Promise<Project> {
@@ -455,6 +494,47 @@ export class ProfileService {
   }
 
   /**
+   * Updates an existing project.
+   */
+  async updateProject(userId: string, projectId: string, input: unknown): Promise<Project> {
+    const profile = await this.getOrCreateProfile(userId);
+    const existingIdx = profile.projects.findIndex((p) => p.id === projectId);
+    if (existingIdx === -1) throw AppError.notFound("Project not found");
+
+    const existing = profile.projects[existingIdx];
+    const raw = typeof input === "object" && input !== null ? (input as Record<string, unknown>) : {};
+
+    const updatedData = {
+      ...existing,
+      ...raw,
+      id: projectId,
+      technologies: Array.isArray(raw.technologies)
+        ? raw.technologies.map(String)
+        : typeof raw.technologies === "string"
+        ? (raw.technologies as string).split(",").map((t) => t.trim()).filter(Boolean)
+        : existing.technologies,
+      bullets: Array.isArray(raw.bullets)
+        ? raw.bullets.map((b: unknown) => {
+            const bulletObj = typeof b === "object" && b !== null ? (b as Record<string, unknown>) : { content: String(b) };
+            return {
+              id: bulletObj.id || crypto.randomUUID(),
+              content: String(bulletObj.content || "").trim(),
+              isHidden: Boolean(bulletObj.isHidden),
+              hasMetrics: Boolean(bulletObj.hasMetrics),
+            };
+          })
+        : existing.bullets,
+    };
+
+    const validated = projectSchema.parse(updatedData);
+    profile.projects[existingIdx] = validated;
+    profile.updatedAt = nowIso();
+
+    await this.repo.saveProfile(profile);
+    return validated;
+  }
+
+  /**
    * Adds a skill.
    */
   async addSkill(userId: string, input: unknown): Promise<SkillItem> {
@@ -502,6 +582,31 @@ export class ProfileService {
 
     profile.updatedAt = nowIso();
     await this.repo.saveProfile(profile);
+  }
+
+  /**
+   * Updates an existing skill.
+   */
+  async updateSkill(userId: string, skillId: string, input: unknown): Promise<SkillItem> {
+    const profile = await this.getOrCreateProfile(userId);
+    const existingIdx = profile.skills.findIndex((s) => s.id === skillId);
+    if (existingIdx === -1) throw AppError.notFound("Skill not found");
+
+    const existing = profile.skills[existingIdx];
+    const raw = typeof input === "object" && input !== null ? (input as Record<string, unknown>) : {};
+
+    const updatedData = {
+      ...existing,
+      ...raw,
+      id: skillId,
+    };
+
+    const validated = skillItemSchema.parse(updatedData);
+    profile.skills[existingIdx] = validated;
+    profile.updatedAt = nowIso();
+
+    await this.repo.saveProfile(profile);
+    return validated;
   }
 
   /**
@@ -555,6 +660,32 @@ export class ProfileService {
 
     profile.updatedAt = nowIso();
     await this.repo.saveProfile(profile);
+  }
+
+  /**
+   * Updates an existing certification.
+   */
+  async updateCertification(userId: string, certificationId: string, input: unknown): Promise<Certification> {
+    const profile = await this.getOrCreateProfile(userId);
+    if (!profile.certifications) profile.certifications = [];
+    const existingIdx = profile.certifications.findIndex((c) => c.id === certificationId);
+    if (existingIdx === -1) throw AppError.notFound("Certification not found");
+
+    const existing = profile.certifications[existingIdx];
+    const raw = typeof input === "object" && input !== null ? (input as Record<string, unknown>) : {};
+
+    const updatedData = {
+      ...existing,
+      ...raw,
+      id: certificationId,
+    };
+
+    const validated = certificationSchema.parse(updatedData);
+    profile.certifications[existingIdx] = validated;
+    profile.updatedAt = nowIso();
+
+    await this.repo.saveProfile(profile);
+    return validated;
   }
 
   /**

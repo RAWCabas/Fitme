@@ -136,6 +136,60 @@ describe("Profile Vault: Schemas & Service", () => {
     expect(profileAfterDelete.certifications).toHaveLength(0);
   });
 
+  it("updates existing experiences, projects, certifications, and skills", async () => {
+    // 1. Experience
+    const exp = await service.addExperience("user_123", {
+      company: "Acme Corp",
+      role: "Junior Dev",
+      location: "Remote",
+      bullets: [{ content: "Fixed bugs" }],
+    });
+    const updatedExp = await service.updateExperience("user_123", exp.id, {
+      role: "Senior Dev",
+      company: "Acme Global",
+      bullets: [{ content: "Architected distributed streaming engine" }],
+    });
+    expect(updatedExp.role).toBe("Senior Dev");
+    expect(updatedExp.company).toBe("Acme Global");
+    expect(updatedExp.bullets[0].content).toBe("Architected distributed streaming engine");
+
+    // 2. Project
+    const proj = await service.addProject("user_123", {
+      name: "Old App",
+      description: "Simple app",
+      technologies: ["JavaScript"],
+    });
+    const updatedProj = await service.updateProject("user_123", proj.id, {
+      name: "NextGen Platform",
+      technologies: ["TypeScript", "Next.js"],
+    });
+    expect(updatedProj.name).toBe("NextGen Platform");
+    expect(updatedProj.technologies).toContain("TypeScript");
+
+    // 3. Certification
+    const cert = await service.addCertification("user_123", {
+      name: "Basic IT",
+      issuer: "Institute",
+      hours: "40 Hours",
+    });
+    const updatedCert = await service.updateCertification("user_123", cert.id, {
+      name: "Advanced Computer Systems Servicing",
+      hours: "280 Hours",
+    });
+    expect(updatedCert.name).toBe("Advanced Computer Systems Servicing");
+    expect(updatedCert.hours).toBe("280 Hours");
+
+    // 4. Skill
+    const skill = await service.addSkill("user_123", {
+      name: "Java",
+      category: "languages",
+    });
+    const updatedSkill = await service.updateSkill("user_123", skill.id, {
+      name: "Java SE 21",
+    });
+    expect(updatedSkill.name).toBe("Java SE 21");
+  });
+
   it("toggles granular bullet point visibility inside an experience", async () => {
     const exp = await service.addExperience("user_123", {
       company: "Google",

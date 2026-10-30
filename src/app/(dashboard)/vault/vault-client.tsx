@@ -17,7 +17,10 @@ import {
   MapPin, 
   Calendar,
   Sparkles,
-  UploadCloud
+  UploadCloud,
+  Pencil,
+  X,
+  Save
 } from "lucide-react";
 import { Profile, WorkExperience, Project, Certification, SkillItem, SkillCategory } from "@/features/profile/schema";
 
@@ -73,6 +76,33 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
   const [contactLocation, setContactLocation] = useState(profile.contact.location || "");
   const [contactLinkedin, setContactLinkedin] = useState(profile.contact.linkedinUrl || "");
   const [contactGithub, setContactGithub] = useState(profile.contact.githubUrl || "");
+  const [contactSummary, setContactSummary] = useState(profile.summary || "");
+
+  // Editing Existing Items State
+  const [editingExp, setEditingExp] = useState<WorkExperience | null>(null);
+  const [editExpCompany, setEditExpCompany] = useState("");
+  const [editExpRole, setEditExpRole] = useState("");
+  const [editExpLocation, setEditExpLocation] = useState("");
+  const [editExpStartDate, setEditExpStartDate] = useState("");
+  const [editExpEndDate, setEditExpEndDate] = useState("");
+  const [editExpBullets, setEditExpBullets] = useState("");
+
+  const [editingProj, setEditingProj] = useState<Project | null>(null);
+  const [editProjName, setEditProjName] = useState("");
+  const [editProjDesc, setEditProjDesc] = useState("");
+  const [editProjTech, setEditProjTech] = useState("");
+  const [editProjLive, setEditProjLive] = useState("");
+  const [editProjRepo, setEditProjRepo] = useState("");
+
+  const [editingCert, setEditingCert] = useState<Certification | null>(null);
+  const [editCertName, setEditCertName] = useState("");
+  const [editCertIssuer, setEditCertIssuer] = useState("");
+  const [editCertHours, setEditCertHours] = useState("");
+  const [editCertCredentialId, setEditCertCredentialId] = useState("");
+
+  const [editingSkill, setEditingSkill] = useState<SkillItem | null>(null);
+  const [editSkillName, setEditSkillName] = useState("");
+  const [editSkillCat, setEditSkillCat] = useState<SkillCategory>("frameworks");
 
   function flashSuccess(msg: string) {
     setSuccessMessage(msg);
@@ -382,7 +412,190 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
     }
   }
 
-  // Save Contact Info
+  // Edit Handlers for Experience
+  function startEditExperience(exp: WorkExperience) {
+    setEditingExp(exp);
+    setEditExpCompany(exp.company);
+    setEditExpRole(exp.role);
+    setEditExpLocation(exp.location || "");
+    setEditExpStartDate(exp.startDate || "");
+    setEditExpEndDate(exp.endDate || "");
+    setEditExpBullets(exp.bullets.map((b) => b.content).join("\n"));
+  }
+
+  async function handleUpdateExperience(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editingExp) return;
+    setLoading(true);
+    try {
+      const payload = {
+        company: editExpCompany.trim(),
+        role: editExpRole.trim(),
+        location: editExpLocation.trim(),
+        startDate: editExpStartDate || null,
+        endDate: editExpEndDate || null,
+        bullets: editExpBullets
+          .split("\n")
+          .map((b) => b.trim())
+          .filter(Boolean)
+          .map((content, idx) => ({
+            id: editingExp.bullets[idx]?.id || crypto.randomUUID(),
+            content,
+            isHidden: editingExp.bullets[idx]?.isHidden || false,
+            hasMetrics: editingExp.bullets[idx]?.hasMetrics || false,
+          })),
+      };
+
+      const res = await fetch(`/api/profile/experiences/${editingExp.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (res.ok) {
+        const updated: WorkExperience = await res.json();
+        setProfile((prev) => ({
+          ...prev,
+          experiences: prev.experiences.map((exp) => (exp.id === updated.id ? updated : exp)),
+        }));
+        setEditingExp(null);
+        flashSuccess("Experience updated");
+      }
+    } catch (err) {
+      console.error("Failed to update experience", err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // Edit Handlers for Project
+  function startEditProject(proj: Project) {
+    setEditingProj(proj);
+    setEditProjName(proj.name);
+    setEditProjDesc(proj.description || "");
+    setEditProjTech(proj.technologies.join(", "));
+    setEditProjLive(proj.liveUrl || "");
+    setEditProjRepo(proj.repoUrl || "");
+  }
+
+  async function handleUpdateProject(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editingProj) return;
+    setLoading(true);
+    try {
+      const payload = {
+        name: editProjName.trim(),
+        description: editProjDesc.trim(),
+        technologies: editProjTech.split(",").map((t) => t.trim()).filter(Boolean),
+        liveUrl: editProjLive.trim(),
+        repoUrl: editProjRepo.trim(),
+      };
+
+      const res = await fetch(`/api/profile/projects/${editingProj.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (res.ok) {
+        const updated: Project = await res.json();
+        setProfile((prev) => ({
+          ...prev,
+          projects: prev.projects.map((p) => (p.id === updated.id ? updated : p)),
+        }));
+        setEditingProj(null);
+        flashSuccess("Project updated");
+      }
+    } catch (err) {
+      console.error("Failed to update project", err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // Edit Handlers for Certification
+  function startEditCert(cert: Certification) {
+    setEditingCert(cert);
+    setEditCertName(cert.name);
+    setEditCertIssuer(cert.issuer || "");
+    setEditCertHours(cert.hours || "");
+    setEditCertCredentialId(cert.credentialId || "");
+  }
+
+  async function handleUpdateCert(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editingCert) return;
+    setLoading(true);
+    try {
+      const payload = {
+        name: editCertName.trim(),
+        issuer: editCertIssuer.trim(),
+        hours: editCertHours.trim(),
+        credentialId: editCertCredentialId.trim(),
+      };
+
+      const res = await fetch(`/api/profile/certifications/${editingCert.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (res.ok) {
+        const updated: Certification = await res.json();
+        setProfile((prev) => ({
+          ...prev,
+          certifications: (prev.certifications || []).map((c) => (c.id === updated.id ? updated : c)),
+        }));
+        setEditingCert(null);
+        flashSuccess("Certification updated");
+      }
+    } catch (err) {
+      console.error("Failed to update certification", err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // Edit Handlers for Skill
+  function startEditSkill(skill: SkillItem) {
+    setEditingSkill(skill);
+    setEditSkillName(skill.name);
+    setEditSkillCat(skill.category);
+  }
+
+  async function handleUpdateSkill(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editingSkill) return;
+    setLoading(true);
+    try {
+      const payload = {
+        name: editSkillName.trim(),
+        category: editSkillCat,
+      };
+
+      const res = await fetch(`/api/profile/skills/${editingSkill.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (res.ok) {
+        const updated: SkillItem = await res.json();
+        setProfile((prev) => ({
+          ...prev,
+          skills: prev.skills.map((s) => (s.id === updated.id ? updated : s)),
+        }));
+        setEditingSkill(null);
+        flashSuccess("Skill updated");
+      }
+    } catch (err) {
+      console.error("Failed to update skill", err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // Save Contact Info & Executive Summary
   async function handleSaveContact(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
@@ -395,6 +608,7 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
         location: contactLocation,
         linkedinUrl: contactLinkedin,
         githubUrl: contactGithub,
+        summary: contactSummary,
       };
 
       const res = await fetch("/api/profile/contact", {
@@ -406,7 +620,7 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
       if (res.ok) {
         const updated: Profile = await res.json();
         setProfile(updated);
-        flashSuccess("Contact details updated");
+        flashSuccess("Contact details & summary updated");
       }
     } catch (err) {
       console.error("Failed to update contact info", err);
@@ -643,65 +857,161 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
                     exp.isHidden ? "opacity-50 bg-muted/30" : ""
                   }`}
                 >
-                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-bold text-base">{exp.role}</h3>
-                        <span className="text-muted-foreground font-normal">at</span>
-                        <span className="font-semibold">{exp.company}</span>
-                        {exp.isHidden && (
-                          <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-muted text-muted-foreground">
-                            Hidden from resumes
-                          </span>
-                        )}
+                  {editingExp?.id === exp.id ? (
+                    <form onSubmit={handleUpdateExperience} className="space-y-4">
+                      <div className="flex items-center justify-between border-b pb-2">
+                        <div className="flex items-center gap-1.5 font-bold text-sm text-primary">
+                          <Pencil className="w-4 h-4" />
+                          <span>Edit Work Experience</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setEditingExp(null)}
+                          className="p-1 rounded-lg hover:bg-muted text-muted-foreground"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
                       </div>
-                      <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                        {exp.location && (
-                          <span className="inline-flex items-center gap-1">
-                            <MapPin className="w-3 h-3" />
-                            {exp.location}
-                          </span>
-                        )}
-                        <span className="inline-flex items-center gap-1">
-                          <Calendar className="w-3 h-3" />
-                          {exp.startDate || "N/A"} - {exp.endDate || "Present"}
-                        </span>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <input
+                          required
+                          placeholder="Job Title / Role"
+                          value={editExpRole}
+                          onChange={(e) => setEditExpRole(e.target.value)}
+                          className="px-3 py-2 text-sm rounded-lg border bg-background"
+                        />
+                        <input
+                          required
+                          placeholder="Company Name"
+                          value={editExpCompany}
+                          onChange={(e) => setEditExpCompany(e.target.value)}
+                          className="px-3 py-2 text-sm rounded-lg border bg-background"
+                        />
+                        <input
+                          placeholder="Location (e.g. Cebu City, Philippines)"
+                          value={editExpLocation}
+                          onChange={(e) => setEditExpLocation(e.target.value)}
+                          className="px-3 py-2 text-sm rounded-lg border bg-background"
+                        />
+                        <div className="grid grid-cols-2 gap-2">
+                          <input
+                            type="text"
+                            placeholder="Start (YYYY-MM-DD)"
+                            value={editExpStartDate}
+                            onChange={(e) => setEditExpStartDate(e.target.value)}
+                            className="px-3 py-2 text-sm rounded-lg border bg-background"
+                          />
+                          <input
+                            type="text"
+                            placeholder="End (YYYY-MM-DD or empty)"
+                            value={editExpEndDate}
+                            onChange={(e) => setEditExpEndDate(e.target.value)}
+                            className="px-3 py-2 text-sm rounded-lg border bg-background"
+                          />
+                        </div>
                       </div>
-                    </div>
 
-                    {/* Actions: Hide Toggle & Delete */}
-                    <div className="flex items-center gap-1.5 self-end sm:self-auto">
-                      <button
-                        onClick={() => toggleExperience(exp.id)}
-                        className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
-                          exp.isHidden
-                            ? "bg-muted text-muted-foreground hover:bg-muted/80"
-                            : "bg-background text-foreground hover:bg-muted"
-                        }`}
-                        title={exp.isHidden ? "Show in resumes" : "Hide from resumes"}
-                      >
-                        {exp.isHidden ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5 text-primary" />}
-                        <span className="hidden sm:inline">{exp.isHidden ? "Hidden" : "Visible"}</span>
-                      </button>
+                      <div className="space-y-1">
+                        <label className="text-xs font-medium text-muted-foreground">Bullet Points (one per line)</label>
+                        <textarea
+                          rows={4}
+                          value={editExpBullets}
+                          onChange={(e) => setEditExpBullets(e.target.value)}
+                          className="w-full px-3 py-2 text-sm rounded-lg border bg-background"
+                        />
+                      </div>
 
-                      <button
-                        onClick={() => deleteExperience(exp.id)}
-                        className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
-                        title="Delete"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
+                      <div className="flex justify-end gap-2 pt-1">
+                        <button
+                          type="button"
+                          onClick={() => setEditingExp(null)}
+                          className="px-3.5 py-1.5 text-xs font-semibold rounded-lg border hover:bg-muted"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="submit"
+                          disabled={loading}
+                          className="inline-flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                        >
+                          <Save className="w-3.5 h-3.5" />
+                          <span>{loading ? "Saving..." : "Save Changes"}</span>
+                        </button>
+                      </div>
+                    </form>
+                  ) : (
+                    <>
+                      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-bold text-base">{exp.role}</h3>
+                            <span className="text-muted-foreground font-normal">at</span>
+                            <span className="font-semibold">{exp.company}</span>
+                            {exp.isHidden && (
+                              <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-muted text-muted-foreground">
+                                Hidden from resumes
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                            {exp.location && (
+                              <span className="inline-flex items-center gap-1">
+                                <MapPin className="w-3 h-3" />
+                                {exp.location}
+                              </span>
+                            )}
+                            <span className="inline-flex items-center gap-1">
+                              <Calendar className="w-3 h-3" />
+                              {exp.startDate || "N/A"} - {exp.endDate || "Present"}
+                            </span>
+                          </div>
+                        </div>
 
-                  {exp.bullets.length > 0 && (
-                    <ul className="mt-3 space-y-1.5 list-disc list-inside text-sm text-muted-foreground">
-                      {exp.bullets.map((b) => (
-                        <li key={b.id} className={b.isHidden ? "line-through opacity-40" : ""}>
-                          {b.content}
-                        </li>
-                      ))}
-                    </ul>
+                        {/* Actions: Edit, Hide Toggle & Delete */}
+                        <div className="flex items-center gap-1.5 self-end sm:self-auto">
+                          <button
+                            onClick={() => startEditExperience(exp)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold border bg-background text-foreground hover:bg-muted transition-colors"
+                            title="Edit this experience"
+                          >
+                            <Pencil className="w-3.5 h-3.5 text-primary" />
+                            <span className="hidden sm:inline">Edit</span>
+                          </button>
+
+                          <button
+                            onClick={() => toggleExperience(exp.id)}
+                            className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+                              exp.isHidden
+                                ? "bg-muted text-muted-foreground hover:bg-muted/80"
+                                : "bg-background text-foreground hover:bg-muted"
+                            }`}
+                            title={exp.isHidden ? "Show in resumes" : "Hide from resumes"}
+                          >
+                            {exp.isHidden ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5 text-primary" />}
+                            <span className="hidden sm:inline">{exp.isHidden ? "Hidden" : "Visible"}</span>
+                          </button>
+
+                          <button
+                            onClick={() => deleteExperience(exp.id)}
+                            className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
+                            title="Delete"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+
+                      {exp.bullets.length > 0 && (
+                        <ul className="mt-3 space-y-1.5 list-disc list-inside text-sm text-muted-foreground">
+                          {exp.bullets.map((b) => (
+                            <li key={b.id} className={b.isHidden ? "line-through opacity-40" : ""}>
+                              {b.content}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </>
                   )}
                 </div>
               ))}
@@ -793,61 +1103,143 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
                     proj.isHidden ? "opacity-50 bg-muted/30" : ""
                   }`}
                 >
-                  <div className="space-y-2">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="space-y-0.5">
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-bold text-base">{proj.name}</h3>
-                          {proj.isHidden && (
-                            <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-muted text-muted-foreground">
-                              Hidden
-                            </span>
-                          )}
+                  {editingProj?.id === proj.id ? (
+                    <form onSubmit={handleUpdateProject} className="space-y-3">
+                      <div className="flex items-center justify-between border-b pb-2">
+                        <div className="flex items-center gap-1.5 font-bold text-sm text-primary">
+                          <Pencil className="w-4 h-4" />
+                          <span>Edit Project</span>
                         </div>
-                        {proj.liveUrl && (
-                          <a
-                            href={proj.liveUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
-                          >
-                            <Globe className="w-3 h-3" />
-                            <span>Live Demo</span>
-                          </a>
+                        <button
+                          type="button"
+                          onClick={() => setEditingProj(null)}
+                          className="p-1 rounded-lg hover:bg-muted text-muted-foreground"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+
+                      <div className="space-y-2">
+                        <input
+                          required
+                          placeholder="Project Name"
+                          value={editProjName}
+                          onChange={(e) => setEditProjName(e.target.value)}
+                          className="w-full px-3 py-2 text-sm rounded-lg border bg-background"
+                        />
+                        <input
+                          placeholder="Technologies (comma-separated, e.g. React, Next.js, AWS)"
+                          value={editProjTech}
+                          onChange={(e) => setEditProjTech(e.target.value)}
+                          className="w-full px-3 py-2 text-sm rounded-lg border bg-background"
+                        />
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          <input
+                            placeholder="Live URL (optional)"
+                            value={editProjLive}
+                            onChange={(e) => setEditProjLive(e.target.value)}
+                            className="px-3 py-2 text-sm rounded-lg border bg-background"
+                          />
+                          <input
+                            placeholder="Repo URL (optional)"
+                            value={editProjRepo}
+                            onChange={(e) => setEditProjRepo(e.target.value)}
+                            className="px-3 py-2 text-sm rounded-lg border bg-background"
+                          />
+                        </div>
+                        <textarea
+                          placeholder="Project description and key impact"
+                          rows={2}
+                          value={editProjDesc}
+                          onChange={(e) => setEditProjDesc(e.target.value)}
+                          className="w-full px-3 py-2 text-sm rounded-lg border bg-background"
+                        />
+                      </div>
+
+                      <div className="flex justify-end gap-2 pt-1">
+                        <button
+                          type="button"
+                          onClick={() => setEditingProj(null)}
+                          className="px-3 py-1.5 text-xs font-semibold rounded-lg border hover:bg-muted"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="submit"
+                          disabled={loading}
+                          className="inline-flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                        >
+                          <Save className="w-3.5 h-3.5" />
+                          <span>{loading ? "Saving..." : "Save Changes"}</span>
+                        </button>
+                      </div>
+                    </form>
+                  ) : (
+                    <>
+                      <div className="space-y-2">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="space-y-0.5">
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-bold text-base">{proj.name}</h3>
+                              {proj.isHidden && (
+                                <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-muted text-muted-foreground">
+                                  Hidden
+                                </span>
+                              )}
+                            </div>
+                            {proj.liveUrl && (
+                              <a
+                                href={proj.liveUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                              >
+                                <Globe className="w-3 h-3" />
+                                <span>Live Demo</span>
+                              </a>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => startEditProject(proj)}
+                              className="p-1.5 text-muted-foreground hover:text-foreground rounded-lg transition-colors"
+                              title="Edit project"
+                            >
+                              <Pencil className="w-3.5 h-3.5 text-primary" />
+                            </button>
+                            <button
+                              onClick={() => toggleProject(proj.id)}
+                              className="p-1.5 text-muted-foreground hover:text-foreground rounded-lg transition-colors"
+                              title={proj.isHidden ? "Show in resumes" : "Hide from resumes"}
+                            >
+                              {proj.isHidden ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4 text-primary" />}
+                            </button>
+                            <button
+                              onClick={() => deleteProject(proj.id)}
+                              className="p-1.5 text-muted-foreground hover:text-destructive rounded-lg transition-colors"
+                              title="Delete"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+
+                        {proj.description && (
+                          <p className="text-xs text-muted-foreground">{proj.description}</p>
                         )}
                       </div>
 
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={() => toggleProject(proj.id)}
-                          className="p-1.5 text-muted-foreground hover:text-foreground rounded-lg transition-colors"
-                          title={proj.isHidden ? "Show in resumes" : "Hide from resumes"}
-                        >
-                          {proj.isHidden ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4 text-primary" />}
-                        </button>
-                        <button
-                          onClick={() => deleteProject(proj.id)}
-                          className="p-1.5 text-muted-foreground hover:text-destructive rounded-lg transition-colors"
-                          title="Delete"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-
-                    {proj.description && (
-                      <p className="text-xs text-muted-foreground">{proj.description}</p>
-                    )}
-                  </div>
-
-                  {proj.technologies.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 pt-2 border-t">
-                      {proj.technologies.map((t) => (
-                        <span key={t} className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-muted text-foreground">
-                          {t}
-                        </span>
-                      ))}
-                    </div>
+                      {proj.technologies.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 pt-2 border-t">
+                          {proj.technologies.map((t) => (
+                            <span key={t} className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-muted text-foreground">
+                              {t}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               ))}
@@ -946,44 +1338,117 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
                     cert.isHidden ? "opacity-50 bg-muted/30" : ""
                   }`}
                 >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <Award className="w-4 h-4 text-primary shrink-0" />
-                        <h3 className="font-bold text-sm leading-snug">{cert.name}</h3>
+                  {editingCert?.id === cert.id ? (
+                    <form onSubmit={handleUpdateCert} className="space-y-3">
+                      <div className="flex items-center justify-between border-b pb-1.5">
+                        <div className="flex items-center gap-1.5 font-bold text-xs text-primary">
+                          <Pencil className="w-3.5 h-3.5" />
+                          <span>Edit Certification</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setEditingCert(null)}
+                          className="p-1 rounded-lg hover:bg-muted text-muted-foreground"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
                       </div>
-                      <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                        {cert.issuer && <span>{cert.issuer}</span>}
-                        {cert.hours && (
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-primary/10 text-primary">
-                            {cert.hours}
-                          </span>
-                        )}
-                        {cert.credentialId && (
-                          <span className="text-[11px] font-mono opacity-80">
-                            ID: {cert.credentialId}
-                          </span>
-                        )}
-                      </div>
-                    </div>
 
-                    <div className="flex items-center gap-1 shrink-0">
-                      <button
-                        onClick={() => toggleCertification(cert.id)}
-                        className="p-1.5 text-muted-foreground hover:text-foreground rounded-lg transition-colors"
-                        title={cert.isHidden ? "Show in resumes" : "Hide from resumes"}
-                      >
-                        {cert.isHidden ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4 text-primary" />}
-                      </button>
-                      <button
-                        onClick={() => deleteCertification(cert.id)}
-                        className="p-1.5 text-muted-foreground hover:text-destructive rounded-lg transition-colors"
-                        title="Delete"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      <div className="space-y-2">
+                        <input
+                          required
+                          placeholder="Certification Name"
+                          value={editCertName}
+                          onChange={(e) => setEditCertName(e.target.value)}
+                          className="w-full px-3 py-1.5 rounded-lg border bg-background text-xs"
+                        />
+                        <input
+                          placeholder="Issuer (e.g. TESDA Accredited Training)"
+                          value={editCertIssuer}
+                          onChange={(e) => setEditCertIssuer(e.target.value)}
+                          className="w-full px-3 py-1.5 rounded-lg border bg-background text-xs"
+                        />
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          <input
+                            placeholder="Hours / Duration (e.g. 280 Hours)"
+                            value={editCertHours}
+                            onChange={(e) => setEditCertHours(e.target.value)}
+                            className="w-full px-3 py-1.5 rounded-lg border bg-background text-xs"
+                          />
+                          <input
+                            placeholder="Credential ID"
+                            value={editCertCredentialId}
+                            onChange={(e) => setEditCertCredentialId(e.target.value)}
+                            className="w-full px-3 py-1.5 rounded-lg border bg-background text-xs"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex justify-end gap-2 pt-1">
+                        <button
+                          type="button"
+                          onClick={() => setEditingCert(null)}
+                          className="px-3 py-1 text-xs font-semibold rounded-lg border hover:bg-muted"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="submit"
+                          disabled={loading}
+                          className="inline-flex items-center gap-1 px-3.5 py-1 text-xs font-semibold rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                        >
+                          <Save className="w-3.5 h-3.5" />
+                          <span>{loading ? "Saving..." : "Save"}</span>
+                        </button>
+                      </div>
+                    </form>
+                  ) : (
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <Award className="w-4 h-4 text-primary shrink-0" />
+                          <h3 className="font-bold text-sm leading-snug">{cert.name}</h3>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                          {cert.issuer && <span>{cert.issuer}</span>}
+                          {cert.hours && (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-primary/10 text-primary">
+                              {cert.hours}
+                            </span>
+                          )}
+                          {cert.credentialId && (
+                            <span className="text-[11px] font-mono opacity-80">
+                              ID: {cert.credentialId}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          onClick={() => startEditCert(cert)}
+                          className="p-1.5 text-muted-foreground hover:text-foreground rounded-lg transition-colors"
+                          title="Edit certification"
+                        >
+                          <Pencil className="w-3.5 h-3.5 text-primary" />
+                        </button>
+                        <button
+                          onClick={() => toggleCertification(cert.id)}
+                          className="p-1.5 text-muted-foreground hover:text-foreground rounded-lg transition-colors"
+                          title={cert.isHidden ? "Show in resumes" : "Hide from resumes"}
+                        >
+                          {cert.isHidden ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4 text-primary" />}
+                        </button>
+                        <button
+                          onClick={() => deleteCertification(cert.id)}
+                          className="p-1.5 text-muted-foreground hover:text-destructive rounded-lg transition-colors"
+                          title="Delete"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -1068,21 +1533,68 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
                               : "bg-background text-foreground"
                           }`}
                         >
-                          <span>{s.name}</span>
-                          <button
-                            onClick={() => toggleSkill(s.id)}
-                            className="p-0.5 hover:text-primary transition-colors"
-                            title={s.isHidden ? "Show in resumes" : "Hide from resumes"}
-                          >
-                            {s.isHidden ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3 text-muted-foreground" />}
-                          </button>
-                          <button
-                            onClick={() => deleteSkill(s.id)}
-                            className="p-0.5 hover:text-destructive transition-colors"
-                            title="Delete"
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </button>
+                          {editingSkill?.id === s.id ? (
+                            <form onSubmit={handleUpdateSkill} className="flex items-center gap-1">
+                              <input
+                                autoFocus
+                                value={editSkillName}
+                                onChange={(e) => setEditSkillName(e.target.value)}
+                                className="px-1.5 py-0.5 text-xs rounded border bg-background w-28"
+                              />
+                              <select
+                                value={editSkillCat}
+                                onChange={(e) => setEditSkillCat(e.target.value as SkillCategory)}
+                                className="px-1 py-0.5 text-xs rounded border bg-background"
+                              >
+                                <option value="languages">Languages</option>
+                                <option value="frameworks">Frameworks</option>
+                                <option value="cloud">Cloud</option>
+                                <option value="tools">Tools</option>
+                                <option value="soft">Soft</option>
+                              </select>
+                              <button
+                                type="submit"
+                                disabled={loading}
+                                className="p-1 rounded bg-primary text-primary-foreground hover:bg-primary/90"
+                                title="Save"
+                              >
+                                <Save className="w-3 h-3" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setEditingSkill(null)}
+                                className="p-1 rounded border hover:bg-muted"
+                                title="Cancel"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            </form>
+                          ) : (
+                            <>
+                              <span>{s.name}</span>
+                              <button
+                                onClick={() => startEditSkill(s)}
+                                className="p-0.5 hover:text-primary transition-colors"
+                                title="Edit skill"
+                              >
+                                <Pencil className="w-3 h-3 text-muted-foreground" />
+                              </button>
+                              <button
+                                onClick={() => toggleSkill(s.id)}
+                                className="p-0.5 hover:text-primary transition-colors"
+                                title={s.isHidden ? "Show in resumes" : "Hide from resumes"}
+                              >
+                                {s.isHidden ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3 text-muted-foreground" />}
+                              </button>
+                              <button
+                                onClick={() => deleteSkill(s.id)}
+                                className="p-0.5 hover:text-destructive transition-colors"
+                                title="Delete"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            </>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -1173,6 +1685,17 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
                 className="w-full px-3 py-2 text-sm rounded-lg border bg-background"
               />
             </div>
+
+            <div className="space-y-1 sm:col-span-2">
+              <label className="text-xs font-medium">Executive Professional Summary</label>
+              <textarea
+                rows={4}
+                placeholder="Brief summary of your background, core strengths, and engineering career objectives..."
+                value={contactSummary}
+                onChange={(e) => setContactSummary(e.target.value)}
+                className="w-full px-3 py-2 text-sm rounded-lg border bg-background"
+              />
+            </div>
           </div>
 
           <div className="flex justify-end pt-2">
@@ -1182,7 +1705,7 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
               className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
             >
               {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-              <span>Save Contact Details</span>
+              <span>Save Contact & Profile Details</span>
             </button>
           </div>
         </form>

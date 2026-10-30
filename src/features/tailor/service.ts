@@ -264,6 +264,57 @@ Return ONLY a valid JSON object matching the requested schema.`;
   }
 
   /**
+   * Updates an existing tailored resume (e.g. customized bullets, summary, skills).
+   */
+  async updateTailoredResume(
+    userId: string,
+    resumeId: string,
+    updates: {
+      tailoredSummary?: string;
+      tailoredExperiences?: WorkExperience[];
+      tailoredProjects?: Project[];
+      tailoredCertifications?: Certification[];
+      selectedSkills?: SkillItem[];
+    }
+  ): Promise<TailoredResume> {
+    const resume = await this.repo.getTailoredResume(userId, resumeId);
+    if (!resume) throw AppError.notFound("Tailored resume not found");
+
+    if (updates.tailoredSummary !== undefined) {
+      resume.tailoredSummary = updates.tailoredSummary;
+    }
+    if (updates.tailoredExperiences !== undefined) {
+      resume.tailoredExperiences = updates.tailoredExperiences;
+    }
+    if (updates.tailoredProjects !== undefined) {
+      resume.tailoredProjects = updates.tailoredProjects;
+    }
+    if (updates.tailoredCertifications !== undefined) {
+      resume.tailoredCertifications = updates.tailoredCertifications;
+    }
+    if (updates.selectedSkills !== undefined) {
+      resume.selectedSkills = updates.selectedSkills;
+    }
+
+    const profile = await this.profService.getOrCreateProfile(userId);
+
+    // Re-generate markdown representation
+    resume.markdownContent = this.generateMarkdown({
+      profile,
+      summary: resume.tailoredSummary,
+      experiences: resume.tailoredExperiences,
+      projects: resume.tailoredProjects,
+      certifications: resume.tailoredCertifications || [],
+      skills: resume.selectedSkills,
+    });
+
+    resume.updatedAt = nowIso();
+
+    const validated = tailoredResumeSchema.parse(resume);
+    return await this.repo.saveTailoredResume(validated);
+  }
+
+  /**
    * Boosts a weak bullet point into the Google XYZ formula:
    * "Accomplished [X] as measured by [Y] by doing [Z]"
    */

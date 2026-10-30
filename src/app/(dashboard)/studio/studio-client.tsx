@@ -18,7 +18,11 @@ import {
   Copy,
   Check,
   History,
-  Award
+  Award,
+  Pencil,
+  Plus,
+  Trash2,
+  Save
 } from "lucide-react";
 import { Profile } from "@/features/profile/schema";
 import { JobOpportunity, TailoredResume, PageBudget, TypographyPreset, ResumeStatus } from "@/features/tailor/schema";
@@ -76,6 +80,40 @@ export function StudioClient({ profile, savedResumes = [], savedJobs = {} }: Stu
   } | null>(null);
   const [generatingBooster, setGeneratingBooster] = useState(false);
   const [copiedBooster, setCopiedBooster] = useState<string | null>(null);
+
+  // Resume Direct Editing State
+  const [editingSummary, setEditingSummary] = useState(false);
+  const [tempSummary, setTempSummary] = useState("");
+  const [editingBulletKey, setEditingBulletKey] = useState<string | null>(null);
+  const [editBulletText, setEditBulletText] = useState("");
+  const [addingBulletForRole, setAddingBulletForRole] = useState<number | null>(null);
+  const [newRoleBulletText, setNewRoleBulletText] = useState("");
+  const [savingEdits, setSavingEdits] = useState(false);
+  const [savedEditsSuccess, setSavedEditsSuccess] = useState(false);
+
+  async function saveResumeEdits(updates: Partial<Pick<TailoredResume, "tailoredSummary" | "tailoredExperiences" | "tailoredProjects" | "tailoredCertifications" | "selectedSkills">>) {
+    if (!tailoredResume) return;
+    setSavingEdits(true);
+    try {
+      const res = await fetch(`/api/tailor/resumes/${tailoredResume.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updates),
+      });
+
+      if (res.ok) {
+        const updated: TailoredResume = await res.json();
+        setTailoredResume(updated);
+        setResumesList((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
+        setSavedEditsSuccess(true);
+        setTimeout(() => setSavedEditsSuccess(false), 2000);
+      }
+    } catch (err) {
+      console.error("Failed to save resume edits", err);
+    } finally {
+      setSavingEdits(false);
+    }
+  }
 
   // Submit Job Description & Tailor
   async function handleAnalyzeAndTailor(e: React.FormEvent) {
@@ -155,7 +193,7 @@ export function StudioClient({ profile, savedResumes = [], savedJobs = {} }: Stu
         updatedExperiences[boostingBullet.roleIndex].bullets[boostingBullet.bulletIndex].content = boostedBullet;
         updatedExperiences[boostingBullet.roleIndex].bullets[boostingBullet.bulletIndex].hasMetrics = true;
 
-        setTailoredResume((prev) => (prev ? { ...prev, tailoredExperiences: updatedExperiences } : null));
+        await saveResumeEdits({ tailoredExperiences: updatedExperiences });
         setBoostingBullet(null);
         setBoostMetrics("");
       }
@@ -548,6 +586,13 @@ export function StudioClient({ profile, savedResumes = [], savedJobs = {} }: Stu
                 <Sparkles className="w-3.5 h-3.5" />
                 <span>AI Boosters</span>
               </button>
+
+              {savedEditsSuccess && (
+                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-500/20 animate-in fade-in">
+                  <Check className="w-3.5 h-3.5" />
+                  Saved
+                </span>
+              )}
             </div>
           </div>
 
@@ -691,12 +736,57 @@ export function StudioClient({ profile, savedResumes = [], savedJobs = {} }: Stu
 
                 {/* Tailored Executive Summary */}
                 <div className="space-y-1.5">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-primary">
-                    Tailored Professional Summary
-                  </h3>
-                  <p className="text-xs sm:text-sm text-foreground leading-relaxed p-3 rounded-xl bg-primary/5 border border-primary/10">
-                    {tailoredResume.tailoredSummary}
-                  </p>
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-primary">
+                      Tailored Professional Summary
+                    </h3>
+                    {!editingSummary ? (
+                      <button
+                        onClick={() => {
+                          setTempSummary(tailoredResume.tailoredSummary);
+                          setEditingSummary(true);
+                        }}
+                        className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary hover:underline"
+                        title="Edit tailored summary"
+                      >
+                        <Pencil className="w-3 h-3" />
+                        <span>Edit Summary</span>
+                      </button>
+                    ) : (
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={() => setEditingSummary(false)}
+                          className="px-2 py-0.5 text-[11px] rounded border hover:bg-muted"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={async () => {
+                            await saveResumeEdits({ tailoredSummary: tempSummary.trim() });
+                            setEditingSummary(false);
+                          }}
+                          disabled={savingEdits || !tempSummary.trim()}
+                          className="inline-flex items-center gap-1 px-2.5 py-0.5 text-[11px] font-semibold rounded bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                        >
+                          <Save className="w-3 h-3" />
+                          <span>{savingEdits ? "Saving..." : "Save"}</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {editingSummary ? (
+                    <textarea
+                      rows={3}
+                      value={tempSummary}
+                      onChange={(e) => setTempSummary(e.target.value)}
+                      className="w-full p-3 text-xs sm:text-sm rounded-xl border bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    />
+                  ) : (
+                    <p className="text-xs sm:text-sm text-foreground leading-relaxed p-3 rounded-xl bg-primary/5 border border-primary/10">
+                      {tailoredResume.tailoredSummary}
+                    </p>
+                  )}
                 </div>
 
                 {/* Tailored Work Experiences */}
@@ -714,20 +804,160 @@ export function StudioClient({ profile, savedResumes = [], savedJobs = {} }: Stu
                         </div>
 
                         <ul className="space-y-2 text-xs sm:text-sm text-muted-foreground pl-2">
-                          {exp.bullets.map((b, bulletIdx) => (
-                            <li key={b.id} className="group flex items-start justify-between gap-2">
-                              <span className="flex-1 text-foreground">• {b.content}</span>
-                              <button
-                                onClick={() => setBoostingBullet({ roleIndex: roleIdx, bulletIndex: bulletIdx, content: b.content })}
-                                className="opacity-0 group-hover:opacity-100 transition-opacity inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-primary/10 text-primary hover:bg-primary/20 shrink-0"
-                                title="Boost this bullet using Google XYZ formula"
-                              >
-                                <Wand2 className="w-3 h-3" />
-                                <span>Boost XYZ</span>
-                              </button>
-                            </li>
-                          ))}
+                          {exp.bullets.map((b, bulletIdx) => {
+                            const bulletKey = `${roleIdx}-${bulletIdx}`;
+                            const isEditing = editingBulletKey === bulletKey;
+
+                            return (
+                              <li key={b.id} className="space-y-1">
+                                {isEditing ? (
+                                  <div className="flex items-center gap-2 p-1.5 rounded-lg border bg-background">
+                                    <input
+                                      autoFocus
+                                      value={editBulletText}
+                                      onChange={(e) => setEditBulletText(e.target.value)}
+                                      onKeyDown={async (e) => {
+                                        if (e.key === "Enter" && editBulletText.trim()) {
+                                          e.preventDefault();
+                                          const updated = [...tailoredResume.tailoredExperiences];
+                                          updated[roleIdx].bullets[bulletIdx].content = editBulletText.trim();
+                                          await saveResumeEdits({ tailoredExperiences: updated });
+                                          setEditingBulletKey(null);
+                                        }
+                                      }}
+                                      className="flex-1 px-2 py-1 text-xs sm:text-sm rounded border bg-background"
+                                    />
+                                    <button
+                                      onClick={async () => {
+                                        if (!editBulletText.trim()) return;
+                                        const updated = [...tailoredResume.tailoredExperiences];
+                                        updated[roleIdx].bullets[bulletIdx].content = editBulletText.trim();
+                                        await saveResumeEdits({ tailoredExperiences: updated });
+                                        setEditingBulletKey(null);
+                                      }}
+                                      disabled={savingEdits || !editBulletText.trim()}
+                                      className="p-1 rounded bg-primary text-primary-foreground hover:bg-primary/90"
+                                      title="Save bullet"
+                                    >
+                                      <Check className="w-3.5 h-3.5" />
+                                    </button>
+                                    <button
+                                      onClick={() => setEditingBulletKey(null)}
+                                      className="p-1 rounded border hover:bg-muted"
+                                      title="Cancel"
+                                    >
+                                      <X className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <div className="group flex items-start justify-between gap-2">
+                                    <span className="flex-1 text-foreground leading-relaxed">• {b.content}</span>
+                                    <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 shrink-0">
+                                      <button
+                                        onClick={() => {
+                                          setEditingBulletKey(bulletKey);
+                                          setEditBulletText(b.content);
+                                        }}
+                                        className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted"
+                                        title="Edit this bullet point directly"
+                                      >
+                                        <Pencil className="w-3 h-3" />
+                                      </button>
+                                      <button
+                                        onClick={() => setBoostingBullet({ roleIndex: roleIdx, bulletIndex: bulletIdx, content: b.content })}
+                                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-primary/10 text-primary hover:bg-primary/20"
+                                        title="Boost this bullet using Google XYZ formula"
+                                      >
+                                        <Wand2 className="w-3 h-3" />
+                                        <span>XYZ</span>
+                                      </button>
+                                      <button
+                                        onClick={async () => {
+                                          const updated = [...tailoredResume.tailoredExperiences];
+                                          updated[roleIdx].bullets.splice(bulletIdx, 1);
+                                          await saveResumeEdits({ tailoredExperiences: updated });
+                                        }}
+                                        className="p-1 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                        title="Remove bullet from this tailored resume"
+                                      >
+                                        <Trash2 className="w-3 h-3" />
+                                      </button>
+                                    </div>
+                                  </div>
+                                )}
+                              </li>
+                            );
+                          })}
                         </ul>
+
+                        {/* Inline Add Bullet for this Role */}
+                        {addingBulletForRole === roleIdx ? (
+                          <div className="flex items-center gap-2 pl-2 pt-1">
+                            <input
+                              autoFocus
+                              placeholder="Write custom bullet point for this job application..."
+                              value={newRoleBulletText}
+                              onChange={(e) => setNewRoleBulletText(e.target.value)}
+                              onKeyDown={async (e) => {
+                                if (e.key === "Enter" && newRoleBulletText.trim()) {
+                                  e.preventDefault();
+                                  const updated = [...tailoredResume.tailoredExperiences];
+                                  updated[roleIdx].bullets.push({
+                                    id: crypto.randomUUID(),
+                                    content: newRoleBulletText.trim(),
+                                    isHidden: false,
+                                    hasMetrics: false,
+                                  });
+                                  await saveResumeEdits({ tailoredExperiences: updated });
+                                  setNewRoleBulletText("");
+                                  setAddingBulletForRole(null);
+                                }
+                              }}
+                              className="flex-1 px-2.5 py-1 text-xs rounded-lg border bg-background"
+                            />
+                            <button
+                              onClick={async () => {
+                                if (!newRoleBulletText.trim()) return;
+                                const updated = [...tailoredResume.tailoredExperiences];
+                                updated[roleIdx].bullets.push({
+                                  id: crypto.randomUUID(),
+                                  content: newRoleBulletText.trim(),
+                                  isHidden: false,
+                                  hasMetrics: false,
+                                });
+                                await saveResumeEdits({ tailoredExperiences: updated });
+                                setNewRoleBulletText("");
+                                setAddingBulletForRole(null);
+                              }}
+                              disabled={savingEdits || !newRoleBulletText.trim()}
+                              className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                            >
+                              Add
+                            </button>
+                            <button
+                              onClick={() => {
+                                setAddingBulletForRole(null);
+                                setNewRoleBulletText("");
+                              }}
+                              className="p-1 rounded-lg border hover:bg-muted text-muted-foreground"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="pl-2 pt-1">
+                            <button
+                              onClick={() => {
+                                setAddingBulletForRole(roleIdx);
+                                setNewRoleBulletText("");
+                              }}
+                              className="inline-flex items-center gap-1 text-[11px] font-semibold text-muted-foreground hover:text-primary transition-colors"
+                            >
+                              <Plus className="w-3 h-3" />
+                              <span>Add Bullet Point</span>
+                            </button>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>

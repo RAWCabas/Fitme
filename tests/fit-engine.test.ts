@@ -146,4 +146,16 @@ Requirements:
     const interviewResume = await tailorService.updateResumeStatus(userId, resume.id, "interview");
     expect(interviewResume.status).toBe("interview");
   });
+
+  it("updates tailored resume content directly", async () => {
+    const job = await tailorService.parseJobDescription(userId, "Stripe\nBackend Engineer");
+    const resume = await tailorService.tailorResume(userId, job.id);
+
+    const updated = await tailorService.updateTailoredResume(userId, resume.id, {
+      tailoredSummary: "Customized executive summary tailored specifically for Stripe payments team.",
+    });
+
+    expect(updated.tailoredSummary).toBe("Customized executive summary tailored specifically for Stripe payments team.");
+    expect(updated.markdownContent).toContain("Customized executive summary tailored specifically for Stripe payments team.");
+  });
 });
