@@ -3,8 +3,26 @@ import packageJson from "../../package.json";
 export type DataStoreType = "memory" | "dynamo";
 
 export function getDataStore(): DataStoreType {
-  const store = process.env.DATA_STORE?.toLowerCase();
-  return store === "dynamo" ? "dynamo" : "memory";
+  const store = (process.env.FITME_DATA_STORE || process.env.DATA_STORE)?.toLowerCase();
+  if (store === "dynamo") return "dynamo";
+  if (store === "memory") return "memory";
+
+  // In test environments, default to in-memory unless explicitly overridden
+  if (process.env.NODE_ENV === "test" || process.env.VITEST) {
+    return "memory";
+  }
+
+  // In production (Amplify SSR) or when AWS credentials/table are configured, use DynamoDB
+  if (
+    getAwsCredentials() ||
+    process.env.DYNAMODB_TABLE_NAME ||
+    process.env.AWS_BRANCH ||
+    process.env.NODE_ENV === "production"
+  ) {
+    return "dynamo";
+  }
+
+  return "memory";
 }
 
 export function getVersion(): string {

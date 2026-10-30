@@ -37,3 +37,18 @@ export async function PUT(
   }
 }
 
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await requireSession();
+    const { id } = await params;
+
+    await tailorService.deleteTailoredResume(session.userId, id);
+    return jsonResponse({ success: true, deletedId: id });
+  } catch (error) {
+    return errorResponse(error);
+  }
+}
+

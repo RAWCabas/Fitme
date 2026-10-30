@@ -242,6 +242,7 @@ Return ONLY a valid JSON object matching the requested schema.`;
       id: crypto.randomUUID(),
       userId,
       jobOpportunityId: jobId,
+      title: `${job.role} - v${versionNumber}`,
       versionNumber,
       status: "draft",
       preset,
@@ -270,6 +271,7 @@ Return ONLY a valid JSON object matching the requested schema.`;
     userId: string,
     resumeId: string,
     updates: {
+      title?: string;
       tailoredSummary?: string;
       tailoredExperiences?: WorkExperience[];
       tailoredProjects?: Project[];
@@ -280,6 +282,9 @@ Return ONLY a valid JSON object matching the requested schema.`;
     const resume = await this.repo.getTailoredResume(userId, resumeId);
     if (!resume) throw AppError.notFound("Tailored resume not found");
 
+    if (updates.title !== undefined) {
+      resume.title = updates.title;
+    }
     if (updates.tailoredSummary !== undefined) {
       resume.tailoredSummary = updates.tailoredSummary;
     }
@@ -312,6 +317,14 @@ Return ONLY a valid JSON object matching the requested schema.`;
 
     const validated = tailoredResumeSchema.parse(resume);
     return await this.repo.saveTailoredResume(validated);
+  }
+
+  /**
+   * Deletes an existing tailored resume.
+   */
+  async deleteTailoredResume(userId: string, resumeId: string): Promise<void> {
+    if (!userId) throw AppError.unauthorized();
+    await this.repo.deleteTailoredResume(userId, resumeId);
   }
 
   /**

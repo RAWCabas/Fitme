@@ -11,6 +11,7 @@ export interface TailorRepo {
   getTailoredResume(userId: string, id: string): Promise<TailoredResume | null>;
   listTailoredResumes(userId: string, jobId?: string): Promise<TailoredResume[]>;
   updateResumeStatus(userId: string, id: string, status: ResumeStatus): Promise<TailoredResume>;
+  deleteTailoredResume(userId: string, id: string): Promise<void>;
 }
 
 export class MemoryTailorRepo implements TailorRepo {
@@ -35,7 +36,12 @@ export class MemoryTailorRepo implements TailorRepo {
   }
 
   async getTailoredResume(userId: string, id: string): Promise<TailoredResume | null> {
-    const found = this.resumes.get(`${userId}#${id}`);
+    const cleanId = id.trim();
+    const hyphenId = cleanId.replace(/\s+/g, "-");
+    let found = this.resumes.get(`${userId}#${cleanId}`);
+    if (!found && hyphenId !== cleanId) {
+      found = this.resumes.get(`${userId}#${hyphenId}`);
+    }
     return found ? JSON.parse(JSON.stringify(found)) : null;
   }
 
@@ -59,6 +65,13 @@ export class MemoryTailorRepo implements TailorRepo {
     resume.status = status;
     resume.updatedAt = nowIso();
     return await this.saveTailoredResume(resume);
+  }
+
+  async deleteTailoredResume(userId: string, id: string): Promise<void> {
+    const cleanId = id.trim();
+    const hyphenId = cleanId.replace(/\s+/g, "-");
+    this.resumes.delete(`${userId}#${cleanId}`);
+    this.resumes.delete(`${userId}#${hyphenId}`);
   }
 
   clear(): void {

@@ -57,6 +57,7 @@ export const tailoredResumeSchema = z.strictObject({
   id: z.string().uuid(),
   userId: z.string().min(1),
   jobOpportunityId: z.string().uuid(),
+  title: text(150).optional().default(""),
   versionNumber: z.number().int().positive().default(1),
   status: resumeStatusSchema.default("draft"),
   preset: typographyPresetSchema.default("modern_standard"),

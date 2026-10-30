@@ -96,6 +96,7 @@ describe("Fit Studio UI: StudioClient", () => {
       id: "res-123",
       userId: "user_test_ui",
       jobOpportunityId: "job-123",
+      title: "Hardware & Software Engineer",
       versionNumber: 1,
       status: "draft" as const,
       preset: "cabas_executive" as const,
@@ -156,7 +157,7 @@ describe("Fit Studio UI: StudioClient", () => {
       />
     );
 
-    expect(screen.getByText("Hardware & Software Engineer")).toBeDefined();
+    expect(screen.getAllByText("Hardware & Software Engineer").length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText("InnovateTech")).toBeDefined();
     expect(screen.getByText("Certifications & Trainings")).toBeDefined();
     expect(screen.getByText("TESDA Computer Systems Servicing NC II")).toBeDefined();

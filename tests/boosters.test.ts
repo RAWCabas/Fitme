@@ -85,6 +85,7 @@ const mockResume: TailoredResume = {
   id: "3fa85f64-5717-4562-b3fc-2c963f66afa6",
   userId: "user_booster_test",
   jobOpportunityId: mockJob.id,
+  title: "Staff Cloud Infrastructure Engineer",
   versionNumber: 1,
   status: "draft",
   preset: "modern_standard",

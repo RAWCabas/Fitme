@@ -147,15 +147,29 @@ Requirements:
     expect(interviewResume.status).toBe("interview");
   });
 
-  it("updates tailored resume content directly", async () => {
+  it("updates tailored resume content and title directly", async () => {
     const job = await tailorService.parseJobDescription(userId, "Stripe\nBackend Engineer");
     const resume = await tailorService.tailorResume(userId, job.id);
 
     const updated = await tailorService.updateTailoredResume(userId, resume.id, {
+      title: "Senior Payments Infrastructure Engineer",
       tailoredSummary: "Customized executive summary tailored specifically for Stripe payments team.",
     });
 
+    expect(updated.title).toBe("Senior Payments Infrastructure Engineer");
     expect(updated.tailoredSummary).toBe("Customized executive summary tailored specifically for Stripe payments team.");
     expect(updated.markdownContent).toContain("Customized executive summary tailored specifically for Stripe payments team.");
+  });
+
+  it("deletes tailored resume via tailor service", async () => {
+    const job = await tailorService.parseJobDescription(userId, "Apple\nFirmware Engineer");
+    const resume = await tailorService.tailorResume(userId, job.id);
+
+    const foundBefore = await tailorRepo.getTailoredResume(userId, resume.id);
+    expect(foundBefore).not.toBeNull();
+
+    await tailorService.deleteTailoredResume(userId, resume.id);
+    const foundAfter = await tailorRepo.getTailoredResume(userId, resume.id);
+    expect(foundAfter).toBeNull();
   });
 });

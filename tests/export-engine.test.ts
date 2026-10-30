@@ -48,6 +48,7 @@ const mockResume: TailoredResume = {
   id: "3fa85f64-5717-4562-b3fc-2c963f66afa6",
   userId: "user_export_test",
   jobOpportunityId: "1fa85f64-5717-4562-b3fc-2c963f66afa1",
+  title: "Principal Systems Engineer",
   versionNumber: 1,
   status: "draft",
   preset: "modern_standard",

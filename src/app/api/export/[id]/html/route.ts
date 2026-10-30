@@ -14,9 +14,13 @@ export async function GET(
   try {
     const session = await requireSession();
     const { id } = await params;
+    const cleanId = decodeURIComponent(id).trim().replace(/\s+/g, "-");
 
     const repo = getTailorRepo();
-    const resume = await repo.getTailoredResume(session.userId, id);
+    let resume = await repo.getTailoredResume(session.userId, cleanId);
+    if (!resume && cleanId !== id) {
+      resume = await repo.getTailoredResume(session.userId, id);
+    }
     if (!resume) {
       throw AppError.notFound("Tailored resume not found");
     }

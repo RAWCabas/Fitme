@@ -81,6 +81,9 @@ export class DynamoTailorRepo implements TailorRepo {
 
   async getTailoredResume(userId: string, id: string): Promise<TailoredResume | null> {
     const docClient = getDynamoDocClient();
+    const cleanId = id.trim();
+    const hyphenId = cleanId.replace(/\s+/g, "-");
+
     const queryResult = await docClient.query({
       TableName: this.tableName,
       KeyConditionExpression: "PK = :pk AND begins_with(SK, :skPrefix)",
@@ -92,7 +95,7 @@ export class DynamoTailorRepo implements TailorRepo {
 
     if (!queryResult.Items || queryResult.Items.length === 0) return null;
 
-    const matched = queryResult.Items.find((item) => item.id === id);
+    const matched = queryResult.Items.find((item) => item.id === cleanId || item.id === hyphenId);
     if (!matched) return null;
 
     const { PK, SK, entityType, GSI1PK, GSI1SK, ...domainData } = matched;
@@ -131,6 +134,20 @@ export class DynamoTailorRepo implements TailorRepo {
     resume.updatedAt = nowIso();
 
     return await this.saveTailoredResume(resume);
+  }
+
+  async deleteTailoredResume(userId: string, id: string): Promise<void> {
+    const docClient = getDynamoDocClient();
+    const resume = await this.getTailoredResume(userId, id);
+    if (!resume) return;
+
+    await docClient.delete({
+      TableName: this.tableName,
+      Key: {
+        PK: userPk(userId),
+        SK: resumeSk(resume.jobOpportunityId, resume.id),
+      },
+    });
   }
 }
 

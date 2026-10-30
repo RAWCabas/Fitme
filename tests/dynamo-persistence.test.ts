@@ -54,6 +54,7 @@ const sampleResumeA: TailoredResume = {
   id: "3fa85f64-5717-4562-b3fc-2c963f66afa3",
   userId: "user_tenant_A",
   jobOpportunityId: sampleJobA.id,
+  title: "DynamoDB Lead Architect",
   versionNumber: 1,
   status: "draft",
   preset: "modern_standard",
@@ -190,6 +191,25 @@ describe("DynamoDB Persistence: Tailor Repository", () => {
       },
     });
     expect(raw.Item?.GSI1PK).toBe("USER#user_tenant_A#STATUS#interview");
+  });
+
+  it("deletes tailored resume from DynamoDB", async () => {
+    await tailorRepo.saveTailoredResume(sampleResumeA);
+    const before = await tailorRepo.getTailoredResume("user_tenant_A", sampleResumeA.id);
+    expect(before).not.toBeNull();
+
+    await tailorRepo.deleteTailoredResume("user_tenant_A", sampleResumeA.id);
+    const after = await tailorRepo.getTailoredResume("user_tenant_A", sampleResumeA.id);
+    expect(after).toBeNull();
+  });
+
+  it("retrieves tailored resume even if query ID contains spaces instead of hyphens", async () => {
+    await tailorRepo.saveTailoredResume(sampleResumeA);
+    // sampleResumeA.id is "3fa85f64-5717-4562-b3fc-2c963f66afa3"
+    const spaceId = sampleResumeA.id.replace(/-/g, " ");
+    const retrieved = await tailorRepo.getTailoredResume("user_tenant_A", spaceId);
+    expect(retrieved).not.toBeNull();
+    expect(retrieved?.id).toBe(sampleResumeA.id);
   });
 });
 

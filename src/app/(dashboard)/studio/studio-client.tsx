@@ -82,6 +82,8 @@ export function StudioClient({ profile, savedResumes = [], savedJobs = {} }: Stu
   const [copiedBooster, setCopiedBooster] = useState<string | null>(null);
 
   // Resume Direct Editing State
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [tempTitle, setTempTitle] = useState("");
   const [editingSummary, setEditingSummary] = useState(false);
   const [tempSummary, setTempSummary] = useState("");
   const [editingBulletKey, setEditingBulletKey] = useState<string | null>(null);
@@ -91,7 +93,53 @@ export function StudioClient({ profile, savedResumes = [], savedJobs = {} }: Stu
   const [savingEdits, setSavingEdits] = useState(false);
   const [savedEditsSuccess, setSavedEditsSuccess] = useState(false);
 
-  async function saveResumeEdits(updates: Partial<Pick<TailoredResume, "tailoredSummary" | "tailoredExperiences" | "tailoredProjects" | "tailoredCertifications" | "selectedSkills">>) {
+  // LocalStorage Resilience: Restore cached resumes if server memory restarted / cold-started
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const cachedRaw = localStorage.getItem(`fitme_resumes_cache_${profile.userId}`);
+      const cachedJobsRaw = localStorage.getItem(`fitme_jobs_cache_${profile.userId}`);
+      if (cachedRaw) {
+        const cached: TailoredResume[] = JSON.parse(cachedRaw);
+        if (cached.length > 0) {
+          setResumesList((current) => {
+            const map = new Map<string, TailoredResume>();
+            current.forEach((r) => map.set(r.id, r));
+            cached.forEach((r) => {
+              if (!map.has(r.id)) map.set(r.id, r);
+            });
+            const merged = Array.from(map.values()).sort(
+              (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+            );
+            return merged;
+          });
+        }
+      }
+      if (cachedJobsRaw) {
+        const cachedJ: Record<string, JobOpportunity> = JSON.parse(cachedJobsRaw);
+        setJobsMap((current) => ({ ...cachedJ, ...current }));
+      }
+    } catch (e) {
+      console.error("Failed to load cached resumes from localStorage", e);
+    }
+  }, [profile.userId]);
+
+  // Persist to localStorage whenever resumesList or jobsMap updates
+  React.useEffect(() => {
+    if (typeof window === "undefined" || resumesList.length === 0) return;
+    try {
+      localStorage.setItem(`fitme_resumes_cache_${profile.userId}`, JSON.stringify(resumesList));
+    } catch {}
+  }, [resumesList, profile.userId]);
+
+  React.useEffect(() => {
+    if (typeof window === "undefined" || Object.keys(jobsMap).length === 0) return;
+    try {
+      localStorage.setItem(`fitme_jobs_cache_${profile.userId}`, JSON.stringify(jobsMap));
+    } catch {}
+  }, [jobsMap, profile.userId]);
+
+  async function saveResumeEdits(updates: Partial<Pick<TailoredResume, "title" | "tailoredSummary" | "tailoredExperiences" | "tailoredProjects" | "tailoredCertifications" | "selectedSkills">>) {
     if (!tailoredResume) return;
     setSavingEdits(true);
     try {
@@ -104,7 +152,15 @@ export function StudioClient({ profile, savedResumes = [], savedJobs = {} }: Stu
       if (res.ok) {
         const updated: TailoredResume = await res.json();
         setTailoredResume(updated);
-        setResumesList((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
+        setResumesList((prev) => {
+          const list = prev.map((r) => (r.id === updated.id ? updated : r));
+          if (typeof window !== "undefined") {
+            try {
+              localStorage.setItem(`fitme_resumes_cache_${profile.userId}`, JSON.stringify(list));
+            } catch {}
+          }
+          return list;
+        });
         setSavedEditsSuccess(true);
         setTimeout(() => setSavedEditsSuccess(false), 2000);
       }
@@ -113,6 +169,111 @@ export function StudioClient({ profile, savedResumes = [], savedJobs = {} }: Stu
     } finally {
       setSavingEdits(false);
     }
+  }
+
+  // Delete Tailored Resume
+  async function handleDeleteResume(resumeId: string) {
+    if (!window.confirm("Are you sure you want to delete this tailored resume? This cannot be undone.")) return;
+    try {
+      await fetch(`/api/tailor/resumes/${resumeId}`, { method: "DELETE" });
+      const remaining = resumesList.filter((r) => r.id !== resumeId);
+      setResumesList(remaining);
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.setItem(`fitme_resumes_cache_${profile.userId}`, JSON.stringify(remaining));
+        } catch {}
+      }
+
+      if (tailoredResume?.id === resumeId) {
+        if (remaining.length > 0) {
+          const next = remaining[0];
+          setTailoredResume(next);
+          if (jobsMap[next.jobOpportunityId]) {
+            setActiveJob(jobsMap[next.jobOpportunityId]);
+          }
+        } else {
+          setTailoredResume(null);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to delete resume", err);
+    }
+  }
+
+  // Duplicate / Clone Resume as a new version
+  async function handleDuplicateResume() {
+    if (!tailoredResume || !activeJob) return;
+    setAnalyzing(true);
+    try {
+      const nextVersion = resumesList.length + 1;
+      const duplicated: TailoredResume = {
+        ...tailoredResume,
+        id: crypto.randomUUID(),
+        title: `${tailoredResume.title || activeJob.role} (v${nextVersion})`,
+        versionNumber: nextVersion,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      const res = await fetch(`/api/tailor/resumes/${duplicated.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(duplicated),
+      });
+
+      const saved = res.ok ? await res.json() : duplicated;
+      setTailoredResume(saved);
+      const updatedList = [saved, ...resumesList];
+      setResumesList(updatedList);
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.setItem(`fitme_resumes_cache_${profile.userId}`, JSON.stringify(updatedList));
+        } catch {}
+      }
+    } catch (err) {
+      console.error("Failed to duplicate resume", err);
+    } finally {
+      setAnalyzing(false);
+    }
+  }
+
+  // 1-Click Add Missing Keyword to Selected Skills
+  async function handleAddMissingSkill(keyword: string) {
+    if (!tailoredResume) return;
+    const exists = tailoredResume.selectedSkills.some(
+      (s) => s.name.toLowerCase() === keyword.toLowerCase()
+    );
+    if (exists) return;
+
+    const newSkill = {
+      id: crypto.randomUUID(),
+      name: keyword,
+      category: "tools" as const,
+      isHidden: false,
+    };
+
+    const updatedSkills = [...tailoredResume.selectedSkills, newSkill];
+    const updatedKeywords = tailoredResume.fitScore.keywords.map((kw) =>
+      kw.keyword.toLowerCase() === keyword.toLowerCase() ? { ...kw, status: "matched" as const } : kw
+    );
+    const matchedCount = updatedKeywords.filter((k) => k.status === "matched").length;
+    const missingCount = updatedKeywords.filter((k) => k.status === "missing").length;
+    const newScore = Math.min(100, Math.round((matchedCount / updatedKeywords.length) * 100));
+
+    const updatedResume: TailoredResume = {
+      ...tailoredResume,
+      selectedSkills: updatedSkills,
+      fitScore: {
+        ...tailoredResume.fitScore,
+        score: newScore,
+        matchedCount,
+        missingCount,
+        keywords: updatedKeywords,
+      },
+    };
+
+    setTailoredResume(updatedResume);
+    await saveResumeEdits({ selectedSkills: updatedSkills });
   }
 
   // Submit Job Description & Tailor
@@ -224,13 +385,27 @@ export function StudioClient({ profile, savedResumes = [], savedJobs = {} }: Stu
     }
   }
 
-  function handleExportMarkdown() {
+  async function handleExportMarkdown() {
     if (!tailoredResume) return;
+    try {
+      await fetch(`/api/tailor/resumes/${tailoredResume.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(tailoredResume),
+      });
+    } catch {}
     window.open(`/api/export/${tailoredResume.id}/markdown`, "_blank");
   }
 
-  function handleExportPdf() {
+  async function handleExportPdf() {
     if (!tailoredResume) return;
+    try {
+      await fetch(`/api/tailor/resumes/${tailoredResume.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(tailoredResume),
+      });
+    } catch {}
     window.open(`/api/export/${tailoredResume.id}/html?preset=${preset}&print=true`, "_blank");
   }
 
@@ -408,6 +583,7 @@ export function StudioClient({ profile, savedResumes = [], savedJobs = {} }: Stu
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {resumesList.map((res) => {
                   const job = jobsMap[res.jobOpportunityId];
+                  const resumeDisplayName = res.title || `${job?.role || "Tailored Resume"} - v${res.versionNumber}`;
                   return (
                     <div
                       key={res.id}
@@ -415,18 +591,34 @@ export function StudioClient({ profile, savedResumes = [], savedJobs = {} }: Stu
                         if (job) setActiveJob(job);
                         setTailoredResume(res);
                       }}
-                      className="group p-3.5 rounded-xl border bg-background hover:border-primary/50 hover:shadow-sm cursor-pointer transition-all duration-150 space-y-2"
+                      className="group p-3.5 rounded-xl border bg-background hover:border-primary/50 hover:shadow-sm cursor-pointer transition-all duration-150 space-y-2 relative"
                     >
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between gap-2">
                         <span className="text-xs font-bold text-foreground group-hover:text-primary transition-colors truncate">
-                          {job?.role || "Tailored Resume"}
+                          {resumeDisplayName}
                         </span>
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary/10 text-primary">
-                          {res.fitScore?.score || 0}% ATS
-                        </span>
+                        <div className="flex items-center gap-1.5 flex-shrink-0">
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary/10 text-primary">
+                            {res.fitScore?.score || 0}% ATS
+                          </span>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteResume(res.id);
+                            }}
+                            className="p-1 rounded-md text-muted-foreground hover:text-red-600 hover:bg-red-500/10 transition-colors"
+                            title="Delete this tailored resume"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </div>
                       <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-                        <span className="truncate">{job?.company || "Target Company"}</span>
+                        <span className="truncate font-medium text-foreground/80 flex items-center gap-1">
+                          <Building className="w-3 h-3 text-muted-foreground" />
+                          {job?.company || "Target Company"}
+                        </span>
                         <span>v{res.versionNumber} • {res.pageBudget === "1_page" ? "1-pg" : "2-pg"}</span>
                       </div>
                     </div>
@@ -452,49 +644,109 @@ export function StudioClient({ profile, savedResumes = [], savedJobs = {} }: Stu
                 <ArrowLeft className="w-4 h-4" />
               </button>
 
-              <div className="space-y-0.5">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h2 className="text-lg sm:text-xl font-bold tracking-tight">{activeJob.role}</h2>
-                  <span className="text-muted-foreground font-normal">at</span>
-                  <span className="font-semibold text-foreground">{activeJob.company}</span>
-
-                  {resumesList.length > 1 && (
-                    <select
-                      value={tailoredResume.id}
-                      onChange={(e) => {
-                        const selected = resumesList.find((r) => r.id === e.target.value);
-                        if (selected) {
-                          setTailoredResume(selected);
-                          if (jobsMap[selected.jobOpportunityId]) {
-                            setActiveJob(jobsMap[selected.jobOpportunityId]);
-                          }
+              <div className="space-y-1">
+                {editingTitle ? (
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <input
+                      type="text"
+                      value={tempTitle}
+                      onChange={(e) => setTempTitle(e.target.value)}
+                      placeholder="e.g. Hardware Support Specialist"
+                      className="px-2.5 py-1 text-sm font-bold rounded-lg border bg-background focus:outline-none focus:ring-2 focus:ring-primary/40 min-w-[220px]"
+                      autoFocus
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          saveResumeEdits({ title: tempTitle });
+                          setEditingTitle(false);
+                        } else if (e.key === "Escape") {
+                          setEditingTitle(false);
                         }
                       }}
-                      className="ml-1 px-2 py-0.5 text-xs font-semibold rounded-lg border bg-muted/60 text-foreground cursor-pointer"
-                      title="Switch between saved tailored resumes"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        saveResumeEdits({ title: tempTitle });
+                        setEditingTitle(false);
+                      }}
+                      className="p-1 rounded-md bg-primary text-primary-foreground hover:bg-primary/90"
+                      title="Save resume title"
                     >
-                      {resumesList.map((r) => {
-                        const j = jobsMap[r.jobOpportunityId];
-                        return (
-                          <option key={r.id} value={r.id}>
-                            {j ? `${j.role} (${j.company}) - v${r.versionNumber}` : `v${r.versionNumber}`}
-                          </option>
-                        );
-                      })}
-                    </select>
-                  )}
-                </div>
-                <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                  <span className="inline-flex items-center gap-1">
-                    <Building className="w-3 h-3" />
-                    Version {tailoredResume.versionNumber}
+                      <Check className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditingTitle(false)}
+                      className="p-1 rounded-md border hover:bg-muted text-muted-foreground"
+                      title="Cancel"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h2 className="text-lg sm:text-xl font-bold tracking-tight text-foreground">
+                      {tailoredResume.title || `${activeJob.role} - v${tailoredResume.versionNumber}`}
+                    </h2>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTempTitle(tailoredResume.title || `${activeJob.role} - v${tailoredResume.versionNumber}`);
+                        setEditingTitle(true);
+                      }}
+                      className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                      title="Rename resume"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
+
+                    {resumesList.length > 1 && (
+                      <select
+                        value={tailoredResume.id}
+                        onChange={(e) => {
+                          const selected = resumesList.find((r) => r.id === e.target.value);
+                          if (selected) {
+                            setTailoredResume(selected);
+                            if (jobsMap[selected.jobOpportunityId]) {
+                              setActiveJob(jobsMap[selected.jobOpportunityId]);
+                            }
+                          }
+                        }}
+                        className="ml-1 px-2 py-0.5 text-xs font-semibold rounded-lg border bg-muted/60 text-foreground cursor-pointer"
+                        title="Switch between saved tailored resumes"
+                      >
+                        {resumesList.map((r) => {
+                          const j = jobsMap[r.jobOpportunityId];
+                          return (
+                            <option key={r.id} value={r.id}>
+                              {r.title || (j ? `${j.role} (${j.company}) - v${r.versionNumber}` : `v${r.versionNumber}`)}
+                            </option>
+                          );
+                        })}
+                      </select>
+                    )}
+                  </div>
+                )}
+
+                {/* Company Name Underneath Resume Name */}
+                <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
+                  <span className="font-semibold text-foreground flex items-center gap-1">
+                    <Building className="w-3.5 h-3.5 text-primary" />
+                    {activeJob.company || "Target Company"}
                   </span>
+                  <span>•</span>
+                  <span>{activeJob.role}</span>
                   {activeJob.location && (
-                    <span className="inline-flex items-center gap-1">
-                      <MapPin className="w-3 h-3" />
-                      {activeJob.location}
-                    </span>
+                    <>
+                      <span>•</span>
+                      <span className="inline-flex items-center gap-1">
+                        <MapPin className="w-3 h-3" />
+                        {activeJob.location}
+                      </span>
+                    </>
                   )}
+                  <span>•</span>
+                  <span>Version {tailoredResume.versionNumber}</span>
                 </div>
               </div>
             </div>
@@ -555,6 +807,17 @@ export function StudioClient({ profile, savedResumes = [], savedJobs = {} }: Stu
                 <option value="rejected">Archived</option>
               </select>
 
+              {/* Duplicate Button */}
+              <button
+                type="button"
+                onClick={handleDuplicateResume}
+                title="Duplicate this resume as a new version"
+                className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold rounded-lg border bg-background hover:bg-muted transition-colors"
+              >
+                <Copy className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Duplicate</span>
+              </button>
+
               {/* Export Buttons */}
               <button
                 type="button"
@@ -574,6 +837,17 @@ export function StudioClient({ profile, savedResumes = [], savedJobs = {} }: Stu
               >
                 <Printer className="w-3.5 h-3.5" />
                 <span>PDF / Print</span>
+              </button>
+
+              {/* Delete Resume Button */}
+              <button
+                type="button"
+                onClick={() => handleDeleteResume(tailoredResume.id)}
+                title="Delete this tailored resume"
+                className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-red-200 dark:border-red-900/40 text-red-600 hover:bg-red-500/10 transition-colors"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Delete</span>
               </button>
 
               {/* AI Boosters Trigger Button */}
@@ -638,6 +912,16 @@ export function StudioClient({ profile, savedResumes = [], savedJobs = {} }: Stu
                   {kw.status === "transferable" && <Sparkles className="w-3 h-3 text-amber-600" />}
                   {kw.status === "missing" && <AlertCircle className="w-3 h-3 text-red-500" />}
                   <span>{kw.keyword}</span>
+                  {kw.status === "missing" && (
+                    <button
+                      type="button"
+                      onClick={() => handleAddMissingSkill(kw.keyword)}
+                      className="ml-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+                      title={`Add "${kw.keyword}" to resume skills`}
+                    >
+                      + Add
+                    </button>
+                  )}
                 </span>
               ))}
             </div>
