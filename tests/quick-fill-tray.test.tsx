@@ -40,6 +40,19 @@ const mockProfile: Profile = {
     { id: "3fa85f64-5717-4562-b3fc-2c963f66afa3", name: "TypeScript", category: "languages", isHidden: false },
     { id: "4fa85f64-5717-4562-b3fc-2c963f66afa4", name: "Next.js", category: "frameworks", isHidden: false },
   ],
+  certifications: [
+    {
+      id: "5fa85f64-5717-4562-b3fc-2c963f66afa5",
+      name: "TESDA Computer Systems Servicing NC II",
+      issuer: "TESDA",
+      issueDate: "2024-05-15",
+      expiryDate: null,
+      credentialId: "TESDA-NC2-2024",
+      credentialUrl: "",
+      hours: "280 Hours",
+      isHidden: false,
+    },
+  ],
   summary: "Results-driven principal engineer specializing in low-latency systems.",
   updatedAt: "2026-01-01T00:00:00.000Z",
 };
@@ -119,6 +132,24 @@ describe("Quick-Fill Clipboard Tray", () => {
     fireEvent.click(closeBtn);
 
     expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("navigates to Certs tab and copies certification details", async () => {
+    render(<QuickFillTray profile={mockProfile} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /Open Quick-Fill Application Clipboard Tray/i }));
+
+    const certsTab = screen.getByRole("button", { name: /Certs/i });
+    fireEvent.click(certsTab);
+
+    expect(screen.getByText("TESDA Computer Systems Servicing NC II")).toBeDefined();
+    expect(screen.getByText(/280 Hours/i)).toBeDefined();
+
+    fireEvent.click(screen.getByText("TESDA Computer Systems Servicing NC II"));
+    expect(writeTextMock).toHaveBeenCalledWith("TESDA Computer Systems Servicing NC II — TESDA (280 Hours)");
+    await waitFor(() => {
+      expect(screen.getByText("Copied")).toBeDefined();
+    });
   });
 });
 

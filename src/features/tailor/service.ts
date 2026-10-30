@@ -3,7 +3,7 @@ import { z } from "zod";
 import { AppError } from "@/lib/errors";
 import { nowIso } from "@/lib/dates";
 import { invokeBedrockJson } from "@/lib/bedrock";
-import { Profile, WorkExperience, Project, SkillItem } from "@/features/profile/schema";
+import { Profile, WorkExperience, Project, Certification, SkillItem } from "@/features/profile/schema";
 import { profileService as defaultProfileService, ProfileService } from "@/features/profile/service";
 import { getTailorRepo } from "./repo";
 import { 
@@ -95,6 +95,15 @@ Return ONLY a valid JSON object matching the requested schema.`;
       .flatMap((e) => e.bullets.filter((b) => !b.isHidden).map((b) => b.content.toLowerCase()))
       .join(" ");
 
+    // Collect certifications
+    (profile.certifications || [])
+      .filter((c) => !c.isHidden)
+      .forEach((c) => {
+        candidateSkills.add(c.name.toLowerCase().trim());
+        if (c.issuer) candidateSkills.add(c.issuer.toLowerCase().trim());
+        if (c.hours) candidateSkills.add(c.hours.toLowerCase().trim());
+      });
+
     const keywords: KeywordMatch[] = [];
     let matchedCount = 0;
     let transferableCount = 0;
@@ -177,6 +186,7 @@ Return ONLY a valid JSON object matching the requested schema.`;
     // 2. Filter out items where isHidden === true
     const activeExperiences = profile.experiences.filter((e) => !e.isHidden);
     const activeProjects = profile.projects.filter((p) => !p.isHidden);
+    const activeCertifications = (profile.certifications || []).filter((c) => !c.isHidden);
     const activeSkills = profile.skills.filter((s) => !s.isHidden);
 
     // 3. Page Budget Curation
@@ -224,6 +234,7 @@ Return ONLY a valid JSON object matching the requested schema.`;
       summary: tailoredSummary,
       experiences: curatedExperiences,
       projects: curatedProjects,
+      certifications: activeCertifications,
       skills: sortedSkills,
     });
 
@@ -239,6 +250,7 @@ Return ONLY a valid JSON object matching the requested schema.`;
       tailoredSummary,
       tailoredExperiences: curatedExperiences,
       tailoredProjects: curatedProjects,
+      tailoredCertifications: activeCertifications,
       selectedSkills: sortedSkills,
       pdfS3Key: null,
       pdfPresignedUrl: null,
@@ -303,9 +315,10 @@ Start with a strong action verb (e.g. Engineered, Spearheaded, Architected, Acce
     summary: string;
     experiences: WorkExperience[];
     projects: Project[];
+    certifications?: Certification[];
     skills: SkillItem[];
   }): string {
-    const { profile, summary, experiences, projects, skills } = params;
+    const { profile, summary, experiences, projects, certifications, skills } = params;
     const c = profile.contact;
 
     const header = `# ${c.fullName}\n${c.headline ? `*${c.headline}*\n` : ""}${c.email} | ${c.phone} | ${c.location}\n${c.linkedinUrl} | ${c.githubUrl}\n\n`;
@@ -320,42 +333,158 @@ Start with a strong action verb (e.g. Engineered, Spearheaded, Architected, Acce
       expSec += `\n`;
     }
 
-    let projSec = `## Technical Projects\n`;
-    for (const p of projects) {
-      projSec += `### ${p.name} (${p.technologies.join(", ")})\n${p.description}\n`;
-      for (const b of p.bullets) {
-        projSec += `- ${b.content}\n`;
+    let projSec = "";
+    if (projects.length > 0) {
+      projSec = `## Technical Projects\n`;
+      for (const p of projects) {
+        projSec += `### ${p.name} (${p.technologies.join(", ")})\n${p.description}\n`;
+        for (const b of p.bullets) {
+          projSec += `- ${b.content}\n`;
+        }
+        projSec += `\n`;
       }
-      projSec += `\n`;
+    }
+
+    let certSec = "";
+    if (certifications && certifications.length > 0) {
+      certSec = `## Trainings and Certificates\n`;
+      for (const cert of certifications) {
+        certSec += `- ${cert.name}${cert.issuer ? ` – ${cert.issuer}` : ""}${cert.hours ? ` | ${cert.hours}` : ""}\n`;
+      }
+      certSec += `\n`;
     }
 
     const skillsSec = `## Core Competencies\n${skills.map((s) => s.name).join(", ")}\n`;
 
-    return header + summarySec + expSec + projSec + skillsSec;
+    return header + summarySec + expSec + projSec + certSec + skillsSec;
   }
 
   private fallbackParseJd(raw: string): ExtractedJd {
     const lines = raw.split("\n").map((l) => l.trim()).filter(Boolean);
-    const company = lines[0] && lines[0].length < 60 ? lines[0] : "Target Tech Inc.";
-    const role = lines[1] && lines[1].length < 80 ? lines[1] : "Senior Full-Stack Engineer";
-
-    const commonSkills = ["TypeScript", "React", "Next.js", "Node.js", "AWS", "DynamoDB", "Docker", "REST APIs", "CI/CD"];
-    const detected: string[] = [];
     const lower = raw.toLowerCase();
 
-    for (const s of commonSkills) {
-      if (lower.includes(s.toLowerCase())) {
-        detected.push(s);
+    // 1. Role Detection
+    let role = "Technical Specialist / Engineer";
+    const roleMatch = raw.match(/(?:role|position|job title|title|hiring for|looking for(?: an?|:)?)\s*[:\-–]?\s*([^\n\r,.]+)/i);
+    if (roleMatch && roleMatch[1]?.trim().length > 2 && roleMatch[1].trim().length < 60) {
+      role = roleMatch[1].trim();
+    } else {
+      const candidateRoles = [
+        "Computer Engineer", "IT Technical Support", "Technical Support Specialist",
+        "Systems & Network Engineer", "Network Engineer", "Hardware Support Specialist",
+        "Embedded Systems Engineer", "Edge AI Specialist", "Software Engineer",
+        "Frontend Developer", "Backend Developer", "Full Stack Developer", "Data Analyst"
+      ];
+      for (const r of candidateRoles) {
+        if (lower.includes(r.toLowerCase())) {
+          role = r;
+          break;
+        }
+      }
+      if (role === "Technical Specialist / Engineer" && lines[0] && lines[0].length < 60 && !lines[0].toLowerCase().includes("description")) {
+        role = lines[0];
+      }
+    }
+
+    // 2. Company Detection
+    let company = "Target Company";
+    const compMatch = raw.match(/(?:company|organization|at|about)\s*[:\-–]?\s*([A-Z][A-Za-z0-9&., ]{2,40})/);
+    if (compMatch && compMatch[1]?.trim() && !compMatch[1].toLowerCase().includes("job") && !compMatch[1].toLowerCase().includes("the")) {
+      company = compMatch[1].trim();
+    } else if (lines.length > 1 && lines[0].length < 40 && lines[0] !== role) {
+      company = lines[0];
+    }
+
+    // 3. Location Detection
+    let location = "Cebu, Philippines / Remote";
+    const locMatch = raw.match(/(?:location|site|based in|workplace)\s*[:\-–]?\s*([^\n\r,.]+)/i);
+    if (locMatch && locMatch[1]?.trim()) {
+      location = locMatch[1].trim();
+    } else if (lower.includes("remote")) {
+      location = "Remote";
+    } else if (lower.includes("cebu")) {
+      location = "Cebu, Philippines";
+    }
+
+    // 4. Comprehensive Skill Taxonomy Scanner (IT, Hardware, Networking, Software, Embedded)
+    const taxonomy = [
+      "Hardware Maintenance", "PC Assembly", "Hardware Diagnostics", "Peripheral Setup",
+      "LAN/WAN", "TCP/IP", "Wi-Fi & Router Configuration", "Network Troubleshooting",
+      "DNS", "DHCP", "VPN", "Systems Troubleshooting", "Printer/Scanner Setup",
+      "Computer Systems Servicing", "Technical Support", "IT Support",
+      "Windows", "Windows Server", "Linux", "Ubuntu", "MacOS",
+      "Microsoft Office", "Google Workspace", "Arduino IDE", "VS Code",
+      "Autodesk Fusion 360", "Adobe Photoshop", "Illustrator", "Premiere Pro",
+      "Edge AI", "Embedded Programming", "Edge Impulse", "Machine Learning", "IoT", "Internet of Things",
+      "Java", "C/C++", "C++", "C", "Python", "JavaScript", "TypeScript", "HTML/CSS", "HTML", "CSS", "SQL",
+      "AWS", "DynamoDB", "React", "Next.js", "Node.js", "Docker", "Git", "REST APIs", "CI/CD",
+      "Problem-Solving", "Troubleshooting", "Team Collaboration", "Customer Satisfaction", "Data Analysis"
+    ];
+
+    const detected: string[] = [];
+    for (const skill of taxonomy) {
+      const regex = new RegExp(`\\b${escapeRegex(skill)}\\b`, "i");
+      if (regex.test(raw)) {
+        detected.push(skill);
+      }
+    }
+
+    // 5. Must-Haves Extraction (Direct from text lines or bullet points, NO FAKE 5+ YEARS!)
+    const mustHaves: string[] = [];
+    const niceToHaves: string[] = [];
+
+    for (const line of lines) {
+      const trimmed = line.replace(/^[•\-*–\d.)\s]+/, "").trim();
+      if (trimmed.length < 15 || trimmed.length > 200) continue;
+      const lowerLine = trimmed.toLowerCase();
+
+      if (
+        lowerLine.includes("experience") ||
+        lowerLine.includes("proficien") ||
+        lowerLine.includes("bachelor") ||
+        lowerLine.includes("degree") ||
+        lowerLine.includes("graduate") ||
+        lowerLine.includes("knowledge") ||
+        lowerLine.includes("ability to") ||
+        lowerLine.includes("responsible for") ||
+        lowerLine.includes("skills in") ||
+        lowerLine.includes("troubleshoot") ||
+        lowerLine.includes("hardware") ||
+        lowerLine.includes("network")
+      ) {
+        if (mustHaves.length < 4 && !mustHaves.includes(trimmed)) {
+          mustHaves.push(trimmed);
+        } else if (niceToHaves.length < 3 && !niceToHaves.includes(trimmed)) {
+          niceToHaves.push(trimmed);
+        }
+      }
+    }
+
+    if (mustHaves.length === 0) {
+      if (detected.length > 0) {
+        mustHaves.push(`Demonstrated hands-on experience or training with ${detected.slice(0, 3).join(", ")}`);
+        mustHaves.push("Strong diagnostic problem-solving and technical troubleshooting capabilities");
+      } else {
+        mustHaves.push("Relevant education or accredited training in Computer Engineering, IT, or related field");
+        mustHaves.push("Solid foundation in technical support, hardware setup, and systems diagnostics");
+      }
+    }
+
+    if (niceToHaves.length === 0) {
+      if (detected.length > 3) {
+        niceToHaves.push(`Familiarity with ${detected.slice(3, 6).join(", ")}`);
+      } else {
+        niceToHaves.push("Good communication skills and ability to collaborate across technical teams");
       }
     }
 
     return {
       company,
       role,
-      location: "San Francisco, CA / Remote",
-      extractedSkills: detected.length > 0 ? detected : ["TypeScript", "React", "AWS"],
-      mustHaves: ["5+ years of software development experience", "Strong background in distributed cloud architectures"],
-      niceToHaves: ["Experience with Next.js 15 and serverless deployments"],
+      location,
+      extractedSkills: detected.length > 0 ? detected : ["Hardware Diagnostics", "Troubleshooting", "Technical Support"],
+      mustHaves,
+      niceToHaves,
     };
   }
 }

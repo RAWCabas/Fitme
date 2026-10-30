@@ -46,6 +46,7 @@ const mockProfile: Profile = {
     { id: "c3d4e5f6-a7b8-49ca-8d12-345678901234", name: "TypeScript", category: "languages", isHidden: false },
     { id: "d4e5f6a7-b8c9-4adb-9e23-456789012345", name: "Next.js", category: "frameworks", isHidden: false },
   ],
+  certifications: [],
   summary: "Experienced Fullstack Engineer building cloud-native apps.",
   updatedAt: "2026-01-01T00:00:00.000Z",
 };
@@ -82,5 +83,88 @@ describe("Fit Studio UI: StudioClient", () => {
     fireEvent.click(twoPagesBtn);
 
     expect(twoPagesBtn.className).toContain("bg-primary");
+  });
+
+  it("includes Cabas Executive in the preset dropdown", () => {
+    render(<StudioClient profile={mockProfile} />);
+
+    expect(screen.getByText("Cabas Executive (Exact PDF Template)")).toBeDefined();
+  });
+
+  it("displays saved resumes in View 1 and switches versions in View 2", () => {
+    const mockResume = {
+      id: "res-123",
+      userId: "user_test_ui",
+      jobOpportunityId: "job-123",
+      versionNumber: 1,
+      status: "draft" as const,
+      preset: "cabas_executive" as const,
+      pageBudget: "1_page" as const,
+      fitScore: {
+        score: 85,
+        matchedCount: 2,
+        missingCount: 0,
+        keywords: [
+          { keyword: "TypeScript", status: "matched" as const, occurrencesInJD: 2, notes: "Direct match" },
+        ],
+        summaryEvaluation: "Strong Match",
+      },
+      tailoredSummary: "Experienced engineer",
+      tailoredExperiences: mockProfile.experiences,
+      tailoredProjects: mockProfile.projects,
+      tailoredCertifications: [
+        {
+          id: "cert-1",
+          name: "TESDA Computer Systems Servicing NC II",
+          issuer: "TESDA",
+          issueDate: "2024-05-15",
+          expiryDate: null,
+          credentialId: "TESDA-NC2-2024",
+          credentialUrl: "",
+          hours: "280 Hours",
+          isHidden: false,
+        },
+      ],
+      selectedSkills: mockProfile.skills,
+      pdfS3Key: null,
+      pdfPresignedUrl: null,
+      markdownContent: "# Resume",
+      createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-01T00:00:00.000Z",
+    };
+
+    const mockJob = {
+      id: "job-123",
+      userId: "user_test_ui",
+      company: "InnovateTech",
+      role: "Hardware & Software Engineer",
+      location: "Cebu City, Philippines",
+      sourceUrl: "",
+      rawDescription: "Tech role",
+      extractedSkills: ["TypeScript"],
+      mustHaves: ["Hardware diagnostics"],
+      niceToHaves: [],
+      createdAt: "2026-01-01T00:00:00.000Z",
+    };
+
+    // When savedResumes is passed, it loads View 2 by default
+    render(
+      <StudioClient
+        profile={mockProfile}
+        savedResumes={[mockResume]}
+        savedJobs={{ "job-123": mockJob }}
+      />
+    );
+
+    expect(screen.getByText("Hardware & Software Engineer")).toBeDefined();
+    expect(screen.getByText("InnovateTech")).toBeDefined();
+    expect(screen.getByText("Certifications & Trainings")).toBeDefined();
+    expect(screen.getByText("TESDA Computer Systems Servicing NC II")).toBeDefined();
+
+    // Clicking back takes to View 1, where saved resumes list is shown
+    const backBtn = screen.getByTitle("Back to input");
+    fireEvent.click(backBtn);
+
+    expect(screen.getByText("Saved Tailored Resumes (1)")).toBeDefined();
   });
 });

@@ -9,7 +9,8 @@ import {
   User, 
   Briefcase, 
   Sparkles, 
-  FileText 
+  FileText,
+  Award
 } from "lucide-react";
 import { Profile } from "@/features/profile/schema";
 
@@ -17,7 +18,7 @@ interface QuickFillTrayProps {
   profile: Profile;
 }
 
-type TrayTab = "contact" | "bullets" | "skills" | "summary";
+type TrayTab = "contact" | "bullets" | "skills" | "summary" | "certs";
 
 export function QuickFillTray({ profile }: QuickFillTrayProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -52,6 +53,7 @@ export function QuickFillTray({ profile }: QuickFillTrayProps) {
 
   const visibleExperiences = profile.experiences.filter((exp) => !exp.isHidden);
   const visibleSkills = profile.skills.filter((s) => !s.isHidden);
+  const visibleCerts = (profile.certifications || []).filter((c) => !c.isHidden);
   const allSkillsText = visibleSkills.map((s) => s.name).join(", ");
 
   return (
@@ -145,6 +147,15 @@ export function QuickFillTray({ profile }: QuickFillTrayProps) {
             >
               <FileText className="w-3.5 h-3.5" />
               <span>Summary</span>
+            </button>
+            <button
+              onClick={() => setActiveTab("certs")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap ${
+                activeTab === "certs" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Award className="w-3.5 h-3.5" />
+              <span>Certs ({visibleCerts.length})</span>
             </button>
           </div>
 
@@ -322,6 +333,69 @@ export function QuickFillTray({ profile }: QuickFillTrayProps) {
                   copied={copiedKey === "summary"}
                   onCopy={() => handleCopy("summary", profile.summary)}
                 />
+              </div>
+            )}
+
+            {/* TAB 5: CERTIFICATIONS & TRAININGS */}
+            {activeTab === "certs" && (
+              <div className="space-y-4">
+                {visibleCerts.length === 0 ? (
+                  <p className="text-xs text-muted-foreground text-center py-6">
+                    No active certifications found in your Master Vault.
+                  </p>
+                ) : (
+                  <>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-bold">Certifications & Trainings ({visibleCerts.length})</span>
+                      <button
+                        onClick={() => handleCopy("allCerts", visibleCerts.map((c) => `${c.name} (${c.issuer}${c.hours ? `, ${c.hours}` : ""})`).join("; "))}
+                        className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary hover:underline"
+                      >
+                        {copiedKey === "allCerts" ? (
+                          <>
+                            <Check className="w-3 h-3 text-emerald-600" />
+                            <span>Copied All</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-3 h-3" />
+                            <span>Copy All</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+
+                    <div className="space-y-2">
+                      {visibleCerts.map((cert) => {
+                        const summaryText = `${cert.name} — ${cert.issuer}${cert.hours ? ` (${cert.hours})` : ""}`;
+                        return (
+                          <div
+                            key={cert.id}
+                            onClick={() => handleCopy(cert.id, summaryText)}
+                            className="group relative p-2.5 rounded-lg border bg-background hover:border-primary/50 cursor-pointer transition-all duration-150 text-xs space-y-1"
+                          >
+                            <div className="pr-6 font-semibold text-foreground">
+                              {cert.name}
+                            </div>
+                            <div className="text-[11px] text-muted-foreground">
+                              {cert.issuer} {cert.hours ? `• ${cert.hours}` : ""} {cert.credentialId ? `• ID: ${cert.credentialId}` : ""}
+                            </div>
+                            <div className="absolute top-2.5 right-2.5 text-muted-foreground group-hover:text-primary transition-colors">
+                              {copiedKey === cert.id ? (
+                                <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-emerald-600">
+                                  <Check className="w-3 h-3" />
+                                  Copied
+                                </span>
+                              ) : (
+                                <Copy className="w-3.5 h-3.5" />
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
               </div>
             )}
           </div>

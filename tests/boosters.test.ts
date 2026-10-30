@@ -62,6 +62,7 @@ const mockProfile: Profile = {
     { id: "c3d4e5f6-a7b8-49ca-8d12-345678901234", name: "Kubernetes", category: "cloud", isHidden: false },
     { id: "d4e5f6a7-b8c9-4adb-9e23-456789012345", name: "Go", category: "languages", isHidden: false },
   ],
+  certifications: [],
   summary: "Cloud architect with 7+ years scaling distributed systems.",
   updatedAt: "2026-01-01T00:00:00.000Z",
 };
@@ -102,6 +103,7 @@ const mockResume: TailoredResume = {
   tailoredSummary: "Proven platform leader specialized in Kubernetes and high-throughput systems.",
   tailoredExperiences: mockProfile.experiences,
   tailoredProjects: [],
+  tailoredCertifications: [],
   selectedSkills: mockProfile.skills,
   pdfS3Key: null,
   pdfPresignedUrl: null,

@@ -110,6 +110,32 @@ describe("Profile Vault: Schemas & Service", () => {
     expect(profile.skills).toHaveLength(0);
   });
 
+  it("adds, toggles visibility, and deletes certifications", async () => {
+    const cert = await service.addCertification("user_123", {
+      name: "TESDA Computer Systems Servicing NC II",
+      issuer: "TESDA",
+      hours: "280 Hours",
+      credentialId: "TESDA-CSS-NCII-2024",
+    });
+
+    expect(cert.name).toBe("TESDA Computer Systems Servicing NC II");
+    expect(cert.issuer).toBe("TESDA");
+    expect(cert.hours).toBe("280 Hours");
+    expect(cert.isHidden).toBe(false);
+
+    // Toggle visibility
+    const isHidden = await service.toggleCertificationVisibility("user_123", cert.id);
+    expect(isHidden).toBe(true);
+
+    const profileAfterToggle = await service.getOrCreateProfile("user_123");
+    expect(profileAfterToggle.certifications?.[0].isHidden).toBe(true);
+
+    // Delete
+    await service.deleteCertification("user_123", cert.id);
+    const profileAfterDelete = await service.getOrCreateProfile("user_123");
+    expect(profileAfterDelete.certifications).toHaveLength(0);
+  });
+
   it("toggles granular bullet point visibility inside an experience", async () => {
     const exp = await service.addExperience("user_123", {
       company: "Google",

@@ -39,6 +39,7 @@ const mockProfile: Profile = {
   experiences: [],
   projects: [],
   skills: [],
+  certifications: [],
   summary: "Experienced cloud architect.",
   updatedAt: "2026-01-01T00:00:00.000Z",
 };
@@ -100,6 +101,7 @@ const mockResume: TailoredResume = {
       isHidden: false,
     },
   ],
+  tailoredCertifications: [],
   selectedSkills: [
     { id: "8fa85f64-5717-4562-b3fc-2c963f66afa8", name: "AWS CDK", category: "cloud", isHidden: false },
     { id: "9fa85f64-5717-4562-b3fc-2c963f66afa9", name: "TypeScript", category: "languages", isHidden: false },

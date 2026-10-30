@@ -47,6 +47,19 @@ export const projectSchema = z.strictObject({
   isHidden: z.boolean().default(false), // Toggle entire project
 });
 
+/** Certification Item */
+export const certificationSchema = z.strictObject({
+  id: z.string().uuid(),
+  name: text(160).min(1, "Certification name is required"),
+  issuer: text(120).default(""),
+  issueDate: isoDateOrNull.default(null),
+  expiryDate: isoDateOrNull.default(null),
+  credentialId: text(100).default(""),
+  credentialUrl: z.union([z.literal(""), z.string().url()]).default(""),
+  hours: text(50).default(""),
+  isHidden: z.boolean().default(false),
+});
+
 /** Skills by Category */
 export const skillCategorySchema = z.enum(["languages", "frameworks", "cloud", "tools", "soft"]);
 
@@ -63,6 +76,7 @@ export const profileSchema = z.strictObject({
   contact: contactInfoSchema,
   experiences: z.array(workExperienceSchema).default([]),
   projects: z.array(projectSchema).default([]),
+  certifications: z.array(certificationSchema).default([]),
   skills: z.array(skillItemSchema).default([]),
   summary: text(2000).default(""),
   updatedAt: z.string().datetime(),
@@ -72,6 +86,7 @@ export type ContactInfo = z.infer<typeof contactInfoSchema>;
 export type BulletPoint = z.infer<typeof bulletPointSchema>;
 export type WorkExperience = z.infer<typeof workExperienceSchema>;
 export type Project = z.infer<typeof projectSchema>;
+export type Certification = z.infer<typeof certificationSchema>;
 export type SkillCategory = z.infer<typeof skillCategorySchema>;
 export type SkillItem = z.infer<typeof skillItemSchema>;
 export type Profile = z.infer<typeof profileSchema>;

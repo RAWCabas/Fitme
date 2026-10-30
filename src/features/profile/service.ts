@@ -8,9 +8,11 @@ import {
   contactInfoSchema, 
   workExperienceSchema, 
   projectSchema, 
+  certificationSchema,
   skillItemSchema, 
   WorkExperience, 
   Project, 
+  Certification,
   SkillItem 
 } from "./schema";
 
@@ -33,6 +35,85 @@ export class ProfileService {
 
     const existing = await this.repo.getProfile(userId);
     if (existing) {
+      let needsSave = false;
+      if (!existing.certifications) {
+        existing.certifications = [];
+        needsSave = true;
+      }
+
+      // Auto-migration: if TESDA was saved as a project, migrate it to the 5 distinct certifications
+      const tesdaProjIdx = existing.projects.findIndex(
+        (p) => p.name.includes("TESDA") || p.name.includes("Certifications")
+      );
+      if (tesdaProjIdx !== -1) {
+        existing.projects.splice(tesdaProjIdx, 1);
+        if (existing.certifications.length === 0) {
+          existing.certifications = [
+            {
+              id: crypto.randomUUID(),
+              name: "Computer Systems Servicing NCII",
+              issuer: "TESDA Accredited Training",
+              issueDate: "2024-01-01",
+              expiryDate: null,
+              credentialId: "NCII-CSS-280",
+              credentialUrl: "",
+              hours: "280 Hours",
+              isHidden: false,
+            },
+            {
+              id: crypto.randomUUID(),
+              name: "Programming (JAVA NCIII)",
+              issuer: "TESDA Accredited Training",
+              issueDate: "2024-01-01",
+              expiryDate: null,
+              credentialId: "NCIII-JAVA-240",
+              credentialUrl: "",
+              hours: "240 Hours",
+              isHidden: false,
+            },
+            {
+              id: crypto.randomUUID(),
+              name: "Data Analysis Level 3",
+              issuer: "TESDA Accredited Training",
+              issueDate: "2024-01-01",
+              expiryDate: null,
+              credentialId: "DA-L3-120",
+              credentialUrl: "",
+              hours: "120 Hours",
+              isHidden: false,
+            },
+            {
+              id: crypto.randomUUID(),
+              name: "Internet of Things (IoT)",
+              issuer: "TESDA Accredited Training",
+              issueDate: "2024-01-01",
+              expiryDate: null,
+              credentialId: "IOT-102",
+              credentialUrl: "",
+              hours: "102 Hours",
+              isHidden: false,
+            },
+            {
+              id: crypto.randomUUID(),
+              name: "Creative Web Design",
+              issuer: "TESDA Accredited Training",
+              issueDate: "2024-01-01",
+              expiryDate: null,
+              credentialId: "CWD-102",
+              credentialUrl: "",
+              hours: "102 Hours",
+              isHidden: false,
+            },
+          ];
+        }
+        needsSave = true;
+      }
+
+      if (needsSave) {
+        existing.updatedAt = nowIso();
+        return await this.repo.saveProfile(existing);
+      }
+
       return existing;
     }
 
@@ -129,28 +210,62 @@ export class ProfileService {
                 },
               ],
             },
+          ],
+          certifications: [
             {
               id: crypto.randomUUID(),
-              name: "TESDA Computer Systems Servicing & Java Certifications",
-              description: "Certified hardware diagnostics, LAN/WAN network configuration, and Java programming.",
-              technologies: ["Java", "LAN/WAN", "TCP/IP", "Windows OS", "Hardware Diagnostics"],
-              liveUrl: "https://github.com/RAWCabas",
-              repoUrl: "https://github.com/RAWCabas",
+              name: "Computer Systems Servicing NCII",
+              issuer: "TESDA Accredited Training",
+              issueDate: "2024-01-01",
+              expiryDate: null,
+              credentialId: "NCII-CSS-280",
+              credentialUrl: "",
+              hours: "280 Hours",
               isHidden: false,
-              bullets: [
-                {
-                  id: crypto.randomUUID(),
-                  content: "Completed 280 hours of Computer Systems Servicing NCII covering PC assembly, hardware diagnostics, and network troubleshooting.",
-                  isHidden: false,
-                  hasMetrics: true,
-                },
-                {
-                  id: crypto.randomUUID(),
-                  content: "Completed 240 hours of Programming (JAVA NCIII) and 120 hours of Level 3 Data Analysis.",
-                  isHidden: false,
-                  hasMetrics: true,
-                },
-              ],
+            },
+            {
+              id: crypto.randomUUID(),
+              name: "Programming (JAVA NCIII)",
+              issuer: "TESDA Accredited Training",
+              issueDate: "2024-01-01",
+              expiryDate: null,
+              credentialId: "NCIII-JAVA-240",
+              credentialUrl: "",
+              hours: "240 Hours",
+              isHidden: false,
+            },
+            {
+              id: crypto.randomUUID(),
+              name: "Data Analysis Level 3",
+              issuer: "TESDA Accredited Training",
+              issueDate: "2024-01-01",
+              expiryDate: null,
+              credentialId: "DA-L3-120",
+              credentialUrl: "",
+              hours: "120 Hours",
+              isHidden: false,
+            },
+            {
+              id: crypto.randomUUID(),
+              name: "Internet of Things (IoT)",
+              issuer: "TESDA Accredited Training",
+              issueDate: "2024-01-01",
+              expiryDate: null,
+              credentialId: "IOT-102",
+              credentialUrl: "",
+              hours: "102 Hours",
+              isHidden: false,
+            },
+            {
+              id: crypto.randomUUID(),
+              name: "Creative Web Design",
+              issuer: "TESDA Accredited Training",
+              issueDate: "2024-01-01",
+              expiryDate: null,
+              credentialId: "CWD-102",
+              credentialUrl: "",
+              hours: "102 Hours",
+              isHidden: false,
             },
           ],
           skills: [
@@ -184,6 +299,7 @@ export class ProfileService {
           },
           experiences: [],
           projects: [],
+          certifications: [],
           skills: [],
           summary: "",
           updatedAt: nowIso(),
@@ -382,6 +498,59 @@ export class ProfileService {
 
     if (profile.skills.length === initialLen) {
       throw AppError.notFound("Skill not found");
+    }
+
+    profile.updatedAt = nowIso();
+    await this.repo.saveProfile(profile);
+  }
+
+  /**
+   * Adds a new certification.
+   */
+  async addCertification(userId: string, input: unknown): Promise<Certification> {
+    const profile = await this.getOrCreateProfile(userId);
+    const raw = typeof input === "object" && input !== null ? (input as Record<string, unknown>) : {};
+    const withId = {
+      ...raw,
+      id: raw.id || crypto.randomUUID(),
+      isHidden: Boolean(raw.isHidden),
+    };
+
+    const cert = certificationSchema.parse(withId);
+    if (!profile.certifications) profile.certifications = [];
+    profile.certifications.unshift(cert);
+    profile.updatedAt = nowIso();
+
+    await this.repo.saveProfile(profile);
+    return cert;
+  }
+
+  /**
+   * Toggles visibility for a certification.
+   */
+  async toggleCertificationVisibility(userId: string, certificationId: string): Promise<boolean> {
+    const profile = await this.getOrCreateProfile(userId);
+    if (!profile.certifications) profile.certifications = [];
+    const item = profile.certifications.find((c) => c.id === certificationId);
+    if (!item) throw AppError.notFound("Certification not found");
+
+    item.isHidden = !item.isHidden;
+    profile.updatedAt = nowIso();
+    await this.repo.saveProfile(profile);
+    return item.isHidden;
+  }
+
+  /**
+   * Deletes a certification.
+   */
+  async deleteCertification(userId: string, certificationId: string): Promise<void> {
+    const profile = await this.getOrCreateProfile(userId);
+    if (!profile.certifications) profile.certifications = [];
+    const initialLen = profile.certifications.length;
+    profile.certifications = profile.certifications.filter((c) => c.id !== certificationId);
+
+    if (profile.certifications.length === initialLen) {
+      throw AppError.notFound("Certification not found");
     }
 
     profile.updatedAt = nowIso();

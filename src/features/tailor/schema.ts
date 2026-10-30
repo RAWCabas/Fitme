@@ -1,10 +1,10 @@
 import { z } from "zod";
-import { workExperienceSchema, projectSchema, skillItemSchema } from "@/features/profile/schema";
+import { workExperienceSchema, projectSchema, certificationSchema, skillItemSchema } from "@/features/profile/schema";
 
 const text = (max: number) => z.string().trim().max(max);
 
 export const RESUME_STATUSES = ["draft", "sent", "interview", "job_offer", "rejected"] as const;
-export const TYPOGRAPHY_PRESETS = ["modern_standard", "classic_ivy", "tech_minimalist"] as const;
+export const TYPOGRAPHY_PRESETS = ["modern_standard", "classic_ivy", "tech_minimalist", "cabas_executive"] as const;
 export const PAGE_BUDGETS = ["1_page", "2_pages"] as const;
 
 export const resumeStatusSchema = z.enum(RESUME_STATUSES);
@@ -65,6 +65,7 @@ export const tailoredResumeSchema = z.strictObject({
   tailoredSummary: text(1500),
   tailoredExperiences: z.array(workExperienceSchema),
   tailoredProjects: z.array(projectSchema),
+  tailoredCertifications: z.array(certificationSchema).default([]),
   selectedSkills: z.array(skillItemSchema),
   pdfS3Key: z.string().nullable().default(null),
   pdfPresignedUrl: z.string().nullable().default(null),
