@@ -1,7 +1,7 @@
 import { requireSession } from "@/lib/auth/session";
 import { profileService } from "@/features/profile/service";
 import { getTailorRepo } from "@/features/tailor/repo";
-import { JobOpportunity } from "@/features/tailor/schema";
+import { JobOpportunity, TailoredResume } from "@/features/tailor/schema";
 import { StudioClient } from "./studio-client";
 
 export const dynamic = "force-dynamic";
@@ -10,14 +10,24 @@ export default async function StudioPage() {
   const session = await requireSession();
   const repo = getTailorRepo();
   const profile = await profileService.getOrCreateProfile(session.userId, session.email, session.name);
-  const resumes = await repo.listTailoredResumes(session.userId);
+
+  let resumes: TailoredResume[] = [];
+  try {
+    resumes = await repo.listTailoredResumes(session.userId);
+  } catch (err) {
+    console.error("Failed to list tailored resumes in Studio:", err);
+  }
 
   const jobsMap: Record<string, JobOpportunity> = {};
   for (const resume of resumes) {
     if (!jobsMap[resume.jobOpportunityId]) {
-      const job = await repo.getJobOpportunity(session.userId, resume.jobOpportunityId);
-      if (job) {
-        jobsMap[resume.jobOpportunityId] = job;
+      try {
+        const job = await repo.getJobOpportunity(session.userId, resume.jobOpportunityId);
+        if (job) {
+          jobsMap[resume.jobOpportunityId] = job;
+        }
+      } catch (err) {
+        console.error("Failed to get job opportunity:", resume.jobOpportunityId, err);
       }
     }
   }

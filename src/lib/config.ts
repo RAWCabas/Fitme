@@ -12,13 +12,8 @@ export function getDataStore(): DataStoreType {
     return "memory";
   }
 
-  // In production (Amplify SSR) or when AWS credentials/table are configured, use DynamoDB
-  if (
-    getAwsCredentials() ||
-    process.env.DYNAMODB_TABLE_NAME ||
-    process.env.AWS_BRANCH ||
-    process.env.NODE_ENV === "production"
-  ) {
+  // Only auto-enable dynamo if AWS credentials are confirmed to be present
+  if (getAwsCredentials()) {
     return "dynamo";
   }
 

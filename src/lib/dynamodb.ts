@@ -132,18 +132,40 @@ export function getDynamoDocClient(): IDynamoDocClient {
     });
     const docClient = DynamoDBDocumentClient.from(ddbClient);
 
+    const memoryFallback = new MemoryDynamoDocClient();
+
     activeDocClient = {
       async get(params) {
-        return await docClient.send(new GetCommand(params));
+        try {
+          return await docClient.send(new GetCommand(params));
+        } catch (err) {
+          console.error("DynamoDB get error (falling back to memory):", err);
+          return await memoryFallback.get(params);
+        }
       },
       async put(params) {
-        await docClient.send(new PutCommand(params));
+        try {
+          await docClient.send(new PutCommand(params));
+        } catch (err) {
+          console.error("DynamoDB put error (falling back to memory):", err);
+          await memoryFallback.put(params);
+        }
       },
       async query(params) {
-        return await docClient.send(new QueryCommand(params));
+        try {
+          return await docClient.send(new QueryCommand(params));
+        } catch (err) {
+          console.error("DynamoDB query error (falling back to memory):", err);
+          return await memoryFallback.query(params);
+        }
       },
       async delete(params) {
-        await docClient.send(new DeleteCommand(params));
+        try {
+          await docClient.send(new DeleteCommand(params));
+        } catch (err) {
+          console.error("DynamoDB delete error (falling back to memory):", err);
+          await memoryFallback.delete(params);
+        }
       },
     };
     return activeDocClient;

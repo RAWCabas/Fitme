@@ -17,7 +17,31 @@ export default async function DashboardLayout({
     redirect("/login");
   }
 
-  const profile = await profileService.getOrCreateProfile(session.userId, session.email, session.name);
+  let profile;
+  try {
+    profile = await profileService.getOrCreateProfile(session.userId, session.email, session.name);
+  } catch (err) {
+    console.error("DashboardLayout profile loading error:", err);
+    profile = {
+      userId: session.userId,
+      contact: {
+        fullName: session.name || "Candidate",
+        headline: "",
+        email: session.email,
+        phone: "",
+        location: "",
+        portfolioUrl: "",
+        linkedinUrl: "",
+        githubUrl: "",
+      },
+      summary: "",
+      experiences: [],
+      projects: [],
+      certifications: [],
+      skills: [],
+      updatedAt: new Date().toISOString(),
+    };
+  }
 
   return (
     <div className="min-h-screen bg-muted/20 flex flex-col">
