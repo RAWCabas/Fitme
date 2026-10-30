@@ -16,9 +16,7 @@ import {
   FileCode,
   X,
   Copy,
-  Check,
-  History,
-  Award
+  Check
 } from "lucide-react";
 import { Profile } from "@/features/profile/schema";
 import { JobOpportunity, TailoredResume, PageBudget, TypographyPreset, ResumeStatus } from "@/features/tailor/schema";
@@ -103,8 +101,6 @@ export function StudioClient({ profile, savedResumes = [], savedJobs = {} }: Stu
       if (!tailorRes.ok) throw new Error("Failed to tailor resume");
       const resume: TailoredResume = await tailorRes.json();
       setTailoredResume(resume);
-      setResumesList((prev) => [resume, ...prev.filter((r) => r.id !== resume.id)]);
-      setJobsMap((prev) => ({ ...prev, [job.id]: job }));
     } catch (err) {
       console.error("Tailoring failed", err);
     } finally {
@@ -329,7 +325,6 @@ export function StudioClient({ profile, savedResumes = [], savedJobs = {} }: Stu
                   onChange={(e) => setPreset(e.target.value as TypographyPreset)}
                   className="w-full px-3 py-2 text-xs sm:text-sm rounded-lg border bg-background"
                 >
-                  <option value="cabas_executive">Cabas Executive (Exact PDF Template)</option>
                   <option value="modern_standard">Modern Standard (Inter / Sans)</option>
                   <option value="classic_ivy">Classic Ivy (Garamond / Serif)</option>
                   <option value="tech_minimalist">Tech Minimalist (Monospace accents)</option>
@@ -355,48 +350,6 @@ export function StudioClient({ profile, savedResumes = [], savedJobs = {} }: Stu
               )}
             </button>
           </form>
-
-          {/* Saved Tailored Resumes List */}
-          {resumesList.length > 0 && (
-            <div className="pt-6 border-t space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <History className="w-4 h-4 text-primary" />
-                  <h3 className="text-sm font-bold">Saved Tailored Resumes ({resumesList.length})</h3>
-                </div>
-                <span className="text-xs text-muted-foreground">Click to reopen and edit</span>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {resumesList.map((res) => {
-                  const job = jobsMap[res.jobOpportunityId];
-                  return (
-                    <div
-                      key={res.id}
-                      onClick={() => {
-                        if (job) setActiveJob(job);
-                        setTailoredResume(res);
-                      }}
-                      className="group p-3.5 rounded-xl border bg-background hover:border-primary/50 hover:shadow-sm cursor-pointer transition-all duration-150 space-y-2"
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-foreground group-hover:text-primary transition-colors truncate">
-                          {job?.role || "Tailored Resume"}
-                        </span>
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary/10 text-primary">
-                          {res.fitScore?.score || 0}% ATS
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-                        <span className="truncate">{job?.company || "Target Company"}</span>
-                        <span>v{res.versionNumber} • {res.pageBudget === "1_page" ? "1-pg" : "2-pg"}</span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
         </div>
       )}
 
@@ -415,36 +368,10 @@ export function StudioClient({ profile, savedResumes = [], savedJobs = {} }: Stu
               </button>
 
               <div className="space-y-0.5">
-                <div className="flex items-center gap-2 flex-wrap">
+                <div className="flex items-center gap-2">
                   <h2 className="text-lg sm:text-xl font-bold tracking-tight">{activeJob.role}</h2>
                   <span className="text-muted-foreground font-normal">at</span>
                   <span className="font-semibold text-foreground">{activeJob.company}</span>
-
-                  {resumesList.length > 1 && (
-                    <select
-                      value={tailoredResume.id}
-                      onChange={(e) => {
-                        const selected = resumesList.find((r) => r.id === e.target.value);
-                        if (selected) {
-                          setTailoredResume(selected);
-                          if (jobsMap[selected.jobOpportunityId]) {
-                            setActiveJob(jobsMap[selected.jobOpportunityId]);
-                          }
-                        }
-                      }}
-                      className="ml-1 px-2 py-0.5 text-xs font-semibold rounded-lg border bg-muted/60 text-foreground cursor-pointer"
-                      title="Switch between saved tailored resumes"
-                    >
-                      {resumesList.map((r) => {
-                        const j = jobsMap[r.jobOpportunityId];
-                        return (
-                          <option key={r.id} value={r.id}>
-                            {j ? `${j.role} (${j.company}) - v${r.versionNumber}` : `v${r.versionNumber}`}
-                          </option>
-                        );
-                      })}
-                    </select>
-                  )}
                 </div>
                 <div className="flex items-center gap-3 text-xs text-muted-foreground">
                   <span className="inline-flex items-center gap-1">
@@ -470,7 +397,6 @@ export function StudioClient({ profile, savedResumes = [], savedJobs = {} }: Stu
                 className="px-2.5 py-1.5 text-xs font-semibold rounded-lg border bg-background"
                 title="ATS Typography Preset"
               >
-                <option value="cabas_executive">Cabas Executive</option>
                 <option value="modern_standard">Modern Standard</option>
                 <option value="classic_ivy">Classic Ivy</option>
                 <option value="tech_minimalist">Tech Minimalist</option>
@@ -747,31 +673,6 @@ export function StudioClient({ profile, savedResumes = [], savedJobs = {} }: Stu
                             <span className="text-muted-foreground font-mono text-[10px]">{p.technologies.join(", ")}</span>
                           </div>
                           {p.description && <p className="text-xs text-muted-foreground">{p.description}</p>}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Tailored Certifications */}
-                {tailoredResume.tailoredCertifications && tailoredResume.tailoredCertifications.length > 0 && (
-                  <div className="space-y-3 pt-2 border-t">
-                    <div className="flex items-center gap-1.5 text-primary">
-                      <Award className="w-3.5 h-3.5" />
-                      <h3 className="text-xs font-bold uppercase tracking-wider">
-                        Certifications & Trainings
-                      </h3>
-                    </div>
-                    <div className="space-y-2">
-                      {tailoredResume.tailoredCertifications.map((c) => (
-                        <div key={c.id} className="text-xs space-y-0.5">
-                          <div className="flex items-center justify-between">
-                            <span className="font-bold text-foreground">{c.name}</span>
-                            {c.hours && <span className="text-[10px] text-muted-foreground font-mono">{c.hours}</span>}
-                          </div>
-                          <div className="text-[11px] text-muted-foreground">
-                            {c.issuer} {c.issueDate ? `• ${c.issueDate}` : ""} {c.credentialId ? `• ID: ${c.credentialId}` : ""}
-                          </div>
                         </div>
                       ))}
                     </div>
