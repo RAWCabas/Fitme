@@ -38,6 +38,7 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
   const [showImportModal, setShowImportModal] = useState(false);
   const [importText, setImportText] = useState("");
   const [importing, setImporting] = useState(false);
+  const [syncingDualResumes, setSyncingDualResumes] = useState(false);
 
   // New Experience Form State
   const [showExpForm, setShowExpForm] = useState(false);
@@ -140,6 +141,23 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
       console.error("Failed to import resume", err);
     } finally {
       setImporting(false);
+    }
+  }
+
+  // One-click sync both resumes (IT Support & Embedded Tracks)
+  async function handleSyncBothResumes() {
+    setSyncingDualResumes(true);
+    try {
+      const res = await fetch("/api/profile/import-both-resumes", { method: "POST" });
+      if (res.ok) {
+        const updated = await res.json();
+        setProfile(updated);
+        flashSuccess("Both resumes (IT Support & Embedded Tracks) successfully imported into your Master Vault!");
+      }
+    } catch (err) {
+      console.error("Failed to sync resumes", err);
+    } finally {
+      setSyncingDualResumes(false);
     }
   }
 
@@ -704,14 +722,30 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
           </button>
         </div>
 
-        {/* AI Resume Import Button */}
-        <button
-          onClick={() => setShowImportModal(true)}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border bg-card hover:bg-muted text-sm font-semibold transition-colors shadow-sm self-start sm:self-auto shrink-0"
-        >
-          <Sparkles className="w-4 h-4 text-primary" />
-          <span>Import with AI</span>
-        </button>
+        {/* Action Buttons: Dual Resume Import & AI Importer */}
+        <div className="flex items-center gap-2 self-start sm:self-auto shrink-0 flex-wrap">
+          <button
+            onClick={handleSyncBothResumes}
+            disabled={syncingDualResumes}
+            title="Import both IT Support & Embedded Systems resumes into Master Vault"
+            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-primary text-primary-foreground text-xs sm:text-sm font-semibold hover:bg-primary/90 transition-colors shadow-sm disabled:opacity-50"
+          >
+            {syncingDualResumes ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Sparkles className="w-4 h-4" />
+            )}
+            <span>Sync Both Resumes (IT + Embedded)</span>
+          </button>
+
+          <button
+            onClick={() => setShowImportModal(true)}
+            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border bg-card hover:bg-muted text-xs sm:text-sm font-semibold transition-colors shadow-sm"
+          >
+            <UploadCloud className="w-4 h-4 text-primary" />
+            <span>Import with AI</span>
+          </button>
+        </div>
       </div>
 
       {/* AI Resume Import Modal */}

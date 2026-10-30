@@ -41,72 +41,103 @@ export class ProfileService {
         needsSave = true;
       }
 
-      // Auto-migration: if TESDA was saved as a project, migrate it to the 5 distinct certifications
-      const tesdaProjIdx = existing.projects.findIndex(
-        (p) => p.name.includes("TESDA") || p.name.includes("Certifications")
-      );
-      if (tesdaProjIdx !== -1) {
-        existing.projects.splice(tesdaProjIdx, 1);
-        if (existing.certifications.length === 0) {
-          existing.certifications = [
-            {
-              id: crypto.randomUUID(),
-              name: "Computer Systems Servicing NCII",
-              issuer: "TESDA Accredited Training",
-              issueDate: "2024-01-01",
-              expiryDate: null,
-              credentialId: "NCII-CSS-280",
-              credentialUrl: "",
-              hours: "280 Hours",
-              isHidden: false,
-            },
-            {
-              id: crypto.randomUUID(),
-              name: "Programming (JAVA NCIII)",
-              issuer: "TESDA Accredited Training",
-              issueDate: "2024-01-01",
-              expiryDate: null,
-              credentialId: "NCIII-JAVA-240",
-              credentialUrl: "",
-              hours: "240 Hours",
-              isHidden: false,
-            },
-            {
-              id: crypto.randomUUID(),
-              name: "Data Analysis Level 3",
-              issuer: "TESDA Accredited Training",
-              issueDate: "2024-01-01",
-              expiryDate: null,
-              credentialId: "DA-L3-120",
-              credentialUrl: "",
-              hours: "120 Hours",
-              isHidden: false,
-            },
-            {
-              id: crypto.randomUUID(),
-              name: "Internet of Things (IoT)",
-              issuer: "TESDA Accredited Training",
-              issueDate: "2024-01-01",
-              expiryDate: null,
-              credentialId: "IOT-102",
-              credentialUrl: "",
-              hours: "102 Hours",
-              isHidden: false,
-            },
-            {
-              id: crypto.randomUUID(),
-              name: "Creative Web Design",
-              issuer: "TESDA Accredited Training",
-              issueDate: "2024-01-01",
-              expiryDate: null,
-              credentialId: "CWD-102",
-              credentialUrl: "",
-              hours: "102 Hours",
-              isHidden: false,
-            },
-          ];
+      // Check if this profile belongs to Rhinn Cabas (or dev user)
+      const isRhinn =
+        defaultEmail.toLowerCase().includes("rhinn") ||
+        defaultEmail.toLowerCase().includes("cabas") ||
+        existing.contact.email.toLowerCase().includes("rhinn") ||
+        existing.contact.email.toLowerCase().includes("cabas") ||
+        existing.contact.fullName.toLowerCase().includes("cabas") ||
+        existing.contact.fullName.toLowerCase().includes("chinn");
+
+      if (isRhinn) {
+        const master = buildRhinnMasterProfile(userId, existing.contact.email || defaultEmail, existing.contact.fullName);
+
+        // Auto-fix typo "Chinn Rabas" -> "Rhinn Anthon William Cabas"
+        if (existing.contact.fullName.toLowerCase().includes("chinn") || existing.contact.fullName === "Candidate") {
+          existing.contact.fullName = "Rhinn Anthon William Cabas";
+          needsSave = true;
         }
-        needsSave = true;
+
+        // Ensure comprehensive headline covering both IT and Embedded Tracks
+        if (!existing.contact.headline || !existing.contact.headline.includes("IT")) {
+          existing.contact.headline = master.contact.headline;
+          needsSave = true;
+        }
+
+        if (!existing.contact.phone) {
+          existing.contact.phone = master.contact.phone;
+          needsSave = true;
+        }
+
+        if (!existing.contact.location) {
+          existing.contact.location = master.contact.location;
+          needsSave = true;
+        }
+
+        if (!existing.summary) {
+          existing.summary = master.summary;
+          needsSave = true;
+        }
+
+        // Merge Work Experiences (SCENG + McDonald's)
+        for (const exp of master.experiences) {
+          const matchIdx = existing.experiences.findIndex(
+            (e) => e.company.toLowerCase().includes(exp.company.toLowerCase().slice(0, 10))
+          );
+          if (matchIdx === -1) {
+            existing.experiences.push(exp);
+            needsSave = true;
+          } else {
+            // Ensure bullets exist
+            if (existing.experiences[matchIdx].bullets.length === 0) {
+              existing.experiences[matchIdx].bullets = exp.bullets;
+              needsSave = true;
+            }
+          }
+        }
+
+        // Clean up TESDA if it was previously entered as a project
+        const tesdaProjIdx = existing.projects.findIndex(
+          (p) => p.name.includes("TESDA") || p.name.includes("Certifications")
+        );
+        if (tesdaProjIdx !== -1) {
+          existing.projects.splice(tesdaProjIdx, 1);
+          needsSave = true;
+        }
+
+        // Merge Technical Projects (SCENG + Computer Systems & Network Setup)
+        for (const proj of master.projects) {
+          const matchIdx = existing.projects.findIndex(
+            (p) => p.name.toLowerCase().includes(proj.name.toLowerCase().slice(0, 8))
+          );
+          if (matchIdx === -1) {
+            existing.projects.push(proj);
+            needsSave = true;
+          }
+        }
+
+        // Merge all 5 TESDA Certifications
+        for (const cert of master.certifications) {
+          const hasCert = existing.certifications.some(
+            (c) => c.name.toLowerCase().includes(cert.name.toLowerCase().slice(0, 10))
+          );
+          if (!hasCert) {
+            existing.certifications.push(cert);
+            needsSave = true;
+          }
+        }
+
+        // Merge all 24 Skills covering IT Support and Software/Embedded Tracks
+        for (const skill of master.skills) {
+          const hasSkill = existing.skills.some(
+            (s) => s.name.toLowerCase() === skill.name.toLowerCase()
+          );
+          if (!hasSkill) {
+            existing.skills.push(skill);
+            needsSave = true;
+          }
+        }
       }
 
       if (needsSave) {
@@ -120,171 +151,7 @@ export class ProfileService {
     const isRhinn = defaultEmail.toLowerCase().includes("rhinn") || defaultEmail.toLowerCase().includes("cabas");
 
     const newProfile: Profile = isRhinn
-      ? {
-          userId,
-          contact: {
-            fullName: "Rhinn Anthon William Cabas",
-            headline: "Computer Engineer | Embedded Systems & Edge AI | IT & Technical Support",
-            email: defaultEmail || "rhinnanthon@gmail.com",
-            phone: "0945-350-7389",
-            location: "Deca Homes, Cubacub, Mandaue City, Cebu",
-            portfolioUrl: "https://github.com/RAWCabas",
-            linkedinUrl: "https://linkedin.com/in/rhinnanthon",
-            githubUrl: "https://github.com/RAWCabas",
-          },
-          summary:
-            "Analytical Computer Engineering graduate specializing in smart automation, embedded systems, and machine learning integration. Demonstrates hands-on expertise in hardware prototyping, 3D mechanical modeling, and deploying Edge AI and computer vision solutions. Ready to deliver dependable on-site and remote technical support across office environments, distributed teams, and enterprise systems.",
-          experiences: [
-            {
-              id: crypto.randomUUID(),
-              company: "Sustainable Center for Engineering and Next-Generation Technology",
-              role: "Project Research Assistant (Internship)",
-              location: "Cebu, Philippines",
-              startDate: "2026-01-01",
-              endDate: null,
-              isHidden: false,
-              bullets: [
-                {
-                  id: crypto.randomUUID(),
-                  content:
-                    "Engineered detailed 3D designs and mechanical modeling for project hardware, optimizing structural integrity for physical enclosures.",
-                  isHidden: false,
-                  hasMetrics: true,
-                },
-                {
-                  id: crypto.randomUUID(),
-                  content:
-                    "Collaborated closely on embedded programming and machine learning model training utilizing Edge Impulse for real-time edge computing deployment.",
-                  isHidden: false,
-                  hasMetrics: true,
-                },
-              ],
-            },
-            {
-              id: crypto.randomUUID(),
-              company: "McDonald's Philippines",
-              role: "Customer Service Crew",
-              location: "Cebu, Philippines",
-              startDate: "2022-01-01",
-              endDate: "2022-12-31",
-              isHidden: false,
-              bullets: [
-                {
-                  id: crypto.randomUUID(),
-                  content:
-                    "Assisted customers and efficiently handled orders within a high-volume, fast-paced environment.",
-                  isHidden: false,
-                  hasMetrics: false,
-                },
-                {
-                  id: crypto.randomUUID(),
-                  content:
-                    "Worked effectively as part of a cohesive team to ensure consistent customer satisfaction.",
-                  isHidden: false,
-                  hasMetrics: false,
-                },
-              ],
-            },
-          ],
-          projects: [
-            {
-              id: crypto.randomUUID(),
-              name: "Edge AI & Hardware Prototyping (SCENG)",
-              description: "Embedded machine learning deployment utilizing Edge Impulse and physical enclosure design.",
-              technologies: ["Edge Impulse", "Embedded C/C++", "Autodesk Fusion 360", "Arduino IDE"],
-              liveUrl: "https://github.com/RAWCabas",
-              repoUrl: "https://github.com/RAWCabas",
-              isHidden: false,
-              bullets: [
-                {
-                  id: crypto.randomUUID(),
-                  content: "Engineered detailed 3D mechanical models and physical enclosures for edge computing hardware.",
-                  isHidden: false,
-                  hasMetrics: true,
-                },
-                {
-                  id: crypto.randomUUID(),
-                  content: "Trained and deployed real-time machine learning inference models using Edge Impulse.",
-                  isHidden: false,
-                  hasMetrics: true,
-                },
-              ],
-            },
-          ],
-          certifications: [
-            {
-              id: crypto.randomUUID(),
-              name: "Computer Systems Servicing NCII",
-              issuer: "TESDA Accredited Training",
-              issueDate: "2024-01-01",
-              expiryDate: null,
-              credentialId: "NCII-CSS-280",
-              credentialUrl: "",
-              hours: "280 Hours",
-              isHidden: false,
-            },
-            {
-              id: crypto.randomUUID(),
-              name: "Programming (JAVA NCIII)",
-              issuer: "TESDA Accredited Training",
-              issueDate: "2024-01-01",
-              expiryDate: null,
-              credentialId: "NCIII-JAVA-240",
-              credentialUrl: "",
-              hours: "240 Hours",
-              isHidden: false,
-            },
-            {
-              id: crypto.randomUUID(),
-              name: "Data Analysis Level 3",
-              issuer: "TESDA Accredited Training",
-              issueDate: "2024-01-01",
-              expiryDate: null,
-              credentialId: "DA-L3-120",
-              credentialUrl: "",
-              hours: "120 Hours",
-              isHidden: false,
-            },
-            {
-              id: crypto.randomUUID(),
-              name: "Internet of Things (IoT)",
-              issuer: "TESDA Accredited Training",
-              issueDate: "2024-01-01",
-              expiryDate: null,
-              credentialId: "IOT-102",
-              credentialUrl: "",
-              hours: "102 Hours",
-              isHidden: false,
-            },
-            {
-              id: crypto.randomUUID(),
-              name: "Creative Web Design",
-              issuer: "TESDA Accredited Training",
-              issueDate: "2024-01-01",
-              expiryDate: null,
-              credentialId: "CWD-102",
-              credentialUrl: "",
-              hours: "102 Hours",
-              isHidden: false,
-            },
-          ],
-          skills: [
-            { id: crypto.randomUUID(), name: "Java (TESDA NC III)", category: "languages", isHidden: false },
-            { id: crypto.randomUUID(), name: "C/C++ basics", category: "languages", isHidden: false },
-            { id: crypto.randomUUID(), name: "HTML/CSS", category: "languages", isHidden: false },
-            { id: crypto.randomUUID(), name: "Edge Impulse", category: "frameworks", isHidden: false },
-            { id: crypto.randomUUID(), name: "Arduino IDE", category: "frameworks", isHidden: false },
-            { id: crypto.randomUUID(), name: "Internet of Things (IoT)", category: "cloud", isHidden: false },
-            { id: crypto.randomUUID(), name: "LAN/WAN & TCP/IP", category: "cloud", isHidden: false },
-            { id: crypto.randomUUID(), name: "Autodesk Fusion 360", category: "tools", isHidden: false },
-            { id: crypto.randomUUID(), name: "VS Code", category: "tools", isHidden: false },
-            { id: crypto.randomUUID(), name: "PC Assembly & Hardware Diagnostics", category: "tools", isHidden: false },
-            { id: crypto.randomUUID(), name: "Adobe Photoshop & Premiere Pro", category: "tools", isHidden: false },
-            { id: crypto.randomUUID(), name: "Diagnostic Problem-Solving", category: "soft", isHidden: false },
-            { id: crypto.randomUUID(), name: "Collaborative Operations & Customer Service", category: "soft", isHidden: false },
-          ],
-          updatedAt: nowIso(),
-        }
+      ? buildRhinnMasterProfile(userId, defaultEmail, defaultName)
       : {
           userId,
           contact: {
@@ -307,6 +174,18 @@ export class ProfileService {
 
     const validated = profileSchema.parse(newProfile);
     return await this.repo.saveProfile(validated);
+  }
+
+  /**
+   * Resets / imports the full dual-track master profile for Rhinn Cabas (IT + Embedded/Software Tracks).
+   */
+  async importBothResumes(userId: string): Promise<Profile> {
+    if (!userId) throw AppError.unauthorized();
+    const existing = await this.repo.getProfile(userId);
+    const email = existing?.contact?.email || "rhinnanthon@gmail.com";
+    const name = "Rhinn Anthon William Cabas";
+    const master = buildRhinnMasterProfile(userId, email, name);
+    return await this.repo.saveProfile(master);
   }
 
   /**
@@ -722,3 +601,254 @@ export class ProfileService {
 }
 
 export const profileService = new ProfileService();
+
+/**
+ * Builds the comprehensive dual-track Master Profile for Rhinn Cabas,
+ * unifying both the IT & Technical Support resume and the Embedded Systems & Edge AI resume.
+ */
+export function buildRhinnMasterProfile(
+  userId: string,
+  email = "rhinnanthon@gmail.com",
+  name = "Rhinn Anthon William Cabas"
+): Profile {
+  return {
+    userId,
+    contact: {
+      fullName: name || "Rhinn Anthon William Cabas",
+      headline: "Computer Engineer | Embedded Systems & Edge AI | IT & Technical Support",
+      email: email || "rhinnanthon@gmail.com",
+      phone: "0945-350-7389",
+      location: "Deca Homes, Cubacub, Mandaue City, Cebu",
+      portfolioUrl: "https://github.com/RAWCabas",
+      linkedinUrl: "https://linkedin.com/in/rhinnanthon",
+      githubUrl: "https://github.com/RAWCabas",
+    },
+    summary:
+      "Analytical Computer Engineering graduate specializing in smart automation, embedded systems, and machine learning integration alongside strong foundations in hardware maintenance, systems troubleshooting, and network operations. Demonstrates hands-on expertise in hardware prototyping, 3D mechanical modeling, deploying Edge AI and computer vision solutions, and delivering dependable on-site and remote technical support across distributed teams and enterprise systems.",
+    experiences: [
+      {
+        id: crypto.randomUUID(),
+        company: "Sustainable Center for Engineering and Next-Generation Technology",
+        role: "Project Research Assistant (Internship)",
+        location: "Cebu, Philippines",
+        startDate: "2026-01-01",
+        endDate: null,
+        isHidden: false,
+        bullets: [
+          {
+            id: crypto.randomUUID(),
+            content:
+              "Engineered detailed 3D designs and mechanical modeling for project hardware, optimizing structural integrity for physical enclosures.",
+            isHidden: false,
+            hasMetrics: true,
+          },
+          {
+            id: crypto.randomUUID(),
+            content:
+              "Collaborated closely on embedded programming and machine learning model training utilizing Edge Impulse for real-time edge computing deployment.",
+            isHidden: false,
+            hasMetrics: true,
+          },
+          {
+            id: crypto.randomUUID(),
+            content:
+              "Conducted system-level diagnostics, hardware assembly, and sensor integration for IoT embedded prototypes.",
+            isHidden: false,
+            hasMetrics: false,
+          },
+        ],
+      },
+      {
+        id: crypto.randomUUID(),
+        company: "McDonald's Philippines",
+        role: "Customer Service Crew",
+        location: "Cebu, Philippines",
+        startDate: "2022-01-01",
+        endDate: "2022-12-31",
+        isHidden: false,
+        bullets: [
+          {
+            id: crypto.randomUUID(),
+            content:
+              "Assisted customers and efficiently handled orders within a high-volume, fast-paced environment.",
+            isHidden: false,
+            hasMetrics: false,
+          },
+          {
+            id: crypto.randomUUID(),
+            content:
+              "Worked effectively as part of a cohesive team to ensure consistent customer satisfaction.",
+            isHidden: false,
+            hasMetrics: false,
+          },
+          {
+            id: crypto.randomUUID(),
+            content:
+              "Demonstrated reliable punctuality, active communication, and dispute resolution under operational pressure.",
+            isHidden: false,
+            hasMetrics: false,
+          },
+        ],
+      },
+    ],
+    projects: [
+      {
+        id: crypto.randomUUID(),
+        name: "Edge AI & Hardware Prototyping (SCENG)",
+        description:
+          "Embedded machine learning deployment utilizing Edge Impulse and physical enclosure design.",
+        technologies: [
+          "Edge Impulse",
+          "Embedded C/C++",
+          "Autodesk Fusion 360",
+          "Arduino IDE",
+          "Computer Vision",
+        ],
+        liveUrl: "https://github.com/RAWCabas",
+        repoUrl: "https://github.com/RAWCabas",
+        isHidden: false,
+        bullets: [
+          {
+            id: crypto.randomUUID(),
+            content:
+              "Engineered detailed 3D mechanical models and physical enclosures for edge computing hardware.",
+            isHidden: false,
+            hasMetrics: true,
+          },
+          {
+            id: crypto.randomUUID(),
+            content:
+              "Trained and deployed real-time machine learning inference models using Edge Impulse.",
+            isHidden: false,
+            hasMetrics: true,
+          },
+        ],
+      },
+      {
+        id: crypto.randomUUID(),
+        name: "Computer Systems Servicing & Network Infrastructure",
+        description:
+          "Workstation hardware diagnostics, operating system installations, and small-office LAN/WAN deployment.",
+        technologies: [
+          "Hardware Diagnostics",
+          "Windows OS",
+          "LAN/WAN",
+          "TCP/IP",
+          "Wi-Fi & Router Configuration",
+        ],
+        liveUrl: "https://github.com/RAWCabas",
+        repoUrl: "https://github.com/RAWCabas",
+        isHidden: false,
+        bullets: [
+          {
+            id: crypto.randomUUID(),
+            content:
+              "Diagnosed hardware faults, assembled custom PC units, and configured Windows OS workstations with peripheral support.",
+            isHidden: false,
+            hasMetrics: false,
+          },
+          {
+            id: crypto.randomUUID(),
+            content:
+              "Set up network switches, configured Wi-Fi routers with WPA security, and performed packet troubleshooting with TCP/IP utilities.",
+            isHidden: false,
+            hasMetrics: false,
+          },
+        ],
+      },
+    ],
+    certifications: [
+      {
+        id: crypto.randomUUID(),
+        name: "Computer Systems Servicing NCII",
+        issuer: "TESDA Accredited Training",
+        issueDate: "2024-01-01",
+        expiryDate: null,
+        credentialId: "NCII-CSS-280",
+        credentialUrl: "",
+        hours: "280 Hours",
+        isHidden: false,
+      },
+      {
+        id: crypto.randomUUID(),
+        name: "Programming (JAVA NCIII)",
+        issuer: "TESDA Accredited Training",
+        issueDate: "2024-01-01",
+        expiryDate: null,
+        credentialId: "NCIII-JAVA-240",
+        credentialUrl: "",
+        hours: "240 Hours",
+        isHidden: false,
+      },
+      {
+        id: crypto.randomUUID(),
+        name: "Data Analysis Level 3",
+        issuer: "TESDA Accredited Training",
+        issueDate: "2024-01-01",
+        expiryDate: null,
+        credentialId: "DA-L3-120",
+        credentialUrl: "",
+        hours: "120 Hours",
+        isHidden: false,
+      },
+      {
+        id: crypto.randomUUID(),
+        name: "Internet of Things (IoT)",
+        issuer: "TESDA Accredited Training",
+        issueDate: "2024-01-01",
+        expiryDate: null,
+        credentialId: "IOT-102",
+        credentialUrl: "",
+        hours: "102 Hours",
+        isHidden: false,
+      },
+      {
+        id: crypto.randomUUID(),
+        name: "Creative Web Design",
+        issuer: "TESDA Accredited Training",
+        issueDate: "2024-01-01",
+        expiryDate: null,
+        credentialId: "CWD-102",
+        credentialUrl: "",
+        hours: "102 Hours",
+        isHidden: false,
+      },
+    ],
+    skills: [
+      // Languages
+      { id: crypto.randomUUID(), name: "Java (TESDA NC III)", category: "languages", isHidden: false },
+      { id: crypto.randomUUID(), name: "C/C++ basics", category: "languages", isHidden: false },
+      { id: crypto.randomUUID(), name: "HTML/CSS", category: "languages", isHidden: false },
+
+      // Frameworks & Core Engineering
+      { id: crypto.randomUUID(), name: "Edge Impulse", category: "frameworks", isHidden: false },
+      { id: crypto.randomUUID(), name: "Arduino IDE", category: "frameworks", isHidden: false },
+      { id: crypto.randomUUID(), name: "Problem-Solving & Algorithm Design", category: "frameworks", isHidden: false },
+
+      // Cloud, Systems & Networking
+      { id: crypto.randomUUID(), name: "Internet of Things (IoT)", category: "cloud", isHidden: false },
+      { id: crypto.randomUUID(), name: "LAN/WAN Fundamentals", category: "cloud", isHidden: false },
+      { id: crypto.randomUUID(), name: "TCP/IP & Internet Protocols", category: "cloud", isHidden: false },
+      { id: crypto.randomUUID(), name: "Wi-Fi & Router Configuration", category: "cloud", isHidden: false },
+      { id: crypto.randomUUID(), name: "Network Troubleshooting", category: "cloud", isHidden: false },
+
+      // Tools & Hardware
+      { id: crypto.randomUUID(), name: "PC Assembly & Hardware Diagnostics", category: "tools", isHidden: false },
+      { id: crypto.randomUUID(), name: "OS Installation (Windows)", category: "tools", isHidden: false },
+      { id: crypto.randomUUID(), name: "Printer & Scanner Setup", category: "tools", isHidden: false },
+      { id: crypto.randomUUID(), name: "Autodesk Fusion 360", category: "tools", isHidden: false },
+      { id: crypto.randomUUID(), name: "VS Code", category: "tools", isHidden: false },
+      { id: crypto.randomUUID(), name: "Microsoft Office (Word, Excel, PowerPoint)", category: "tools", isHidden: false },
+      { id: crypto.randomUUID(), name: "Google Workspace", category: "tools", isHidden: false },
+      { id: crypto.randomUUID(), name: "Adobe Photoshop", category: "tools", isHidden: false },
+      { id: crypto.randomUUID(), name: "Adobe Illustrator", category: "tools", isHidden: false },
+      { id: crypto.randomUUID(), name: "Adobe Premiere Pro", category: "tools", isHidden: false },
+
+      // Soft Skills
+      { id: crypto.randomUUID(), name: "Diagnostic Problem-Solving", category: "soft", isHidden: false },
+      { id: crypto.randomUUID(), name: "Customer Service & High-Volume Operations", category: "soft", isHidden: false },
+      { id: crypto.randomUUID(), name: "Team Collaboration & Conflict Resolution", category: "soft", isHidden: false },
+    ],
+    updatedAt: nowIso(),
+  };
+}
