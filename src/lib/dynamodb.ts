@@ -126,10 +126,14 @@ export function getDynamoDocClient(): IDynamoDocClient {
 
     const credentials = getAwsCredentials();
 
-    const ddbClient = new DynamoDBClient({ 
+    const clientConfig: Record<string, unknown> = {
       region: getAwsRegion(),
-      credentials,
-    });
+    };
+    if (credentials) {
+      clientConfig.credentials = credentials;
+    }
+
+    const ddbClient = new DynamoDBClient(clientConfig);
     const docClient = DynamoDBDocumentClient.from(ddbClient);
 
     const memoryFallback = new MemoryDynamoDocClient();

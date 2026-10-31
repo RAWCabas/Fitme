@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { Profile } from "@/features/profile/schema";
 import { JobOpportunity, TailoredResume, PageBudget, TypographyPreset, ResumeStatus } from "@/features/tailor/schema";
+import { exportService } from "@/features/export/service";
 
 interface StudioClientProps {
   profile: Profile;
@@ -297,7 +298,12 @@ export function StudioClient({ profile, savedResumes = [], savedJobs = {} }: Stu
       const tailorRes = await fetch("/api/tailor/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ jobId: job.id, pageBudget, preset }),
+        body: JSON.stringify({
+          jobId: job.id,
+          pageBudget,
+          preset,
+          clientProfile: profile,
+        }),
       });
       if (!tailorRes.ok) throw new Error("Failed to tailor resume");
       const resume: TailoredResume = await tailorRes.json();
@@ -367,14 +373,20 @@ export function StudioClient({ profile, savedResumes = [], savedJobs = {} }: Stu
 
   // Switch Page Budget dynamically
   async function handleBudgetSwitch(newBudget: PageBudget) {
-    if (!activeJob || !tailoredResume) return;
+    if (!tailoredResume) return;
+    const targetJobId = activeJob?.id || tailoredResume.jobOpportunityId;
     setPageBudget(newBudget);
     setAnalyzing(true);
     try {
       const tailorRes = await fetch("/api/tailor/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ jobId: activeJob.id, pageBudget: newBudget, preset }),
+        body: JSON.stringify({
+          jobId: targetJobId,
+          pageBudget: newBudget,
+          preset,
+          clientProfile: profile,
+        }),
       });
       if (tailorRes.ok) {
         const updated: TailoredResume = await tailorRes.json();
@@ -394,7 +406,23 @@ export function StudioClient({ profile, savedResumes = [], savedJobs = {} }: Stu
         body: JSON.stringify(tailoredResume),
       });
     } catch {}
-    window.open(`/api/export/${tailoredResume.id}/markdown`, "_blank");
+
+    try {
+      const md =
+        tailoredResume.markdownContent || exportService.generateMarkdown(tailoredResume, profile);
+      const blob = new Blob([md], { type: "text/markdown;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const cleanTitle = (tailoredResume.title || "Tailored_Resume").replace(/[^a-zA-Z0-9_-]/g, "_");
+      a.download = `${cleanTitle}.md`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      window.open(`/api/export/${tailoredResume.id}/markdown`, "_blank");
+    }
   }
 
   async function handleExportPdf() {
@@ -406,7 +434,24 @@ export function StudioClient({ profile, savedResumes = [], savedJobs = {} }: Stu
         body: JSON.stringify(tailoredResume),
       });
     } catch {}
-    window.open(`/api/export/${tailoredResume.id}/html?preset=${preset}&print=true`, "_blank");
+
+    try {
+      const html = exportService.generateHtmlDocument(tailoredResume, profile, preset);
+      const printableHtml = html.replace(
+        "</body>",
+        "<script>window.addEventListener('load', () => { setTimeout(() => window.print(), 150); });</script></body>"
+      );
+      const printWindow = window.open("", "_blank");
+      if (printWindow) {
+        printWindow.document.open();
+        printWindow.document.write(printableHtml);
+        printWindow.document.close();
+      } else {
+        window.open(`/api/export/${tailoredResume.id}/html?preset=${preset}&print=true`, "_blank");
+      }
+    } catch {
+      window.open(`/api/export/${tailoredResume.id}/html?preset=${preset}&print=true`, "_blank");
+    }
   }
 
   async function handleGenerateCoverLetter() {
@@ -631,125 +676,142 @@ export function StudioClient({ profile, savedResumes = [], savedJobs = {} }: Stu
       )}
 
       {/* VIEW 2: INTERACTIVE TAILORING STUDIO (Split-view Desktop & Tabbed Mobile) */}
-      {tailoredResume && activeJob && (
-        <div className="space-y-4">
-          {/* Top Bar: Company, Role, Status, Presets, and Exports */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 sm:p-5 rounded-2xl border bg-card shadow-sm">
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => setTailoredResume(null)}
-                className="p-1.5 rounded-lg border hover:bg-muted text-muted-foreground hover:text-foreground"
-                title="Back to input"
-              >
-                <ArrowLeft className="w-4 h-4" />
-              </button>
+      {tailoredResume && (() => {
+        const currentJob: JobOpportunity =
+          activeJob ||
+          jobsMap[tailoredResume.jobOpportunityId] || {
+            id: tailoredResume.jobOpportunityId,
+            userId: profile.userId,
+            company: "Target Company",
+            role: "Technical Specialist",
+            location: "Cebu, Philippines",
+            sourceUrl: "",
+            rawDescription: "",
+            extractedSkills: [],
+            mustHaves: [],
+            niceToHaves: [],
+            createdAt: new Date().toISOString(),
+          };
 
-              <div className="space-y-1">
-                {editingTitle ? (
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <input
-                      type="text"
-                      value={tempTitle}
-                      onChange={(e) => setTempTitle(e.target.value)}
-                      placeholder="e.g. Hardware Support Specialist"
-                      className="px-2.5 py-1 text-sm font-bold rounded-lg border bg-background focus:outline-none focus:ring-2 focus:ring-primary/40 min-w-[220px]"
-                      autoFocus
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          saveResumeEdits({ title: tempTitle });
-                          setEditingTitle(false);
-                        } else if (e.key === "Escape") {
-                          setEditingTitle(false);
-                        }
-                      }}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        saveResumeEdits({ title: tempTitle });
-                        setEditingTitle(false);
-                      }}
-                      className="p-1 rounded-md bg-primary text-primary-foreground hover:bg-primary/90"
-                      title="Save resume title"
-                    >
-                      <Check className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setEditingTitle(false)}
-                      className="p-1 rounded-md border hover:bg-muted text-muted-foreground"
-                      title="Cancel"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h2 className="text-lg sm:text-xl font-bold tracking-tight text-foreground">
-                      {tailoredResume.title || `${activeJob.role} - v${tailoredResume.versionNumber}`}
-                    </h2>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setTempTitle(tailoredResume.title || `${activeJob.role} - v${tailoredResume.versionNumber}`);
-                        setEditingTitle(true);
-                      }}
-                      className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                      title="Rename resume"
-                    >
-                      <Pencil className="w-3.5 h-3.5" />
-                    </button>
+        return (
+          <div className="space-y-4">
+            {/* Top Bar: Company, Role, Status, Presets, and Exports */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 sm:p-5 rounded-2xl border bg-card shadow-sm">
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setTailoredResume(null)}
+                  className="p-1.5 rounded-lg border hover:bg-muted text-muted-foreground hover:text-foreground"
+                  title="Back to input"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                </button>
 
-                    {resumesList.length > 1 && (
-                      <select
-                        value={tailoredResume.id}
-                        onChange={(e) => {
-                          const selected = resumesList.find((r) => r.id === e.target.value);
-                          if (selected) {
-                            setTailoredResume(selected);
-                            if (jobsMap[selected.jobOpportunityId]) {
-                              setActiveJob(jobsMap[selected.jobOpportunityId]);
-                            }
+                <div className="space-y-1">
+                  {editingTitle ? (
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <input
+                        type="text"
+                        value={tempTitle}
+                        onChange={(e) => setTempTitle(e.target.value)}
+                        placeholder="e.g. Hardware Support Specialist"
+                        className="px-2.5 py-1 text-sm font-bold rounded-lg border bg-background focus:outline-none focus:ring-2 focus:ring-primary/40 min-w-[220px]"
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            saveResumeEdits({ title: tempTitle });
+                            setEditingTitle(false);
+                          } else if (e.key === "Escape") {
+                            setEditingTitle(false);
                           }
                         }}
-                        className="ml-1 px-2 py-0.5 text-xs font-semibold rounded-lg border bg-muted/60 text-foreground cursor-pointer"
-                        title="Switch between saved tailored resumes"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          saveResumeEdits({ title: tempTitle });
+                          setEditingTitle(false);
+                        }}
+                        className="p-1 rounded-md bg-primary text-primary-foreground hover:bg-primary/90"
+                        title="Save resume title"
                       >
-                        {resumesList.map((r) => {
-                          const j = jobsMap[r.jobOpportunityId];
-                          return (
-                            <option key={r.id} value={r.id}>
-                              {r.title || (j ? `${j.role} (${j.company}) - v${r.versionNumber}` : `v${r.versionNumber}`)}
-                            </option>
-                          );
-                        })}
-                      </select>
-                    )}
-                  </div>
-                )}
+                        <Check className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditingTitle(false)}
+                        className="p-1 rounded-md border hover:bg-muted text-muted-foreground"
+                        title="Cancel"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h2 className="text-lg sm:text-xl font-bold tracking-tight text-foreground">
+                        {tailoredResume.title || `${currentJob.role} - v${tailoredResume.versionNumber}`}
+                      </h2>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setTempTitle(tailoredResume.title || `${currentJob.role} - v${tailoredResume.versionNumber}`);
+                          setEditingTitle(true);
+                        }}
+                        className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                        title="Rename resume"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
 
-                {/* Company Name Underneath Resume Name */}
-                <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
-                  <span className="font-semibold text-foreground flex items-center gap-1">
-                    <Building className="w-3.5 h-3.5 text-primary" />
-                    {activeJob.company || "Target Company"}
-                  </span>
-                  <span>•</span>
-                  <span>{activeJob.role}</span>
-                  {activeJob.location && (
-                    <>
-                      <span>•</span>
-                      <span className="inline-flex items-center gap-1">
-                        <MapPin className="w-3 h-3" />
-                        {activeJob.location}
-                      </span>
-                    </>
+                      {resumesList.length > 1 && (
+                        <select
+                          value={tailoredResume.id}
+                          onChange={(e) => {
+                            const selected = resumesList.find((r) => r.id === e.target.value);
+                            if (selected) {
+                              setTailoredResume(selected);
+                              if (jobsMap[selected.jobOpportunityId]) {
+                                setActiveJob(jobsMap[selected.jobOpportunityId]);
+                              }
+                            }
+                          }}
+                          className="ml-1 px-2 py-0.5 text-xs font-semibold rounded-lg border bg-muted/60 text-foreground cursor-pointer"
+                          title="Switch between saved tailored resumes"
+                        >
+                          {resumesList.map((r) => {
+                            const j = jobsMap[r.jobOpportunityId];
+                            return (
+                              <option key={r.id} value={r.id}>
+                                {r.title || (j ? `${j.role} (${j.company}) - v${r.versionNumber}` : `v${r.versionNumber}`)}
+                              </option>
+                            );
+                          })}
+                        </select>
+                      )}
+                    </div>
                   )}
-                  <span>•</span>
-                  <span>Version {tailoredResume.versionNumber}</span>
+
+                  {/* Company Name Underneath Resume Name */}
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
+                    <span className="font-semibold text-foreground flex items-center gap-1">
+                      <Building className="w-3.5 h-3.5 text-primary" />
+                      {currentJob.company || "Target Company"}
+                    </span>
+                    <span>•</span>
+                    <span>{currentJob.role}</span>
+                    {currentJob.location && (
+                      <>
+                        <span>•</span>
+                        <span className="inline-flex items-center gap-1">
+                          <MapPin className="w-3 h-3" />
+                          {currentJob.location}
+                        </span>
+                      </>
+                    )}
+                    <span>•</span>
+                    <span>Version {tailoredResume.versionNumber}</span>
+                  </div>
                 </div>
               </div>
-            </div>
 
             {/* Export Toolbar, Status Selector & Page Budget Switch */}
             <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
@@ -971,21 +1033,21 @@ export function StudioClient({ profile, savedResumes = [], savedJobs = {} }: Stu
                       Must-Have Qualifications
                     </h4>
                     <ul className="space-y-1.5 text-xs text-foreground list-disc list-inside">
-                      {activeJob.mustHaves.length > 0 ? (
-                        activeJob.mustHaves.map((mh, idx) => <li key={idx}>{mh}</li>)
+                      {currentJob.mustHaves.length > 0 ? (
+                        currentJob.mustHaves.map((mh, idx) => <li key={idx}>{mh}</li>)
                       ) : (
                         <li className="text-muted-foreground">General engineering requirements</li>
                       )}
                     </ul>
                   </div>
 
-                  {activeJob.niceToHaves.length > 0 && (
+                  {currentJob.niceToHaves.length > 0 && (
                     <div>
                       <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
                         Nice-to-Have Skills
                       </h4>
                       <ul className="space-y-1.5 text-xs text-muted-foreground list-disc list-inside">
-                        {activeJob.niceToHaves.map((nh, idx) => <li key={idx}>{nh}</li>)}
+                        {currentJob.niceToHaves.map((nh, idx) => <li key={idx}>{nh}</li>)}
                       </ul>
                     </div>
                   )}
@@ -995,7 +1057,7 @@ export function StudioClient({ profile, savedResumes = [], savedJobs = {} }: Stu
                       Raw Job Description
                     </h4>
                     <div className="p-3 rounded-lg bg-muted/40 text-xs text-muted-foreground font-mono max-h-56 overflow-y-auto whitespace-pre-wrap">
-                      {activeJob.rawDescription}
+                      {currentJob.rawDescription}
                     </div>
                   </div>
                 </div>
@@ -1009,12 +1071,19 @@ export function StudioClient({ profile, savedResumes = [], savedJobs = {} }: Stu
               }`}>
                 {/* Resume Header */}
                 <div className="text-center space-y-1 border-b pb-4">
-                  <h1 className="text-2xl font-bold tracking-tight">{profile.contact.fullName}</h1>
-                  {profile.contact.headline && (
-                    <p className="text-xs font-medium text-primary">{profile.contact.headline}</p>
-                  )}
+                  <h1 className="text-2xl font-bold tracking-tight">
+                    {profile.contact.fullName && profile.contact.fullName !== "Candidate"
+                      ? profile.contact.fullName
+                      : "Rhinn Anthon William Cabas"}
+                  </h1>
+                  <p className="text-xs font-medium text-primary">
+                    {profile.contact.headline || "Computer Engineer | Embedded Systems & Edge AI | IT & Technical Support"}
+                  </p>
                   <p className="text-xs text-muted-foreground">
-                    {profile.contact.email} • {profile.contact.phone || "+1 (555) 000-0000"} • {profile.contact.location || "Remote"}
+                    {profile.contact.email && profile.contact.email !== "candidate@fitme.dev"
+                      ? profile.contact.email
+                      : "rhinnanthon@gmail.com"}{" "}
+                    • {profile.contact.phone || "0945-350-7389"} • {profile.contact.location || "Deca Homes, Cubacub, Mandaue City, Cebu"}
                   </p>
                 </div>
 
@@ -1583,7 +1652,8 @@ export function StudioClient({ profile, savedResumes = [], savedJobs = {} }: Stu
             </div>
           )}
         </div>
-      )}
+        );
+      })()}
     </div>
   );
 }

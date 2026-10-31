@@ -4,7 +4,7 @@ import { AppError } from "@/lib/errors";
 import { nowIso } from "@/lib/dates";
 import { invokeBedrockJson } from "@/lib/bedrock";
 import { Profile, WorkExperience, Project, Certification, SkillItem } from "@/features/profile/schema";
-import { profileService as defaultProfileService, ProfileService } from "@/features/profile/service";
+import { profileService as defaultProfileService, ProfileService, buildRhinnMasterProfile } from "@/features/profile/service";
 import { getTailorRepo } from "./repo";
 import { 
   JobOpportunity, 
@@ -77,32 +77,53 @@ Return ONLY a valid JSON object matching the requested schema.`;
    * Calculates the ATS Fit Score and Keyword Match Breakdown.
    */
   calculateFitScore(profile: Profile, job: JobOpportunity): FitScore {
-    // Collect candidate's visible skills
-    const candidateSkills = new Set(
-      profile.skills.filter((s) => !s.isHidden).map((s) => s.name.toLowerCase().trim())
-    );
+    // 1. Collect candidate's visible skills
+    const candidateSkillsList = profile.skills
+      .filter((s) => !s.isHidden)
+      .map((s) => s.name.toLowerCase().trim());
+    const candidateSkills = new Set(candidateSkillsList);
 
-    // Collect technologies from visible projects
+    // 2. Collect technologies from visible projects
     profile.projects
       .filter((p) => !p.isHidden)
       .forEach((p) => {
-        p.technologies.forEach((t) => candidateSkills.add(t.toLowerCase().trim()));
+        p.technologies.forEach((t) => {
+          const lowerTech = t.toLowerCase().trim();
+          candidateSkills.add(lowerTech);
+          candidateSkillsList.push(lowerTech);
+        });
       });
 
-    // Collect experience text for contextual/transferable matches
-    const experienceCorpus = profile.experiences
-      .filter((e) => !e.isHidden)
-      .flatMap((e) => e.bullets.filter((b) => !b.isHidden).map((b) => b.content.toLowerCase()))
-      .join(" ");
-
-    // Collect certifications
+    // 3. Collect certifications and issuers
+    const certStrings: string[] = [];
     (profile.certifications || [])
       .filter((c) => !c.isHidden)
       .forEach((c) => {
-        candidateSkills.add(c.name.toLowerCase().trim());
-        if (c.issuer) candidateSkills.add(c.issuer.toLowerCase().trim());
+        const cName = c.name.toLowerCase().trim();
+        candidateSkills.add(cName);
+        candidateSkillsList.push(cName);
+        certStrings.push(cName);
+        if (c.issuer) certStrings.push(c.issuer.toLowerCase().trim());
         if (c.hours) candidateSkills.add(c.hours.toLowerCase().trim());
       });
+
+    // 4. Collect experience, headline, and project text for contextual/transferable matches
+    const experienceCorpus = [
+      profile.contact.headline || "",
+      ...profile.experiences.filter((e) => !e.isHidden).flatMap((e) => [
+        e.role,
+        e.company,
+        ...e.bullets.filter((b) => !b.isHidden).map((b) => b.content),
+      ]),
+      ...profile.projects.filter((p) => !p.isHidden).flatMap((p) => [
+        p.name,
+        p.description || "",
+        ...p.bullets.filter((b) => !b.isHidden).map((b) => b.content),
+      ]),
+      ...certStrings,
+    ].join(" ").toLowerCase();
+
+    const candidateHeadline = (profile.contact.headline || "").toLowerCase();
 
     const keywords: KeywordMatch[] = [];
     let matchedCount = 0;
@@ -112,27 +133,41 @@ Return ONLY a valid JSON object matching the requested schema.`;
     // Use extractedSkills or mustHaves as keyword targets
     const targetKeywords = job.extractedSkills.length > 0
       ? job.extractedSkills
-      : ["TypeScript", "React", "Cloud Architecture", "API Design", "Agile"];
+      : ["Technical Support", "Troubleshooting", "POS Systems", "Hardware Diagnostics", "Networking"];
 
     for (const kw of targetKeywords) {
       const lower = kw.toLowerCase().trim();
       const occurrencesInJD = (job.rawDescription.toLowerCase().match(new RegExp(`\\b${escapeRegex(lower)}\\b`, "g")) || []).length || 1;
 
-      if (candidateSkills.has(lower)) {
+      // Check direct match: exact, substring/superset in skills list, or headline/cert title match
+      const hasDirectSkillMatch =
+        candidateSkills.has(lower) ||
+        candidateSkillsList.some(
+          (cs) => cs === lower || cs.includes(lower) || lower.includes(cs)
+        ) ||
+        candidateHeadline.includes(lower) ||
+        certStrings.some((cert) => cert.includes(lower) || lower.includes(cert));
+
+      // Check transferable match: corpus match or individual key term match in corpus
+      const isTransferableMatch =
+        experienceCorpus.includes(lower) ||
+        lower.split(/\s+/).filter((w) => w.length > 3 && !["with", "from", "that", "this", "also"].includes(w)).some((w) => experienceCorpus.includes(w));
+
+      if (hasDirectSkillMatch) {
         matchedCount++;
         keywords.push({
           keyword: kw,
           status: "matched",
           occurrencesInJD,
-          notes: "Direct match in your skills inventory.",
+          notes: "Direct match in your skills inventory, headline, or certifications.",
         });
-      } else if (experienceCorpus.includes(lower)) {
+      } else if (isTransferableMatch) {
         transferableCount++;
         keywords.push({
           keyword: kw,
           status: "transferable",
           occurrencesInJD,
-          notes: "Mentioned contextually within your work experiences.",
+          notes: "Demonstrated contextually within your work history or technical projects.",
         });
       } else {
         missingCount++;
@@ -146,16 +181,16 @@ Return ONLY a valid JSON object matching the requested schema.`;
     }
 
     const totalKeywords = targetKeywords.length || 1;
-    const rawScore = ((matchedCount * 1.0 + transferableCount * 0.5) / totalKeywords) * 100;
+    const rawScore = ((matchedCount * 1.0 + transferableCount * 0.6) / totalKeywords) * 100;
     const score = Math.min(100, Math.max(0, Math.round(rawScore)));
 
     let summaryEvaluation = "";
     if (score >= 80) {
-      summaryEvaluation = `Strong Match (${score}%): Your experience closely aligns with the required core stack. Minor additions can maximize ATS pass-through.`;
+      summaryEvaluation = `Strong Match (${score}%): Your experience and certifications closely align with the required role requirements.`;
     } else if (score >= 50) {
-      summaryEvaluation = `Moderate Match (${score}%): You possess several transferable skills, but key requirements like ${keywords.filter((k) => k.status === "missing").slice(0, 2).map((k) => k.keyword).join(", ")} should be emphasized.`;
+      summaryEvaluation = `Moderate Match (${score}%): You possess solid transferable skills, but key requirements like ${keywords.filter((k) => k.status === "missing").slice(0, 2).map((k) => k.keyword).join(", ")} can be highlighted.`;
     } else {
-      summaryEvaluation = `Growth Fit (${score}%): Significant keyword gaps detected. Consider emphasizing transferable architectural experience.`;
+      summaryEvaluation = `Growth Fit (${score}%): Keyword alignment detected. Consider emphasizing transferable technical experience.`;
     }
 
     return {
@@ -174,9 +209,22 @@ Return ONLY a valid JSON object matching the requested schema.`;
     userId: string,
     jobId: string,
     pageBudget: PageBudget = "1_page",
-    preset: TypographyPreset = "modern_standard"
+    preset: TypographyPreset = "modern_standard",
+    userEmail = "",
+    userName = "",
+    clientProfile?: Profile
   ): Promise<TailoredResume> {
-    const profile = await this.profService.getOrCreateProfile(userId);
+    let profile = clientProfile;
+    if (!profile || profile.experiences.length === 0) {
+      profile = await this.profService.getOrCreateProfile(userId, userEmail, userName);
+    }
+    if (profile.experiences.length === 0) {
+      profile = buildRhinnMasterProfile(
+        userId,
+        userEmail || "rhinnanthon@gmail.com",
+        userName || "Rhinn Anthon William Cabas"
+      );
+    }
     const job = await this.repo.getJobOpportunity(userId, jobId);
     if (!job) throw AppError.notFound("Job opportunity not found");
 
@@ -277,10 +325,24 @@ Return ONLY a valid JSON object matching the requested schema.`;
       tailoredProjects?: Project[];
       tailoredCertifications?: Certification[];
       selectedSkills?: SkillItem[];
+      [key: string]: unknown;
     }
   ): Promise<TailoredResume> {
     const resume = await this.repo.getTailoredResume(userId, resumeId);
-    if (!resume) throw AppError.notFound("Tailored resume not found");
+    if (!resume) {
+      // Upsert complete tailored resume if supplied from client cache or sync
+      if (updates && "jobOpportunityId" in updates && "fitScore" in updates) {
+        const fullResume = updates as unknown as TailoredResume;
+        const validated = tailoredResumeSchema.parse({
+          ...fullResume,
+          id: resumeId,
+          userId,
+          updatedAt: nowIso(),
+        });
+        return await this.repo.saveTailoredResume(validated);
+      }
+      throw AppError.notFound("Tailored resume not found");
+    }
 
     if (updates.title !== undefined) {
       resume.title = updates.title;
@@ -426,16 +488,36 @@ Start with a strong action verb (e.g. Engineered, Spearheaded, Architected, Acce
   private fallbackParseJd(raw: string): ExtractedJd {
     const lines = raw.split("\n").map((l) => l.trim()).filter(Boolean);
     const lower = raw.toLowerCase();
+    const meaningfulLines = lines.filter((l) => {
+      const low = l.toLowerCase();
+      return (
+        !low.startsWith("about the job") &&
+        !low.startsWith("about us") &&
+        !low.startsWith("job description") &&
+        !low.startsWith("overview")
+      );
+    });
 
     // 1. Role Detection
-    let role = "Technical Specialist / Engineer";
-    const roleMatch = raw.match(/(?:role|position|job title|title|hiring for|looking for(?: an?|:)?)\s*[:\-–]?\s*([^\n\r,.]+)/i);
-    if (roleMatch && roleMatch[1]?.trim().length > 2 && roleMatch[1].trim().length < 60) {
+    let role = "IT Technical Support / Associate";
+    const responsibleMatch = raw.match(/([A-Z][A-Za-z0-9\s/&-]{2,30})\s+(?:is responsible for|will be responsible)/i);
+    const roleMatch = raw.match(/(?:role|position|job title|title|hiring for)\s*[:\-–]?\s*([^\n\r,.]+)/i);
+
+    if (responsibleMatch && responsibleMatch[1]?.trim() && !responsibleMatch[1].toLowerCase().includes("impact")) {
+      role = responsibleMatch[1].trim();
+    } else if (
+      roleMatch &&
+      roleMatch[1]?.trim().length > 2 &&
+      roleMatch[1].trim().length < 50 &&
+      !roleMatch[1].toLowerCase().includes("passionate") &&
+      !roleMatch[1].toLowerCase().includes("individual")
+    ) {
       role = roleMatch[1].trim();
     } else {
       const candidateRoles = [
-        "Computer Engineer", "IT Technical Support", "Technical Support Specialist",
-        "Systems & Network Engineer", "Network Engineer", "Hardware Support Specialist",
+        "IT Associate", "IT Support Associate", "IT Technical Support", "Technical Support Specialist",
+        "Systems & Network Engineer", "Computer Engineer", "Hardware Support Specialist",
+        "POS Specialist", "Systems Administrator", "Network Administrator", "Helpdesk Support",
         "Embedded Systems Engineer", "Edge AI Specialist", "Software Engineer",
         "Frontend Developer", "Backend Developer", "Full Stack Developer", "Data Analyst"
       ];
@@ -445,18 +527,21 @@ Start with a strong action verb (e.g. Engineered, Spearheaded, Architected, Acce
           break;
         }
       }
-      if (role === "Technical Specialist / Engineer" && lines[0] && lines[0].length < 60 && !lines[0].toLowerCase().includes("description")) {
-        role = lines[0];
+      if (role === "IT Technical Support / Associate" && meaningfulLines[0] && meaningfulLines[0].length < 50) {
+        role = meaningfulLines[0];
       }
     }
 
     // 2. Company Detection
     let company = "Target Company";
-    const compMatch = raw.match(/(?:company|organization|at|about)\s*[:\-–]?\s*([A-Z][A-Za-z0-9&., ]{2,40})/);
-    if (compMatch && compMatch[1]?.trim() && !compMatch[1].toLowerCase().includes("job") && !compMatch[1].toLowerCase().includes("the")) {
+    const joinMatch = raw.match(/(?:We in|We at|Join)\s+([A-Z][A-Za-z0-9&., ]{2,35})/);
+    const compMatch = raw.match(/(?:company|organization)\s*[:\-–]?\s*([A-Z][A-Za-z0-9&., ]{2,40})/);
+    if (joinMatch && joinMatch[1]?.trim() && !joinMatch[1].toLowerCase().includes("job")) {
+      company = joinMatch[1].trim();
+    } else if (compMatch && compMatch[1]?.trim() && !compMatch[1].toLowerCase().includes("job")) {
       company = compMatch[1].trim();
-    } else if (lines.length > 1 && lines[0].length < 40 && lines[0] !== role) {
-      company = lines[0];
+    } else if (meaningfulLines.length > 1 && meaningfulLines[0].length < 40 && meaningfulLines[0] !== role) {
+      company = meaningfulLines[0];
     }
 
     // 3. Location Detection
@@ -470,12 +555,14 @@ Start with a strong action verb (e.g. Engineered, Spearheaded, Architected, Acce
       location = "Cebu, Philippines";
     }
 
-    // 4. Comprehensive Skill Taxonomy Scanner (IT, Hardware, Networking, Software, Embedded)
+    // 4. Comprehensive Skill Taxonomy Scanner (IT, POS, Hardware, Networking, Software, Embedded)
     const taxonomy = [
+      "Point of Sale (POS)", "POS", "POS Systems", "POS Applications",
       "Hardware Maintenance", "PC Assembly", "Hardware Diagnostics", "Peripheral Setup",
       "LAN/WAN", "TCP/IP", "Wi-Fi & Router Configuration", "Network Troubleshooting",
-      "DNS", "DHCP", "VPN", "Systems Troubleshooting", "Printer/Scanner Setup",
-      "Computer Systems Servicing", "Technical Support", "IT Support",
+      "Network Connections", "DNS", "DHCP", "VPN", "Systems Troubleshooting", "Printer/Scanner Setup",
+      "Computer Systems Servicing", "Technical Support", "IT Support", "IT Associate",
+      "Inventory Management", "Vendor Coordination", "Retail IT Operations",
       "Windows", "Windows Server", "Linux", "Ubuntu", "MacOS",
       "Microsoft Office", "Google Workspace", "Arduino IDE", "VS Code",
       "Autodesk Fusion 360", "Adobe Photoshop", "Illustrator", "Premiere Pro",

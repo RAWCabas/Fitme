@@ -12,8 +12,13 @@ export function getDataStore(): DataStoreType {
     return "memory";
   }
 
-  // Only auto-enable dynamo if AWS credentials are confirmed to be present
-  if (getAwsCredentials()) {
+  // Auto-enable dynamo in cloud production or when AWS credentials / execution environment are present
+  if (
+    getAwsCredentials() ||
+    process.env.NODE_ENV === "production" ||
+    process.env.AWS_EXECUTION_ENV ||
+    process.env.AMPLIFY_APP_ID
+  ) {
     return "dynamo";
   }
 

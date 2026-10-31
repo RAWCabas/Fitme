@@ -21,10 +21,14 @@ export async function GET(
       resume = await repo.getTailoredResume(session.userId, id);
     }
     if (!resume) {
+      const allResumes = await repo.listTailoredResumes(session.userId);
+      resume = allResumes.find((r) => r.id === cleanId || r.id === id) || null;
+    }
+    if (!resume) {
       throw AppError.notFound("Tailored resume not found");
     }
 
-    const profile = await profileService.getOrCreateProfile(session.userId);
+    const profile = await profileService.getOrCreateProfile(session.userId, session.email, session.name);
     const markdown = exportService.generateMarkdown(resume, profile);
 
     return new Response(markdown, {

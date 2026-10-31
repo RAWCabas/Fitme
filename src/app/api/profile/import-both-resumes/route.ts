@@ -1,9 +1,8 @@
-import { NextRequest } from "next/server";
 import { errorResponse, jsonResponse } from "@/lib/http";
 import { requireSession } from "@/lib/auth/session";
 import { profileService } from "@/features/profile/service";
 
-export async function POST(_req: NextRequest) {
+export async function POST() {
   try {
     const session = await requireSession();
     const profile = await profileService.importBothResumes(session.userId);
@@ -12,3 +11,4 @@ export async function POST(_req: NextRequest) {
     return errorResponse(error);
   }
 }
+
