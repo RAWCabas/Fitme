@@ -638,6 +638,35 @@ Start with a strong action verb (e.g. Engineered, Spearheaded, Architected, Acce
       niceToHaves,
     };
   }
+
+  /**
+   * Updates an existing target job opportunity (company, role, location).
+   */
+  async updateJobOpportunity(
+    userId: string,
+    jobId: string,
+    updates: {
+      company?: string;
+      role?: string;
+      location?: string;
+    }
+  ): Promise<JobOpportunity> {
+    if (!userId) throw AppError.unauthorized();
+    const existing = await this.repo.getJobOpportunity(userId, jobId);
+    if (!existing) {
+      throw AppError.notFound("Target job opportunity not found");
+    }
+
+    const merged: JobOpportunity = {
+      ...existing,
+      company: updates.company !== undefined ? updates.company.trim() : existing.company,
+      role: updates.role !== undefined ? updates.role.trim() : existing.role,
+      location: updates.location !== undefined ? updates.location.trim() : existing.location,
+    };
+
+    const validated = jobOpportunitySchema.parse(merged);
+    return await this.repo.saveJobOpportunity(validated);
+  }
 }
 
 function escapeRegex(string: string) {

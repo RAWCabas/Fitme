@@ -212,98 +212,102 @@ export class ExportService {
         body {
           font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
           color: #111827;
-          line-height: 1.4;
+          line-height: 1.32;
         }
         .header-container {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-          margin-bottom: 4pt;
+          margin-bottom: 2pt;
         }
         h1 {
-          font-size: 22pt;
+          font-size: 19pt;
           font-weight: 900;
           letter-spacing: 0.02em;
           text-transform: uppercase;
-          margin: 0 0 3pt 0;
+          margin: 0 0 2pt 0;
           color: #111827;
+          line-height: 1.1;
         }
         .headline {
-          font-size: 9.5pt;
+          font-size: 8.5pt;
           color: #111827;
           font-weight: 700;
-          letter-spacing: 0.04em;
+          letter-spacing: 0.03em;
           text-transform: uppercase;
-          margin-bottom: 5pt;
+          margin-bottom: 3pt;
+          line-height: 1.2;
         }
         .contact-row {
-          font-size: 8.5pt;
+          font-size: 8pt;
           color: #374151;
-          margin-bottom: 2pt;
           display: flex;
-          flex-direction: column;
-          gap: 2pt;
+          flex-wrap: wrap;
+          gap: 2pt 8pt;
+          align-items: center;
+          line-height: 1.2;
         }
         .contact-row a {
           color: #374151;
           text-decoration: none;
         }
         .header-divider {
-          border-bottom: 2.5px solid #111827;
-          margin: 8pt 0 10pt 0;
+          border-bottom: 2px solid #111827;
+          margin: 3.5pt 0 4.5pt 0;
         }
         h2 {
-          font-size: 10pt;
+          font-size: 9pt;
           font-weight: 800;
           text-transform: uppercase;
-          letter-spacing: 0.05em;
+          letter-spacing: 0.04em;
           color: #111827;
-          border-bottom: 2px solid #111827;
-          padding-bottom: 1.5pt;
-          margin-top: 9pt;
-          margin-bottom: 5pt;
+          border-bottom: 1.5px solid #111827;
+          padding-bottom: 1pt;
+          margin-top: 4.5pt;
+          margin-bottom: 2pt;
         }
         .item-header {
           display: flex;
           justify-content: space-between;
-          font-size: 9.5pt;
+          font-size: 8.5pt;
           font-weight: 700;
           color: #111827;
-          margin-top: 4pt;
+          margin-top: 2pt;
         }
         .item-sub {
           display: flex;
           justify-content: space-between;
-          font-size: 8.5pt;
+          font-size: 8pt;
           font-style: italic;
           color: #4b5563;
-          margin-bottom: 2pt;
+          margin-bottom: 1.5pt;
         }
         ul {
-          margin: 2pt 0 5pt 0;
-          padding-left: 14pt;
+          margin: 1pt 0 2.5pt 0;
+          padding-left: 12pt;
         }
         li {
-          font-size: 8.5pt;
+          font-size: 8pt;
           color: #1f2937;
-          margin-bottom: 2pt;
-          line-height: 1.38;
+          margin-bottom: 1pt;
+          line-height: 1.24;
         }
         .summary-text {
-          font-size: 8.5pt;
+          font-size: 8pt;
           color: #1f2937;
-          line-height: 1.4;
+          line-height: 1.28;
           text-align: justify;
         }
         .skills-category-row {
-          font-size: 8.5pt;
+          font-size: 8pt;
           color: #1f2937;
-          margin-bottom: 3pt;
-          line-height: 1.4;
+          margin-bottom: 1.5pt;
+          line-height: 1.25;
         }
         .skills-category-label {
           font-weight: 700;
           color: #111827;
+        }
+        .experience-item, .project-item, .education-item {
+          page-break-inside: avoid;
+          break-inside: avoid;
         }
       `,
       classic_ivy: `
@@ -544,22 +548,27 @@ export class ExportService {
   <title>${escapeHtml(c.fullName)} - Resume</title>
   <style>
     @page {
-      margin: 0.4in 0.45in;
-      size: letter;
+      size: A4 portrait;
+      margin: 7mm 9mm;
     }
     *, *::before, *::after {
       box-sizing: border-box;
     }
     body {
       margin: 0;
-      padding: 0.35in 0.45in;
+      padding: 7mm 9mm;
       background: #ffffff;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
     }
     @media print {
+      @page {
+        size: A4 portrait;
+        margin: 7mm 9mm;
+      }
       body {
-        padding: 0;
+        padding: 0 !important;
+        margin: 0 !important;
       }
       .no-print {
         display: none !important;
@@ -573,16 +582,21 @@ export class ExportService {
   </style>
 </head>
 <body data-preset="${preset}">
+  <div class="no-print" style="margin: -7mm -9mm 6mm -9mm; background: #f8fafc; border-bottom: 1px solid #e2e8f0; padding: 8px 14px; font-family: -apple-system, sans-serif; font-size: 12px; color: #475569; display: flex; justify-content: space-between; align-items: center;">
+    <span>💡 <strong>Tip:</strong> In Chrome's print dialog, switch <strong>Destination</strong> from your physical printer to <strong>Save as PDF</strong> to download as a PDF file.</span>
+    <button onclick="window.print()" style="background: #2563eb; color: #ffffff; border: none; padding: 4px 12px; border-radius: 4px; font-size: 12px; font-weight: 600; cursor: pointer;">Print / Save PDF</button>
+  </div>
+
   <header class="header-container">
     <div>
       <h1>${escapeHtml(c.fullName)}</h1>
       ${c.headline ? `<div class="headline">${escapeHtml(c.headline)}</div>` : ""}
       <div class="contact-row">
         ${c.location ? `<span>📍 ${escapeHtml(c.location)}</span>` : ""}
-        ${c.phone ? `<span>📞 ${escapeHtml(c.phone)}</span>` : ""}
-        ${c.email ? `<span>✉️ <a href="mailto:${escapeHtml(c.email)}">${escapeHtml(c.email)}</a></span>` : ""}
-        ${c.linkedinUrl ? `<span>🔗 <a href="${escapeHtml(c.linkedinUrl)}">LinkedIn</a></span>` : ""}
-        ${c.githubUrl ? `<span>💻 <a href="${escapeHtml(c.githubUrl)}">GitHub</a></span>` : ""}
+        ${c.phone ? `<span>• 📞 ${escapeHtml(c.phone)}</span>` : ""}
+        ${c.email ? `<span>• ✉️ <a href="mailto:${escapeHtml(c.email)}">${escapeHtml(c.email)}</a></span>` : ""}
+        ${c.linkedinUrl ? `<span>• 🔗 <a href="${escapeHtml(c.linkedinUrl)}">LinkedIn</a></span>` : ""}
+        ${c.githubUrl ? `<span>• 💻 <a href="${escapeHtml(c.githubUrl)}">GitHub</a></span>` : ""}
       </div>
     </div>
   </header>
@@ -682,6 +696,7 @@ export class ExportService {
       ? `<section>
     <h2>Technical Projects</h2>
     ${resume.tailoredProjects
+      .slice(0, resume.pageBudget === "1_page" ? 1 : undefined)
       .map(
         (p) => `
       <div class="project-item">

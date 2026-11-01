@@ -172,4 +172,20 @@ Requirements:
     const foundAfter = await tailorRepo.getTailoredResume(userId, resume.id);
     expect(foundAfter).toBeNull();
   });
+
+  it("updates target job opportunity company, role, location and work mode", async () => {
+    const job = await tailorService.parseJobDescription(userId, "Company X\nSupport Specialist");
+    const updated = await tailorService.updateJobOpportunity(userId, job.id, {
+      company: "Ayala Malls",
+      role: "IT Associate",
+      location: "Cebu City, Philippines (Onsite)",
+    });
+
+    expect(updated.company).toBe("Ayala Malls");
+    expect(updated.role).toBe("IT Associate");
+    expect(updated.location).toBe("Cebu City, Philippines (Onsite)");
+
+    const retrieved = await tailorRepo.getJobOpportunity(userId, job.id);
+    expect(retrieved?.company).toBe("Ayala Malls");
+  });
 });

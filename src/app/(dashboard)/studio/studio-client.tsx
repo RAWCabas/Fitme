@@ -22,7 +22,8 @@ import {
   Pencil,
   Plus,
   Trash2,
-  Save
+  Save,
+  Download
 } from "lucide-react";
 import { Profile } from "@/features/profile/schema";
 import { JobOpportunity, TailoredResume, PageBudget, TypographyPreset, ResumeStatus } from "@/features/tailor/schema";
@@ -93,6 +94,15 @@ export function StudioClient({ profile, savedResumes = [], savedJobs = {} }: Stu
   const [newRoleBulletText, setNewRoleBulletText] = useState("");
   const [savingEdits, setSavingEdits] = useState(false);
   const [savedEditsSuccess, setSavedEditsSuccess] = useState(false);
+
+  // Direct PDF Download & Job Details Editing State
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
+  const [editingJobModal, setEditingJobModal] = useState(false);
+  const [editCompany, setEditCompany] = useState("");
+  const [editRole, setEditRole] = useState("");
+  const [editLocation, setEditLocation] = useState("");
+  const [editWorkMode, setEditWorkMode] = useState<"Onsite" | "Hybrid" | "Remote / WFH">("Onsite");
+  const [savingJobDetails, setSavingJobDetails] = useState(false);
 
   // LocalStorage Resilience: Restore cached resumes if server memory restarted / cold-started
   React.useEffect(() => {
@@ -422,6 +432,116 @@ export function StudioClient({ profile, savedResumes = [], savedJobs = {} }: Stu
       URL.revokeObjectURL(url);
     } catch {
       window.open(`/api/export/${tailoredResume.id}/markdown`, "_blank");
+    }
+  }
+
+  async function handleSaveJobDetails() {
+    if (!tailoredResume) return;
+    const targetJobId = activeJob?.id || tailoredResume.jobOpportunityId;
+    if (!targetJobId) return;
+
+    setSavingJobDetails(true);
+    try {
+      const trimmedLoc = editLocation.trim();
+      const combinedLocation = trimmedLoc ? `${trimmedLoc} (${editWorkMode})` : editWorkMode;
+      const updates = {
+        company: editCompany.trim() || "Target Company",
+        role: editRole.trim() || "Technical Specialist",
+        location: combinedLocation,
+      };
+
+      const res = await fetch(`/api/tailor/jobs/${targetJobId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updates),
+      });
+
+      const updatedJob: JobOpportunity = res.ok
+        ? await res.json()
+        : {
+            id: targetJobId,
+            userId: profile.userId,
+            ...updates,
+            sourceUrl: activeJob?.sourceUrl || "",
+            rawDescription: activeJob?.rawDescription || "",
+            extractedSkills: activeJob?.extractedSkills || [],
+            mustHaves: activeJob?.mustHaves || [],
+            niceToHaves: activeJob?.niceToHaves || [],
+            createdAt: activeJob?.createdAt || new Date().toISOString(),
+          };
+
+      setActiveJob(updatedJob);
+      setJobsMap((prev) => {
+        const next = { ...prev, [targetJobId]: updatedJob };
+        if (typeof window !== "undefined") {
+          try {
+            localStorage.setItem(`fitme_jobs_cache_${profile.userId}`, JSON.stringify(next));
+          } catch {}
+        }
+        return next;
+      });
+
+      setEditingJobModal(false);
+    } catch (err) {
+      console.error("Failed to update job details", err);
+    } finally {
+      setSavingJobDetails(false);
+    }
+  }
+
+  async function handleDownloadPdfDirect() {
+    if (!tailoredResume) return;
+    setDownloadingPdf(true);
+
+    try {
+      try {
+        await fetch(`/api/tailor/resumes/${tailoredResume.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(tailoredResume),
+        });
+      } catch {}
+
+      const html = exportService.generateHtmlDocument(tailoredResume, profile, preset);
+
+      const container = document.createElement("div");
+      container.innerHTML = html;
+      container.style.position = "fixed";
+      container.style.left = "-9999px";
+      container.style.top = "0";
+      container.style.width = "794px";
+      container.style.background = "#ffffff";
+      container.style.color = "#111827";
+
+      const noPrintEls = container.querySelectorAll(".no-print");
+      noPrintEls.forEach((el) => el.remove());
+
+      document.body.appendChild(container);
+
+      try {
+        const html2pdfModule = await import("html2pdf.js");
+        const html2pdf = html2pdfModule.default;
+        const cleanTitle = (tailoredResume.title || `${profile.contact?.fullName || "Resume"}`).replace(/[^a-zA-Z0-9_-]/g, "_");
+
+        const opt = {
+          margin: [7, 9, 7, 9] as [number, number, number, number],
+          filename: `${cleanTitle}.pdf`,
+          image: { type: "jpeg" as const, quality: 0.98 },
+          html2canvas: { scale: 2, useCORS: true, logging: false },
+          jsPDF: { unit: "mm", format: "a4", orientation: "portrait" as const },
+        };
+
+        await html2pdf().set(opt).from(container).save();
+      } finally {
+        if (document.body.contains(container)) {
+          document.body.removeChild(container);
+        }
+      }
+    } catch (err) {
+      console.error("Direct PDF generation failed, falling back to print window", err);
+      handleExportPdf();
+    } finally {
+      setDownloadingPdf(false);
     }
   }
 
@@ -802,13 +922,38 @@ export function StudioClient({ profile, savedResumes = [], savedJobs = {} }: Stu
                       <>
                         <span>•</span>
                         <span className="inline-flex items-center gap-1">
-                          <MapPin className="w-3 h-3" />
+                          <MapPin className="w-3 h-3 text-muted-foreground" />
                           {currentJob.location}
                         </span>
                       </>
                     )}
                     <span>•</span>
                     <span>Version {tailoredResume.versionNumber}</span>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditCompany(currentJob.company || "");
+                        setEditRole(currentJob.role || "");
+                        const loc = currentJob.location || "";
+                        if (/remote|wfh/i.test(loc)) {
+                          setEditWorkMode("Remote / WFH");
+                          setEditLocation(loc.replace(/\(?(remote\s*\/\s*wfh|remote|wfh)\)?/gi, "").replace(/•/g, "").trim());
+                        } else if (/hybrid/i.test(loc)) {
+                          setEditWorkMode("Hybrid");
+                          setEditLocation(loc.replace(/\(?hybrid\)?/gi, "").replace(/•/g, "").trim());
+                        } else {
+                          setEditWorkMode("Onsite");
+                          setEditLocation(loc.replace(/\(?onsite\)?/gi, "").replace(/•/g, "").trim());
+                        }
+                        setEditingJobModal(true);
+                      }}
+                      className="ml-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold text-primary hover:bg-primary/10 border border-primary/20 transition-colors"
+                      title="Edit target company name, role, location, and work mode"
+                    >
+                      <Pencil className="w-3 h-3" />
+                      <span>Edit Target Job</span>
+                    </button>
                   </div>
                 </div>
               </div>
@@ -880,25 +1025,47 @@ export function StudioClient({ profile, savedResumes = [], savedJobs = {} }: Stu
                 <span className="hidden sm:inline">Duplicate</span>
               </button>
 
-              {/* Export Buttons */}
+              {/* Direct PDF Download */}
               <button
                 type="button"
-                onClick={handleExportMarkdown}
-                title="Download as ATS-clean Markdown"
-                className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold rounded-lg border bg-background hover:bg-muted transition-colors"
+                onClick={handleDownloadPdfDirect}
+                disabled={downloadingPdf}
+                title="Download as PDF file directly to your downloads"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors shadow-sm disabled:opacity-60"
               >
-                <FileCode className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Markdown</span>
+                {downloadingPdf ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Downloading...</span>
+                  </>
+                ) : (
+                  <>
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Download PDF</span>
+                  </>
+                )}
               </button>
 
+              {/* System Print Preview */}
               <button
                 type="button"
                 onClick={handleExportPdf}
-                title="Print or Save to ATS PDF"
-                className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors shadow-sm"
+                title="Open browser print preview dialog"
+                className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold rounded-lg border bg-background hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
               >
                 <Printer className="w-3.5 h-3.5" />
-                <span>PDF / Print</span>
+                <span className="hidden sm:inline">Print Dialog</span>
+              </button>
+
+              {/* Export Markdown */}
+              <button
+                type="button"
+                onClick={handleExportMarkdown}
+                title="Download as ATS-clean Markdown (.md)"
+                className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold rounded-lg border bg-background hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+              >
+                <FileCode className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Markdown</span>
               </button>
 
               {/* Delete Resume Button */}
@@ -1399,6 +1566,106 @@ export function StudioClient({ profile, savedResumes = [], savedJobs = {} }: Stu
               </div>
             )}
           </div>
+
+          {/* EDIT TARGET JOB DETAILS MODAL */}
+          {editingJobModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in">
+              <div className="w-full max-w-lg p-6 rounded-2xl border bg-card shadow-2xl space-y-4">
+                <div className="flex items-center justify-between border-b pb-3">
+                  <div className="space-y-0.5">
+                    <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-semibold">
+                      <Building className="w-3.5 h-3.5" />
+                      Target Opportunity
+                    </div>
+                    <h3 className="text-lg font-bold">Edit Target Job Details</h3>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setEditingJobModal(false)}
+                    className="p-1 rounded-lg border hover:bg-muted text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <div className="space-y-3.5">
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-foreground">Company Name</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Ayala Malls, Accenture, Google"
+                      value={editCompany}
+                      onChange={(e) => setEditCompany(e.target.value)}
+                      className="w-full px-3 py-2 text-sm rounded-lg border bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-foreground">Target Role Title</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. IT Associate, Computer Engineer, Embedded Systems Engineer"
+                      value={editRole}
+                      onChange={(e) => setEditRole(e.target.value)}
+                      className="w-full px-3 py-2 text-sm rounded-lg border bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-foreground">Location</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Cebu City, Philippines"
+                      value={editLocation}
+                      onChange={(e) => setEditLocation(e.target.value)}
+                      className="w-full px-3 py-2 text-sm rounded-lg border bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-foreground">Workplace Mode</label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {(["Onsite", "Hybrid", "Remote / WFH"] as const).map((mode) => (
+                        <button
+                          key={mode}
+                          type="button"
+                          onClick={() => setEditWorkMode(mode)}
+                          className={`py-2 px-3 text-xs font-semibold rounded-lg border transition-colors ${
+                            editWorkMode === mode
+                              ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                              : "bg-muted/40 hover:bg-muted text-muted-foreground border-border"
+                          }`}
+                        >
+                          {mode}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-2 pt-3 border-t">
+                  <button
+                    type="button"
+                    onClick={() => setEditingJobModal(false)}
+                    className="px-3.5 py-1.5 text-xs font-semibold rounded-lg border hover:bg-muted"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    disabled={savingJobDetails || !editCompany.trim() || !editRole.trim()}
+                    onClick={handleSaveJobDetails}
+                    className="inline-flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                  >
+                    {savingJobDetails ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                    <span>{savingJobDetails ? "Saving..." : "Save Job Details"}</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* INLINE GOOGLE XYZ BULLET BOOSTER MODAL */}
           {boostingBullet && (

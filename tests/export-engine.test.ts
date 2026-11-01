@@ -7,6 +7,7 @@ import { getTailorRepo } from "@/features/tailor/repo";
 import { getProfileRepo } from "@/features/profile/repo";
 import { GET as exportMarkdownHandler } from "@/app/api/export/[id]/markdown/route";
 import { GET as exportHtmlHandler } from "@/app/api/export/[id]/html/route";
+import { PUT as updateJobHandler } from "@/app/api/tailor/jobs/[id]/route";
 
 const mockCookieStore = new Map<string, string>();
 vi.mock("next/headers", () => ({
@@ -175,6 +176,50 @@ describe("ATS Export Engine: Service", () => {
     expect(html).toContain("Jane &amp; John &lt;Doe&gt;");
     expect(html).not.toContain("<Doe>");
   });
+
+  it("renders A4 portrait dimensions and compact cabas_executive layout", () => {
+    const html = exportService.generateHtmlDocument(mockResume, mockProfile, "cabas_executive");
+    expect(html).toContain("size: A4 portrait;");
+    expect(html).toContain('data-preset="cabas_executive"');
+    expect(html).toContain("Technical Projects");
+  });
+
+  it("caps projects to 1 on 1_page budget to prevent 2-page print overflow", () => {
+    const multiProjectResume: TailoredResume = {
+      ...mockResume,
+      pageBudget: "1_page",
+      tailoredProjects: [
+        {
+          id: "proj_1",
+          name: "Project One",
+          description: "Desc 1",
+          technologies: ["React"],
+          liveUrl: "",
+          repoUrl: "",
+          isHidden: false,
+          bullets: [{ id: "b1", content: "Bullet 1", isHidden: false, hasMetrics: false }],
+        },
+        {
+          id: "proj_2",
+          name: "Project Two",
+          description: "Desc 2",
+          technologies: ["Node"],
+          liveUrl: "",
+          repoUrl: "",
+          isHidden: false,
+          bullets: [{ id: "b2", content: "Bullet 2", isHidden: false, hasMetrics: false }],
+        },
+      ],
+    };
+
+    const html1Page = exportService.generateHtmlDocument(multiProjectResume, mockProfile, "cabas_executive");
+    expect(html1Page).toContain("Project One");
+    expect(html1Page).not.toContain("Project Two");
+
+    const html2Page = exportService.generateHtmlDocument({ ...multiProjectResume, pageBudget: "2_pages" }, mockProfile, "cabas_executive");
+    expect(html2Page).toContain("Project One");
+    expect(html2Page).toContain("Project Two");
+  });
 });
 
 describe("ATS Export Engine: API Routes", () => {
@@ -183,6 +228,19 @@ describe("ATS Export Engine: API Routes", () => {
 
     const tailorRepo = getTailorRepo();
     await tailorRepo.saveTailoredResume(mockResume);
+    await tailorRepo.saveJobOpportunity({
+      id: mockResume.jobOpportunityId,
+      userId: "user_export_test",
+      company: "Acme Corp",
+      role: "Software Architect",
+      location: "Austin, TX",
+      sourceUrl: "",
+      rawDescription: "Software architect with TypeScript and cloud experience",
+      extractedSkills: ["TypeScript", "AWS"],
+      mustHaves: ["5 years experience"],
+      niceToHaves: [],
+      createdAt: "2026-01-01T00:00:00.000Z",
+    });
 
     const profileRepo = getProfileRepo();
     await profileRepo.saveProfile(mockProfile);
@@ -234,6 +292,29 @@ describe("ATS Export Engine: API Routes", () => {
     const html = await res.text();
     expect(html).toContain('data-preset="classic_ivy"');
     expect(html).toContain("window.print()");
+  });
+
+  it("updates target job opportunity via PUT /api/tailor/jobs/[id]", async () => {
+    const authSession = { userId: "user_export_test", email: "alex.cloud@example.com", name: "Alex" };
+    mockCookieStore.set("fitme_session", Buffer.from(JSON.stringify(authSession)).toString("base64url"));
+
+    const req = new NextRequest(`http://localhost:3000/api/tailor/jobs/${mockResume.jobOpportunityId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        company: "Ayala Malls",
+        role: "IT Associate",
+        location: "Cebu City, Philippines (Onsite)",
+      }),
+    });
+
+    const res = await updateJobHandler(req, { params: Promise.resolve({ id: mockResume.jobOpportunityId }) });
+    expect(res.status).toBe(200);
+
+    const body = await res.json();
+    expect(body.company).toBe("Ayala Malls");
+    expect(body.role).toBe("IT Associate");
+    expect(body.location).toBe("Cebu City, Philippines (Onsite)");
   });
 });
 
