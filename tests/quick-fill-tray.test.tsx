@@ -36,6 +36,7 @@ const mockProfile: Profile = {
     },
   ],
   projects: [],
+  education: [],
   skills: [
     { id: "3fa85f64-5717-4562-b3fc-2c963f66afa3", name: "TypeScript", category: "languages", isHidden: false },
     { id: "4fa85f64-5717-4562-b3fc-2c963f66afa4", name: "Next.js", category: "frameworks", isHidden: false },

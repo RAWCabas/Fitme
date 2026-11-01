@@ -20,9 +20,10 @@ import {
   UploadCloud,
   Pencil,
   X,
-  Save
+  Save,
+  GraduationCap
 } from "lucide-react";
-import { Profile, WorkExperience, Project, Certification, SkillItem, SkillCategory } from "@/features/profile/schema";
+import { Profile, WorkExperience, Project, Certification, SkillItem, SkillCategory, EducationItem, EducationLevel } from "@/features/profile/schema";
 
 interface VaultClientProps {
   initialProfile: Profile;
@@ -30,7 +31,7 @@ interface VaultClientProps {
 
 export function VaultClient({ initialProfile }: VaultClientProps) {
   const [profile, setProfile] = useState<Profile>(initialProfile);
-  const [activeTab, setActiveTab] = useState<"experiences" | "projects" | "certifications" | "skills" | "contact">("experiences");
+  const [activeTab, setActiveTab] = useState<"experiences" | "projects" | "education" | "certifications" | "skills" | "contact">("experiences");
   const [loading, setLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
@@ -57,12 +58,23 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
   const [newProjLive, setNewProjLive] = useState("");
   const [newProjRepo, setNewProjRepo] = useState("");
 
+  // New Education Form State
+  const [showEduForm, setShowEduForm] = useState(false);
+  const [newEduInstitution, setNewEduInstitution] = useState("");
+  const [newEduDegree, setNewEduDegree] = useState("");
+  const [newEduField, setNewEduField] = useState("");
+  const [newEduStart, setNewEduStart] = useState("");
+  const [newEduEnd, setNewEduEnd] = useState("");
+  const [newEduLevel, setNewEduLevel] = useState<EducationLevel>("college");
+  const [newEduHonors, setNewEduHonors] = useState("");
+
   // New Certification Form State
   const [showCertForm, setShowCertForm] = useState(false);
   const [newCertName, setNewCertName] = useState("");
   const [newCertIssuer, setNewCertIssuer] = useState("");
   const [newCertHours, setNewCertHours] = useState("");
   const [newCertCredentialId, setNewCertCredentialId] = useState("");
+  const [newCertIssueDate, setNewCertIssueDate] = useState("");
 
   // New Skill Form State
   const [showSkillForm, setShowSkillForm] = useState(false);
@@ -100,6 +112,16 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
   const [editCertIssuer, setEditCertIssuer] = useState("");
   const [editCertHours, setEditCertHours] = useState("");
   const [editCertCredentialId, setEditCertCredentialId] = useState("");
+  const [editCertIssueDate, setEditCertIssueDate] = useState("");
+
+  const [editingEdu, setEditingEdu] = useState<EducationItem | null>(null);
+  const [editEduInstitution, setEditEduInstitution] = useState("");
+  const [editEduDegree, setEditEduDegree] = useState("");
+  const [editEduField, setEditEduField] = useState("");
+  const [editEduStart, setEditEduStart] = useState("");
+  const [editEduEnd, setEditEduEnd] = useState("");
+  const [editEduLevel, setEditEduLevel] = useState<EducationLevel>("college");
+  const [editEduHonors, setEditEduHonors] = useState("");
 
   const [editingSkill, setEditingSkill] = useState<SkillItem | null>(null);
   const [editSkillName, setEditSkillName] = useState("");
@@ -303,6 +325,83 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
     }
   }
 
+  // Toggle Education Visibility
+  async function toggleEducation(id: string) {
+    try {
+      const res = await fetch(`/api/profile/education/${id}/toggle`, { method: "PATCH" });
+      if (res.ok) {
+        setProfile((prev) => ({
+          ...prev,
+          education: (prev.education || []).map((e) => (e.id === id ? { ...e, isHidden: !e.isHidden } : e)),
+        }));
+      }
+    } catch (err) {
+      console.error("Failed to toggle education visibility", err);
+    }
+  }
+
+  // Delete Education
+  async function deleteEducation(id: string) {
+    if (!confirm("Are you sure you want to remove this education record?")) return;
+    try {
+      const res = await fetch(`/api/profile/education/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        setProfile((prev) => ({
+          ...prev,
+          education: (prev.education || []).filter((e) => e.id !== id),
+        }));
+        flashSuccess("Education record removed");
+      }
+    } catch (err) {
+      console.error("Failed to delete education", err);
+    }
+  }
+
+  // Add Education
+  async function handleAddEducation(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newEduInstitution.trim()) return;
+    setLoading(true);
+    try {
+      const payload = {
+        institution: newEduInstitution.trim(),
+        degree: newEduDegree.trim(),
+        fieldOfStudy: newEduField.trim(),
+        startDate: newEduStart.trim() || null,
+        endDate: newEduEnd.trim() || null,
+        level: newEduLevel,
+        honors: newEduHonors.trim(),
+      };
+
+      const res = await fetch("/api/profile/education", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (res.ok) {
+        const created: EducationItem = await res.json();
+        setProfile((prev) => ({
+          ...prev,
+          education: [created, ...(prev.education || [])],
+        }));
+        setShowEduForm(false);
+        setNewEduInstitution("");
+        setNewEduDegree("");
+        setNewEduField("");
+        setNewEduStart("");
+        setNewEduEnd("");
+        setNewEduLevel("college");
+        setNewEduHonors("");
+        flashSuccess("Education added to vault");
+      }
+    } catch (err) {
+      console.error("Failed to add education", err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   // Toggle Certification Visibility
   async function toggleCertification(id: string) {
     try {
@@ -346,6 +445,7 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
         issuer: newCertIssuer.trim() || "TESDA Accredited Training",
         hours: newCertHours.trim() || "",
         credentialId: newCertCredentialId.trim() || "",
+        issueDate: newCertIssueDate.trim() || null,
       };
 
       const res = await fetch("/api/profile/certifications", {
@@ -365,6 +465,7 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
         setNewCertIssuer("");
         setNewCertHours("");
         setNewCertCredentialId("");
+        setNewCertIssueDate("");
         flashSuccess("Certification added to vault");
       }
     } catch (err) {
@@ -531,6 +632,55 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
     }
   }
 
+  // Edit Handlers for Education
+  function startEditEducation(edu: EducationItem) {
+    setEditingEdu(edu);
+    setEditEduInstitution(edu.institution);
+    setEditEduDegree(edu.degree || "");
+    setEditEduField(edu.fieldOfStudy || "");
+    setEditEduStart(edu.startDate || "");
+    setEditEduEnd(edu.endDate || "");
+    setEditEduLevel(edu.level || "college");
+    setEditEduHonors(edu.honors || "");
+  }
+
+  async function handleUpdateEducation(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editingEdu) return;
+    setLoading(true);
+    try {
+      const payload = {
+        institution: editEduInstitution.trim(),
+        degree: editEduDegree.trim(),
+        fieldOfStudy: editEduField.trim(),
+        startDate: editEduStart.trim() || null,
+        endDate: editEduEnd.trim() || null,
+        level: editEduLevel,
+        honors: editEduHonors.trim(),
+      };
+
+      const res = await fetch(`/api/profile/education/${editingEdu.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (res.ok) {
+        const updated: EducationItem = await res.json();
+        setProfile((prev) => ({
+          ...prev,
+          education: (prev.education || []).map((e) => (e.id === updated.id ? updated : e)),
+        }));
+        setEditingEdu(null);
+        flashSuccess("Education updated");
+      }
+    } catch (err) {
+      console.error("Failed to update education", err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   // Edit Handlers for Certification
   function startEditCert(cert: Certification) {
     setEditingCert(cert);
@@ -538,6 +688,7 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
     setEditCertIssuer(cert.issuer || "");
     setEditCertHours(cert.hours || "");
     setEditCertCredentialId(cert.credentialId || "");
+    setEditCertIssueDate(cert.issueDate || "");
   }
 
   async function handleUpdateCert(e: React.FormEvent) {
@@ -550,6 +701,7 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
         issuer: editCertIssuer.trim(),
         hours: editCertHours.trim(),
         credentialId: editCertCredentialId.trim(),
+        issueDate: editCertIssueDate.trim() || null,
       };
 
       const res = await fetch(`/api/profile/certifications/${editingCert.id}`, {
@@ -683,6 +835,18 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
           >
             <Code2 className="w-4 h-4" />
             <span>Projects ({profile.projects.length})</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab("education")}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-colors ${
+              activeTab === "education"
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <GraduationCap className="w-4 h-4" />
+            <span>Education ({profile.education?.length || 0})</span>
           </button>
 
           <button
@@ -1282,6 +1446,342 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
         </div>
       )}
 
+      {/* TAB: EDUCATION */}
+      {activeTab === "education" && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-bold">Education & Academics</h2>
+              <p className="text-xs text-muted-foreground">
+                Your academic background from College/University to High School and Elementary. Toggle individual visibility to show or hide entries on your tailored resumes.
+              </p>
+            </div>
+            <button
+              onClick={() => setShowEduForm(!showEduForm)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors shadow-sm"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Add Education</span>
+            </button>
+          </div>
+
+          {/* New Education Form */}
+          {showEduForm && (
+            <form onSubmit={handleAddEducation} className="p-4 rounded-xl border bg-card/60 space-y-3">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                New Education Entry
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-semibold text-muted-foreground mb-1">
+                    Education Level *
+                  </label>
+                  <select
+                    value={newEduLevel}
+                    onChange={(e) => setNewEduLevel(e.target.value as EducationLevel)}
+                    className="w-full px-3 py-2 rounded-lg border bg-background text-xs"
+                  >
+                    <option value="college">College / University</option>
+                    <option value="high_school">High School</option>
+                    <option value="elementary">Elementary</option>
+                    <option value="other">Other / Vocational</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-muted-foreground mb-1">
+                    Institution / School Name *
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Cebu Technological University- Main Campus"
+                    value={newEduInstitution}
+                    onChange={(e) => setNewEduInstitution(e.target.value)}
+                    required
+                    className="w-full px-3 py-2 rounded-lg border bg-background text-xs"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-semibold text-muted-foreground mb-1">
+                    Degree / Certificate
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Bachelor of Science in Computer Engineering"
+                    value={newEduDegree}
+                    onChange={(e) => setNewEduDegree(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg border bg-background text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-muted-foreground mb-1">
+                    Field of Study / Track (optional)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Computer Engineering / STEM Track"
+                    value={newEduField}
+                    onChange={(e) => setNewEduField(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg border bg-background text-xs"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-[11px] font-semibold text-muted-foreground mb-1">
+                    Start Year / Date (optional)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 2020"
+                    value={newEduStart}
+                    onChange={(e) => setNewEduStart(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg border bg-background text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-muted-foreground mb-1">
+                    Graduation / End Year (optional)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 2024"
+                    value={newEduEnd}
+                    onChange={(e) => setNewEduEnd(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg border bg-background text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-muted-foreground mb-1">
+                    Honors / Awards (optional)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Cum Laude / With Honors"
+                    value={newEduHonors}
+                    onChange={(e) => setNewEduHonors(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg border bg-background text-xs"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowEduForm(false)}
+                  className="px-3 py-1.5 text-xs font-semibold rounded-lg hover:bg-muted"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="px-4 py-1.5 text-xs font-semibold rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                >
+                  {loading ? "Saving..." : "Save Education"}
+                </button>
+              </div>
+            </form>
+          )}
+
+          {(!profile.education || profile.education.length === 0) ? (
+            <div className="text-center py-12 rounded-xl border border-dashed bg-card/50 text-muted-foreground text-sm">
+              No education entries added yet. Click &quot;Add Education&quot; to record your college, high school, or elementary credentials.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {profile.education.map((edu) => {
+                const levelBadge =
+                  edu.level === "college"
+                    ? "College / University"
+                    : edu.level === "high_school"
+                    ? "High School"
+                    : edu.level === "elementary"
+                    ? "Elementary"
+                    : "Education";
+
+                return (
+                  <div
+                    key={edu.id}
+                    className={`p-4 rounded-xl border bg-card shadow-sm flex flex-col justify-between space-y-2.5 transition-opacity ${
+                      edu.isHidden ? "opacity-50 bg-muted/30" : ""
+                    }`}
+                  >
+                    {editingEdu?.id === edu.id ? (
+                      <form onSubmit={handleUpdateEducation} className="space-y-3">
+                        <div className="flex items-center justify-between border-b pb-1.5">
+                          <div className="flex items-center gap-1.5 font-bold text-xs text-primary">
+                            <Pencil className="w-3.5 h-3.5" />
+                            <span>Edit Education</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setEditingEdu(null)}
+                            className="p-1 rounded-lg hover:bg-muted text-muted-foreground"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+
+                        <div className="space-y-2">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <div>
+                              <label className="block text-[10px] font-semibold text-muted-foreground mb-0.5">
+                                Level
+                              </label>
+                              <select
+                                value={editEduLevel}
+                                onChange={(e) => setEditEduLevel(e.target.value as EducationLevel)}
+                                className="w-full px-2.5 py-1.5 rounded-lg border bg-background text-xs"
+                              >
+                                <option value="college">College / University</option>
+                                <option value="high_school">High School</option>
+                                <option value="elementary">Elementary</option>
+                                <option value="other">Other / Vocational</option>
+                              </select>
+                            </div>
+                            <div>
+                              <label className="block text-[10px] font-semibold text-muted-foreground mb-0.5">
+                                Institution *
+                              </label>
+                              <input
+                                required
+                                placeholder="Institution Name"
+                                value={editEduInstitution}
+                                onChange={(e) => setEditEduInstitution(e.target.value)}
+                                className="w-full px-2.5 py-1.5 rounded-lg border bg-background text-xs"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <input
+                              placeholder="Degree (e.g. Bachelor of Science in Computer Engineering)"
+                              value={editEduDegree}
+                              onChange={(e) => setEditEduDegree(e.target.value)}
+                              className="w-full px-2.5 py-1.5 rounded-lg border bg-background text-xs"
+                            />
+                            <input
+                              placeholder="Field of Study (optional)"
+                              value={editEduField}
+                              onChange={(e) => setEditEduField(e.target.value)}
+                              className="w-full px-2.5 py-1.5 rounded-lg border bg-background text-xs"
+                            />
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                            <input
+                              placeholder="Start Year (e.g. 2020)"
+                              value={editEduStart}
+                              onChange={(e) => setEditEduStart(e.target.value)}
+                              className="w-full px-2.5 py-1.5 rounded-lg border bg-background text-xs"
+                            />
+                            <input
+                              placeholder="End Year (e.g. 2024)"
+                              value={editEduEnd}
+                              onChange={(e) => setEditEduEnd(e.target.value)}
+                              className="w-full px-2.5 py-1.5 rounded-lg border bg-background text-xs"
+                            />
+                            <input
+                              placeholder="Honors (e.g. Cum Laude)"
+                              value={editEduHonors}
+                              onChange={(e) => setEditEduHonors(e.target.value)}
+                              className="w-full px-2.5 py-1.5 rounded-lg border bg-background text-xs"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="flex justify-end gap-2 pt-1">
+                          <button
+                            type="button"
+                            onClick={() => setEditingEdu(null)}
+                            className="px-3 py-1 text-xs font-semibold rounded-lg border hover:bg-muted"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="submit"
+                            disabled={loading}
+                            className="inline-flex items-center gap-1 px-3.5 py-1 text-xs font-semibold rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                          >
+                            <Save className="w-3.5 h-3.5" />
+                            <span>{loading ? "Saving..." : "Save"}</span>
+                          </button>
+                        </div>
+                      </form>
+                    ) : (
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <GraduationCap className="w-4 h-4 text-primary shrink-0" />
+                            <h3 className="font-bold text-sm leading-snug">
+                              {edu.degree || edu.institution}
+                            </h3>
+                            <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-primary/10 text-primary">
+                              {levelBadge}
+                            </span>
+                            {edu.isHidden && (
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-muted text-muted-foreground">
+                                Hidden from resumes
+                              </span>
+                            )}
+                          </div>
+                          {edu.degree && (
+                            <p className="text-xs font-medium text-foreground">
+                              {edu.institution}
+                            </p>
+                          )}
+                          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                            {edu.fieldOfStudy && <span>{edu.fieldOfStudy}</span>}
+                            {(edu.startDate || edu.endDate) && (
+                              <span className="font-mono text-[11px]">
+                                {edu.startDate && edu.endDate ? `${edu.startDate} – ${edu.endDate}` : (edu.endDate || edu.startDate)}
+                              </span>
+                            )}
+                            {edu.honors && (
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
+                                {edu.honors}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            onClick={() => startEditEducation(edu)}
+                            className="p-1.5 text-muted-foreground hover:text-foreground rounded-lg transition-colors"
+                            title="Edit education record"
+                          >
+                            <Pencil className="w-3.5 h-3.5 text-primary" />
+                          </button>
+                          <button
+                            onClick={() => toggleEducation(edu.id)}
+                            className="p-1.5 text-muted-foreground hover:text-foreground rounded-lg transition-colors"
+                            title={edu.isHidden ? "Show in resumes" : "Hide from resumes"}
+                          >
+                            {edu.isHidden ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4 text-primary" />}
+                          </button>
+                          <button
+                            onClick={() => deleteEducation(edu.id)}
+                            className="p-1.5 text-muted-foreground hover:text-destructive rounded-lg transition-colors"
+                            title="Delete education record"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* TAB: CERTIFICATIONS */}
       {activeTab === "certifications" && (
         <div className="space-y-4">
@@ -1324,12 +1824,19 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
                   className="w-full px-3 py-2 rounded-lg border bg-background text-xs"
                 />
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <input
                   type="text"
                   placeholder="Accredited Hours / Duration (e.g. 280 Hours)"
                   value={newCertHours}
                   onChange={(e) => setNewCertHours(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border bg-background text-xs"
+                />
+                <input
+                  type="text"
+                  placeholder="Completion / Date Issued (e.g. 2024 or 2024-01-15, optional)"
+                  value={newCertIssueDate}
+                  onChange={(e) => setNewCertIssueDate(e.target.value)}
                   className="w-full px-3 py-2 rounded-lg border bg-background text-xs"
                 />
                 <input
@@ -1402,11 +1909,17 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
                           onChange={(e) => setEditCertIssuer(e.target.value)}
                           className="w-full px-3 py-1.5 rounded-lg border bg-background text-xs"
                         />
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                           <input
                             placeholder="Hours / Duration (e.g. 280 Hours)"
                             value={editCertHours}
                             onChange={(e) => setEditCertHours(e.target.value)}
+                            className="w-full px-3 py-1.5 rounded-lg border bg-background text-xs"
+                          />
+                          <input
+                            placeholder="Completion / Date Issued (optional)"
+                            value={editCertIssueDate}
+                            onChange={(e) => setEditCertIssueDate(e.target.value)}
                             className="w-full px-3 py-1.5 rounded-lg border bg-background text-xs"
                           />
                           <input
@@ -1448,6 +1961,11 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
                           {cert.hours && (
                             <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-primary/10 text-primary">
                               {cert.hours}
+                            </span>
+                          )}
+                          {cert.issueDate && (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-muted text-foreground">
+                              📅 Issued: {cert.issueDate}
                             </span>
                           )}
                           {cert.credentialId && (

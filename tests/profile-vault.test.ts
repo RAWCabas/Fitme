@@ -116,11 +116,13 @@ describe("Profile Vault: Schemas & Service", () => {
       issuer: "TESDA",
       hours: "280 Hours",
       credentialId: "TESDA-CSS-NCII-2024",
+      issueDate: "2024-05-15",
     });
 
     expect(cert.name).toBe("TESDA Computer Systems Servicing NC II");
     expect(cert.issuer).toBe("TESDA");
     expect(cert.hours).toBe("280 Hours");
+    expect(cert.issueDate).toBe("2024-05-15");
     expect(cert.isHidden).toBe(false);
 
     // Toggle visibility
@@ -134,6 +136,59 @@ describe("Profile Vault: Schemas & Service", () => {
     await service.deleteCertification("user_123", cert.id);
     const profileAfterDelete = await service.getOrCreateProfile("user_123");
     expect(profileAfterDelete.certifications).toHaveLength(0);
+  });
+
+  it("adds, toggles visibility, updates, and deletes education items for college, high school, and elementary", async () => {
+    // Add college
+    const college = await service.addEducation("user_123", {
+      institution: "Cebu Technological University- Main Campus",
+      degree: "Bachelor of Science in Computer Engineering",
+      fieldOfStudy: "Computer Engineering",
+      startDate: "2020",
+      endDate: "2024",
+      level: "college",
+      honors: "Cum Laude",
+    });
+
+    expect(college.institution).toBe("Cebu Technological University- Main Campus");
+    expect(college.level).toBe("college");
+    expect(college.isHidden).toBe(false);
+
+    // Add high school
+    const highSchool = await service.addEducation("user_123", {
+      institution: "City High School",
+      degree: "High School Diploma",
+      level: "high_school",
+      startDate: "2016",
+      endDate: "2020",
+    });
+    expect(highSchool.level).toBe("high_school");
+
+    // Add elementary
+    const elementary = await service.addEducation("user_123", {
+      institution: "Central Elementary School",
+      level: "elementary",
+      startDate: "2010",
+      endDate: "2016",
+    });
+    expect(elementary.level).toBe("elementary");
+
+    // Toggle visibility on elementary
+    const isElemHidden = await service.toggleEducationVisibility("user_123", elementary.id);
+    expect(isElemHidden).toBe(true);
+
+    // Update college
+    const updatedCollege = await service.updateEducation("user_123", college.id, {
+      honors: "Magna Cum Laude",
+    });
+    expect(updatedCollege.honors).toBe("Magna Cum Laude");
+
+    // Delete high school
+    await service.deleteEducation("user_123", highSchool.id);
+    const profile = await service.getOrCreateProfile("user_123");
+    expect(profile.education.find((e) => e.id === highSchool.id)).toBeUndefined();
+    expect(profile.education.find((e) => e.id === elementary.id)?.isHidden).toBe(true);
+    expect(profile.education.find((e) => e.id === college.id)?.honors).toBe("Magna Cum Laude");
   });
 
   it("updates existing experiences, projects, certifications, and skills", async () => {

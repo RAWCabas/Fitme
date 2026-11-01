@@ -37,12 +37,20 @@ export class ExportService {
     }
 
     // Education
-    const isRhinn = c.fullName.toLowerCase().includes("rhinn") || c.email.toLowerCase().includes("rhinn");
-    if (isRhinn) {
+    const eduList = (resume.tailoredEducation && resume.tailoredEducation.length > 0)
+      ? resume.tailoredEducation
+      : (profile.education || []);
+    const activeEdu = eduList.filter((e) => !e.isHidden);
+    if (activeEdu.length > 0) {
       lines.push("## Education");
-      lines.push("### Bachelor of Science in Computer Engineering");
-      lines.push("*Cebu Technological University- Main Campus*");
-      lines.push("");
+      for (const edu of activeEdu) {
+        const title = edu.degree ? `${edu.degree} — ${edu.institution}` : edu.institution;
+        lines.push(`### ${title}`);
+        const dateStr = [edu.startDate, edu.endDate || "Present"].filter(Boolean).join(" – ");
+        const subStr = [dateStr, edu.fieldOfStudy, edu.honors].filter(Boolean).join(" | ");
+        if (subStr) lines.push(`*${subStr}*`);
+        lines.push("");
+      }
     }
 
     // Work Experience
@@ -86,6 +94,7 @@ export class ExportService {
     // Certifications
     const certs = resume.tailoredCertifications || profile.certifications || [];
     const activeCerts = certs.filter((cert) => !cert.isHidden);
+
     if (activeCerts.length > 0) {
       lines.push("## Trainings and Certificates");
       for (const cert of activeCerts) {
@@ -535,6 +544,11 @@ export class ExportService {
     const certs = resume.tailoredCertifications || profile.certifications || [];
     const activeCerts = certs.filter((cert) => !cert.isHidden);
 
+    const eduList = (resume.tailoredEducation && resume.tailoredEducation.length > 0)
+      ? resume.tailoredEducation
+      : (profile.education || []);
+    const activeEdu = eduList.filter((e) => !e.isHidden);
+
     const isCabasTemplate = isRhinn || preset === "cabas_executive";
     const expTitle = isCabasTemplate ? "Research & Professional Experience" : "Work Experience";
     const skillsTitle = isCabasTemplate ? "Technical Skills" : "Core Competencies";
@@ -613,17 +627,24 @@ export class ExportService {
   }
 
   ${
-    isRhinn
+    activeEdu.length > 0
       ? `<section>
     <h2>Education</h2>
-    <div class="education-item">
-      <div class="item-header">
-        <span>Bachelor of Science in Computer Engineering</span>
-      </div>
-      <div class="item-sub">
-        <span>Cebu Technological University- Main Campus</span>
-      </div>
-    </div>
+    ${activeEdu
+      .map(
+        (edu) => `
+      <div class="education-item">
+        <div class="item-header">
+          <span>${escapeHtml(edu.degree || edu.institution)}</span>
+          ${(edu.startDate || edu.endDate) ? `<span style="font-weight: normal; font-size: 8pt;">${escapeHtml([edu.startDate, edu.endDate || "Present"].filter(Boolean).join(" – "))}</span>` : ""}
+        </div>
+        <div class="item-sub">
+          <span>${escapeHtml(edu.institution)}${edu.fieldOfStudy ? ` • ${escapeHtml(edu.fieldOfStudy)}` : ""}</span>
+          ${edu.honors ? `<span>${escapeHtml(edu.honors)}</span>` : ""}
+        </div>
+      </div>`
+      )
+      .join("")}
   </section>`
       : ""
   }
@@ -682,7 +703,7 @@ export class ExportService {
         .map(
           (cert) => `
         <li>
-          <strong>${escapeHtml(cert.name)}</strong>${cert.issuer ? ` – ${escapeHtml(cert.issuer)}` : ""}${cert.hours ? ` | ${escapeHtml(cert.hours)}` : ""}
+          <strong>${escapeHtml(cert.name)}</strong>${cert.issuer ? ` – ${escapeHtml(cert.issuer)}` : ""}${cert.hours ? ` | ${escapeHtml(cert.hours)}` : ""}${cert.issueDate ? ` • Completed: ${escapeHtml(cert.issueDate)}` : ""}
         </li>`
         )
         .join("")}

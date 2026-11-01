@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { workExperienceSchema, projectSchema, certificationSchema, skillItemSchema } from "@/features/profile/schema";
+import { workExperienceSchema, projectSchema, educationItemSchema, certificationSchema, skillItemSchema } from "@/features/profile/schema";
 
 const text = (max: number) => z.string().trim().max(max);
 
@@ -66,6 +66,7 @@ export const tailoredResumeSchema = z.strictObject({
   tailoredSummary: text(1500),
   tailoredExperiences: z.array(workExperienceSchema),
   tailoredProjects: z.array(projectSchema),
+  tailoredEducation: z.array(educationItemSchema).default([]),
   tailoredCertifications: z.array(certificationSchema).default([]),
   selectedSkills: z.array(skillItemSchema),
   pdfS3Key: z.string().nullable().default(null),

@@ -58,6 +58,7 @@ const mockProfile: Profile = {
     },
   ],
   projects: [],
+  education: [],
   skills: [
     { id: "c3d4e5f6-a7b8-49ca-8d12-345678901234", name: "Kubernetes", category: "cloud", isHidden: false },
     { id: "d4e5f6a7-b8c9-4adb-9e23-456789012345", name: "Go", category: "languages", isHidden: false },
@@ -104,6 +105,7 @@ const mockResume: TailoredResume = {
   tailoredSummary: "Proven platform leader specialized in Kubernetes and high-throughput systems.",
   tailoredExperiences: mockProfile.experiences,
   tailoredProjects: [],
+  tailoredEducation: [],
   tailoredCertifications: [],
   selectedSkills: mockProfile.skills,
   pdfS3Key: null,

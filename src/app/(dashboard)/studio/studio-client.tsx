@@ -23,7 +23,10 @@ import {
   Plus,
   Trash2,
   Save,
-  Download
+  Download,
+  GraduationCap,
+  Eye,
+  EyeOff
 } from "lucide-react";
 import { Profile } from "@/features/profile/schema";
 import { JobOpportunity, TailoredResume, PageBudget, TypographyPreset, ResumeStatus } from "@/features/tailor/schema";
@@ -150,7 +153,7 @@ export function StudioClient({ profile, savedResumes = [], savedJobs = {} }: Stu
     } catch {}
   }, [jobsMap, profile.userId]);
 
-  async function saveResumeEdits(updates: Partial<Pick<TailoredResume, "title" | "tailoredSummary" | "tailoredExperiences" | "tailoredProjects" | "tailoredCertifications" | "selectedSkills">>) {
+  async function saveResumeEdits(updates: Partial<Pick<TailoredResume, "title" | "tailoredSummary" | "tailoredExperiences" | "tailoredProjects" | "tailoredCertifications" | "tailoredEducation" | "selectedSkills">>) {
     if (!tailoredResume) return;
     setSavingEdits(true);
     try {
@@ -1309,6 +1312,103 @@ export function StudioClient({ profile, savedResumes = [], savedJobs = {} }: Stu
                   )}
                 </div>
 
+                {/* Tailored Education */}
+                {((tailoredResume.tailoredEducation && tailoredResume.tailoredEducation.length > 0) || (profile.education && profile.education.length > 0)) && (
+                  <div className="space-y-3 pt-2 border-t">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 text-primary">
+                        <GraduationCap className="w-3.5 h-3.5" />
+                        <h3 className="text-xs font-bold uppercase tracking-wider">
+                          Education
+                        </h3>
+                      </div>
+                      <span className="text-[10px] text-muted-foreground">Toggle eye to include or hide from resume</span>
+                    </div>
+
+                    <div className="space-y-2">
+                      {(tailoredResume.tailoredEducation && tailoredResume.tailoredEducation.length > 0
+                        ? tailoredResume.tailoredEducation
+                        : profile.education || []
+                      ).map((edu, eduIdx) => {
+                        const isHidden = edu.isHidden;
+                        const levelLabel =
+                          edu.level === "college"
+                            ? "College"
+                            : edu.level === "high_school"
+                            ? "High School"
+                            : edu.level === "elementary"
+                            ? "Elementary"
+                            : "Education";
+
+                        return (
+                          <div
+                            key={edu.id}
+                            className={`p-2.5 rounded-lg border text-xs transition-opacity ${
+                              isHidden ? "opacity-45 bg-muted/30" : "bg-card"
+                            }`}
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="space-y-0.5">
+                                <div className="flex items-center gap-2">
+                                  <span className={`font-bold ${isHidden ? "line-through text-muted-foreground" : "text-foreground"}`}>
+                                    {edu.degree || edu.institution}
+                                  </span>
+                                  <span className="px-1.5 py-0.5 rounded text-[9px] font-semibold bg-primary/10 text-primary uppercase">
+                                    {levelLabel}
+                                  </span>
+                                  {isHidden && (
+                                    <span className="px-1.5 py-0.5 rounded text-[9px] font-semibold bg-muted text-muted-foreground">
+                                      Hidden
+                                    </span>
+                                  )}
+                                </div>
+                                {edu.degree && (
+                                  <p className="text-[11px] text-muted-foreground font-medium">
+                                    {edu.institution}
+                                  </p>
+                                )}
+                                {edu.honors && (
+                                  <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
+                                    {edu.honors}
+                                  </p>
+                                )}
+                              </div>
+
+                              <div className="flex items-center gap-2 shrink-0">
+                                {(edu.startDate || edu.endDate) && (
+                                  <span className="text-muted-foreground font-mono text-[10px]">
+                                    {edu.startDate && edu.endDate
+                                      ? `${edu.startDate} – ${edu.endDate}`
+                                      : edu.endDate || edu.startDate}
+                                  </span>
+                                )}
+                                <button
+                                  onClick={async () => {
+                                    const baseEduList = [
+                                      ...(tailoredResume.tailoredEducation && tailoredResume.tailoredEducation.length > 0
+                                        ? tailoredResume.tailoredEducation
+                                        : profile.education || []),
+                                    ];
+                                    baseEduList[eduIdx] = {
+                                      ...baseEduList[eduIdx],
+                                      isHidden: !baseEduList[eduIdx].isHidden,
+                                    };
+                                    await saveResumeEdits({ tailoredEducation: baseEduList });
+                                  }}
+                                  className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                                  title={isHidden ? "Include this education in resume" : "Hide this education from resume"}
+                                >
+                                  {isHidden ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5 text-primary" />}
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
                 {/* Tailored Work Experiences */}
                 <div className="space-y-4">
                   <h3 className="text-xs font-bold uppercase tracking-wider text-primary">
@@ -1504,7 +1604,7 @@ export function StudioClient({ profile, savedResumes = [], savedJobs = {} }: Stu
                 )}
 
                 {/* Tailored Certifications */}
-                {tailoredResume.tailoredCertifications && tailoredResume.tailoredCertifications.length > 0 && (
+                {((tailoredResume.tailoredCertifications && tailoredResume.tailoredCertifications.length > 0) || (profile.certifications && profile.certifications.length > 0)) && (
                   <div className="space-y-3 pt-2 border-t">
                     <div className="flex items-center gap-1.5 text-primary">
                       <Award className="w-3.5 h-3.5" />
@@ -1513,14 +1613,17 @@ export function StudioClient({ profile, savedResumes = [], savedJobs = {} }: Stu
                       </h3>
                     </div>
                     <div className="space-y-2">
-                      {tailoredResume.tailoredCertifications.map((c) => (
+                      {(tailoredResume.tailoredCertifications && tailoredResume.tailoredCertifications.length > 0
+                        ? tailoredResume.tailoredCertifications
+                        : (profile.certifications || []).filter((c) => !c.isHidden)
+                      ).map((c) => (
                         <div key={c.id} className="text-xs space-y-0.5">
                           <div className="flex items-center justify-between">
                             <span className="font-bold text-foreground">{c.name}</span>
                             {c.hours && <span className="text-[10px] text-muted-foreground font-mono">{c.hours}</span>}
                           </div>
                           <div className="text-[11px] text-muted-foreground">
-                            {c.issuer} {c.issueDate ? `• ${c.issueDate}` : ""} {c.credentialId ? `• ID: ${c.credentialId}` : ""}
+                            {c.issuer} {c.issueDate ? `• Completed: ${c.issueDate}` : ""} {c.credentialId ? `• ID: ${c.credentialId}` : ""}
                           </div>
                         </div>
                       ))}

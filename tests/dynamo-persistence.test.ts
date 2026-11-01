@@ -28,6 +28,7 @@ const sampleProfileA: Profile = {
   },
   experiences: [],
   projects: [],
+  education: [],
   skills: [
     { id: "1fa85f64-5717-4562-b3fc-2c963f66afa1", name: "DynamoDB", category: "cloud", isHidden: false },
   ],
@@ -69,6 +70,7 @@ const sampleResumeA: TailoredResume = {
   tailoredSummary: "Proven DynamoDB specialist with multi-tenant expertise.",
   tailoredExperiences: [],
   tailoredProjects: [],
+  tailoredEducation: [],
   tailoredCertifications: [],
   selectedSkills: sampleProfileA.skills,
   pdfS3Key: "resumes/user_tenant_A/sample-resume.pdf",

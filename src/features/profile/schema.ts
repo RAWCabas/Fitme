@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 const text = (max: number) => z.string().trim().max(max);
-const isoDateOrNull = z.string().regex(/^\d{4}-\d{2}(-\d{2})?$/).nullable();
+const isoDateOrNull = z.string().regex(/^\d{4}(-\d{2})?(-\d{2})?$/).nullable();
 
 /** Contact and Personal Details */
 export const contactInfoSchema = z.strictObject({
@@ -60,6 +60,21 @@ export const certificationSchema = z.strictObject({
   isHidden: z.boolean().default(false),
 });
 
+/** Education Item */
+export const educationLevelSchema = z.enum(["college", "high_school", "elementary", "other"]);
+
+export const educationItemSchema = z.strictObject({
+  id: z.string().uuid(),
+  institution: text(160).min(1, "Institution name is required"),
+  degree: text(160).default(""),
+  fieldOfStudy: text(120).default(""),
+  startDate: isoDateOrNull.default(null),
+  endDate: isoDateOrNull.default(null),
+  level: educationLevelSchema.default("college"),
+  honors: text(160).default(""),
+  isHidden: z.boolean().default(false),
+});
+
 /** Skills by Category */
 export const skillCategorySchema = z.enum(["languages", "frameworks", "cloud", "tools", "soft"]);
 
@@ -76,6 +91,7 @@ export const profileSchema = z.strictObject({
   contact: contactInfoSchema,
   experiences: z.array(workExperienceSchema).default([]),
   projects: z.array(projectSchema).default([]),
+  education: z.array(educationItemSchema).default([]),
   certifications: z.array(certificationSchema).default([]),
   skills: z.array(skillItemSchema).default([]),
   summary: text(2000).default(""),
@@ -86,6 +102,8 @@ export type ContactInfo = z.infer<typeof contactInfoSchema>;
 export type BulletPoint = z.infer<typeof bulletPointSchema>;
 export type WorkExperience = z.infer<typeof workExperienceSchema>;
 export type Project = z.infer<typeof projectSchema>;
+export type EducationLevel = z.infer<typeof educationLevelSchema>;
+export type EducationItem = z.infer<typeof educationItemSchema>;
 export type Certification = z.infer<typeof certificationSchema>;
 export type SkillCategory = z.infer<typeof skillCategorySchema>;
 export type SkillItem = z.infer<typeof skillItemSchema>;

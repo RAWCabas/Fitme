@@ -69,6 +69,21 @@ export const certificationSchema = z.strictObject({
   isHidden: z.boolean().default(false),
 });
 
+/** Education Item */
+export const educationLevelSchema = z.enum(["college", "high_school", "elementary", "other"]);
+
+export const educationItemSchema = z.strictObject({
+  id: z.string().uuid(),
+  institution: text(160).min(1),
+  degree: text(160).default(""),
+  fieldOfStudy: text(120).default(""),
+  startDate: isoDateOrNull.default(null),
+  endDate: isoDateOrNull.default(null),
+  level: educationLevelSchema.default("college"),
+  honors: text(160).default(""),
+  isHidden: z.boolean().default(false),
+});
+
 /** Skills by Category */
 export const skillCategorySchema = z.enum(["languages", "frameworks", "cloud", "tools", "soft"]);
 
@@ -85,6 +100,7 @@ export const profileSchema = z.strictObject({
   contact: contactInfoSchema,
   experiences: z.array(workExperienceSchema).default([]),
   projects: z.array(projectSchema).default([]),
+  education: z.array(educationItemSchema).default([]),
   certifications: z.array(certificationSchema).default([]),
   skills: z.array(skillItemSchema).default([]),
   summary: text(2000).default(""),
@@ -95,6 +111,8 @@ export type ContactInfo = z.infer<typeof contactInfoSchema>;
 export type BulletPoint = z.infer<typeof bulletPointSchema>;
 export type WorkExperience = z.infer<typeof workExperienceSchema>;
 export type Project = z.infer<typeof projectSchema>;
+export type EducationLevel = z.infer<typeof educationLevelSchema>;
+export type EducationItem = z.infer<typeof educationItemSchema>;
 export type Certification = z.infer<typeof certificationSchema>;
 export type SkillItem = z.infer<typeof skillItemSchema>;
 export type Profile = z.infer<typeof profileSchema>;
@@ -171,6 +189,7 @@ export const tailoredResumeSchema = z.strictObject({
   tailoredSummary: text(1500),
   tailoredExperiences: z.array(workExperienceSchema),
   tailoredProjects: z.array(projectSchema),
+  tailoredEducation: z.array(educationItemSchema).default([]),
   tailoredCertifications: z.array(certificationSchema).default([]),
   selectedSkills: z.array(skillItemSchema),
   pdfS3Key: z.string().nullable().default(null),

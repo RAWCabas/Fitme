@@ -37,6 +37,7 @@ export default async function DashboardLayout({
       summary: "",
       experiences: [],
       projects: [],
+      education: [],
       certifications: [],
       skills: [],
       updatedAt: new Date().toISOString(),

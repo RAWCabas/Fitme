@@ -9,10 +9,12 @@ import {
   workExperienceSchema, 
   projectSchema, 
   certificationSchema,
+  educationItemSchema,
   skillItemSchema, 
   WorkExperience, 
   Project, 
   Certification,
+  EducationItem,
   SkillItem 
 } from "./schema";
 
@@ -162,6 +164,20 @@ export class ProfileService {
           }
         }
 
+        // Clean up dummy 2024-01-01 date on certs so user has a clean slate or can input custom date
+        for (const cert of existing.certifications) {
+          if (cert.issueDate === "2024-01-01") {
+            cert.issueDate = null;
+            needsSave = true;
+          }
+        }
+
+        // Merge Education (College, High School, Elementary)
+        if (!existing.education || existing.education.length === 0) {
+          existing.education = master.education;
+          needsSave = true;
+        }
+
         // Merge all 24 Skills covering IT Support and Software/Embedded Tracks
         for (const skill of master.skills) {
           const hasSkill = existing.skills.some(
@@ -216,6 +232,7 @@ export class ProfileService {
           },
           experiences: [],
           projects: [],
+          education: [],
           certifications: [],
           skills: [],
           summary: "",
@@ -544,9 +561,13 @@ export class ProfileService {
   async addCertification(userId: string, input: unknown): Promise<Certification> {
     const profile = await this.getOrCreateProfile(userId);
     const raw = typeof input === "object" && input !== null ? (input as Record<string, unknown>) : {};
+    const issueDate = raw.issueDate ? String(raw.issueDate).trim() : null;
+    const expiryDate = raw.expiryDate ? String(raw.expiryDate).trim() : null;
     const withId = {
       ...raw,
       id: raw.id || crypto.randomUUID(),
+      issueDate: issueDate || null,
+      expiryDate: expiryDate || null,
       isHidden: Boolean(raw.isHidden),
     };
 
@@ -602,15 +623,106 @@ export class ProfileService {
 
     const existing = profile.certifications[existingIdx];
     const raw = typeof input === "object" && input !== null ? (input as Record<string, unknown>) : {};
+    const issueDate = raw.issueDate !== undefined ? (raw.issueDate ? String(raw.issueDate).trim() : null) : existing.issueDate;
+    const expiryDate = raw.expiryDate !== undefined ? (raw.expiryDate ? String(raw.expiryDate).trim() : null) : existing.expiryDate;
 
     const updatedData = {
       ...existing,
       ...raw,
+      issueDate: issueDate || null,
+      expiryDate: expiryDate || null,
       id: certificationId,
     };
 
     const validated = certificationSchema.parse(updatedData);
     profile.certifications[existingIdx] = validated;
+    profile.updatedAt = nowIso();
+
+    await this.repo.saveProfile(profile);
+    return validated;
+  }
+
+  /**
+   * Adds an education item.
+   */
+  async addEducation(userId: string, input: unknown): Promise<EducationItem> {
+    const profile = await this.getOrCreateProfile(userId);
+    const raw = typeof input === "object" && input !== null ? (input as Record<string, unknown>) : {};
+    const startDate = raw.startDate ? String(raw.startDate).trim() : null;
+    const endDate = raw.endDate ? String(raw.endDate).trim() : null;
+    const withId = {
+      ...raw,
+      id: raw.id || crypto.randomUUID(),
+      startDate: startDate || null,
+      endDate: endDate || null,
+      isHidden: Boolean(raw.isHidden),
+    };
+
+    const edu = educationItemSchema.parse(withId);
+    if (!profile.education) profile.education = [];
+    profile.education.unshift(edu);
+    profile.updatedAt = nowIso();
+
+    await this.repo.saveProfile(profile);
+    return edu;
+  }
+
+  /**
+   * Toggles visibility for an education item.
+   */
+  async toggleEducationVisibility(userId: string, educationId: string): Promise<boolean> {
+    const profile = await this.getOrCreateProfile(userId);
+    if (!profile.education) profile.education = [];
+    const item = profile.education.find((e) => e.id === educationId);
+    if (!item) throw AppError.notFound("Education item not found");
+
+    item.isHidden = !item.isHidden;
+    profile.updatedAt = nowIso();
+    await this.repo.saveProfile(profile);
+    return item.isHidden;
+  }
+
+  /**
+   * Deletes an education item.
+   */
+  async deleteEducation(userId: string, educationId: string): Promise<void> {
+    const profile = await this.getOrCreateProfile(userId);
+    if (!profile.education) profile.education = [];
+    const initialLen = profile.education.length;
+    profile.education = profile.education.filter((e) => e.id !== educationId);
+
+    if (profile.education.length === initialLen) {
+      throw AppError.notFound("Education item not found");
+    }
+
+    profile.updatedAt = nowIso();
+    await this.repo.saveProfile(profile);
+  }
+
+  /**
+   * Updates an existing education item.
+   */
+  async updateEducation(userId: string, educationId: string, input: unknown): Promise<EducationItem> {
+    const profile = await this.getOrCreateProfile(userId);
+    if (!profile.education) profile.education = [];
+    const existingIdx = profile.education.findIndex((e) => e.id === educationId);
+    if (existingIdx === -1) throw AppError.notFound("Education item not found");
+
+    const existing = profile.education[existingIdx];
+    const raw = typeof input === "object" && input !== null ? (input as Record<string, unknown>) : {};
+    const startDate = raw.startDate !== undefined ? (raw.startDate ? String(raw.startDate).trim() : null) : existing.startDate;
+    const endDate = raw.endDate !== undefined ? (raw.endDate ? String(raw.endDate).trim() : null) : existing.endDate;
+
+    const updatedData = {
+      ...existing,
+      ...raw,
+      startDate: startDate || null,
+      endDate: endDate || null,
+      id: educationId,
+    };
+
+    const validated = educationItemSchema.parse(updatedData);
+    profile.education[existingIdx] = validated;
     profile.updatedAt = nowIso();
 
     await this.repo.saveProfile(profile);
@@ -807,12 +919,47 @@ export function buildRhinnMasterProfile(
         ],
       },
     ],
+    education: [
+      {
+        id: crypto.randomUUID(),
+        institution: "Cebu Technological University- Main Campus",
+        degree: "Bachelor of Science in Computer Engineering",
+        fieldOfStudy: "Computer Engineering",
+        startDate: "2020",
+        endDate: "2024",
+        level: "college",
+        honors: "",
+        isHidden: false,
+      },
+      {
+        id: crypto.randomUUID(),
+        institution: "High School",
+        degree: "High School Diploma",
+        fieldOfStudy: "STEM / General Academic",
+        startDate: "2016",
+        endDate: "2020",
+        level: "high_school",
+        honors: "",
+        isHidden: false,
+      },
+      {
+        id: crypto.randomUUID(),
+        institution: "Elementary School",
+        degree: "Primary Education Certificate",
+        fieldOfStudy: "General",
+        startDate: "2010",
+        endDate: "2016",
+        level: "elementary",
+        honors: "",
+        isHidden: false,
+      },
+    ],
     certifications: [
       {
         id: crypto.randomUUID(),
         name: "Computer Systems Servicing NCII",
         issuer: "TESDA Accredited Training",
-        issueDate: "2024-01-01",
+        issueDate: null,
         expiryDate: null,
         credentialId: "NCII-CSS-280",
         credentialUrl: "",
@@ -823,7 +970,7 @@ export function buildRhinnMasterProfile(
         id: crypto.randomUUID(),
         name: "Programming (JAVA NCIII)",
         issuer: "TESDA Accredited Training",
-        issueDate: "2024-01-01",
+        issueDate: null,
         expiryDate: null,
         credentialId: "NCIII-JAVA-240",
         credentialUrl: "",
@@ -834,7 +981,7 @@ export function buildRhinnMasterProfile(
         id: crypto.randomUUID(),
         name: "Data Analysis Level 3",
         issuer: "TESDA Accredited Training",
-        issueDate: "2024-01-01",
+        issueDate: null,
         expiryDate: null,
         credentialId: "DA-L3-120",
         credentialUrl: "",
@@ -845,7 +992,7 @@ export function buildRhinnMasterProfile(
         id: crypto.randomUUID(),
         name: "Internet of Things (IoT)",
         issuer: "TESDA Accredited Training",
-        issueDate: "2024-01-01",
+        issueDate: null,
         expiryDate: null,
         credentialId: "IOT-102",
         credentialUrl: "",
@@ -856,7 +1003,7 @@ export function buildRhinnMasterProfile(
         id: crypto.randomUUID(),
         name: "Creative Web Design",
         issuer: "TESDA Accredited Training",
-        issueDate: "2024-01-01",
+        issueDate: null,
         expiryDate: null,
         credentialId: "CWD-102",
         credentialUrl: "",

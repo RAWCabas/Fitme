@@ -3,7 +3,7 @@ import { z } from "zod";
 import { AppError } from "@/lib/errors";
 import { nowIso } from "@/lib/dates";
 import { invokeBedrockJson } from "@/lib/bedrock";
-import { Profile, WorkExperience, Project, Certification, SkillItem } from "@/features/profile/schema";
+import { Profile, WorkExperience, Project, EducationItem, Certification, SkillItem } from "@/features/profile/schema";
 import { profileService as defaultProfileService, ProfileService, buildRhinnMasterProfile } from "@/features/profile/service";
 import { getTailorRepo } from "./repo";
 import { 
@@ -234,6 +234,7 @@ Return ONLY a valid JSON object matching the requested schema.`;
     // 2. Filter out items where isHidden === true
     const activeExperiences = profile.experiences.filter((e) => !e.isHidden);
     const activeProjects = profile.projects.filter((p) => !p.isHidden);
+    const activeEducation = (profile.education || []).filter((e) => !e.isHidden);
     const activeCertifications = (profile.certifications || []).filter((c) => !c.isHidden);
     const activeSkills = profile.skills.filter((s) => !s.isHidden);
 
@@ -282,6 +283,7 @@ Return ONLY a valid JSON object matching the requested schema.`;
       summary: tailoredSummary,
       experiences: curatedExperiences,
       projects: curatedProjects,
+      education: activeEducation,
       certifications: activeCertifications,
       skills: sortedSkills,
     });
@@ -299,6 +301,7 @@ Return ONLY a valid JSON object matching the requested schema.`;
       tailoredSummary,
       tailoredExperiences: curatedExperiences,
       tailoredProjects: curatedProjects,
+      tailoredEducation: activeEducation,
       tailoredCertifications: activeCertifications,
       selectedSkills: sortedSkills,
       pdfS3Key: null,
@@ -323,6 +326,7 @@ Return ONLY a valid JSON object matching the requested schema.`;
       tailoredSummary?: string;
       tailoredExperiences?: WorkExperience[];
       tailoredProjects?: Project[];
+      tailoredEducation?: EducationItem[];
       tailoredCertifications?: Certification[];
       selectedSkills?: SkillItem[];
       [key: string]: unknown;
@@ -356,6 +360,9 @@ Return ONLY a valid JSON object matching the requested schema.`;
     if (updates.tailoredProjects !== undefined) {
       resume.tailoredProjects = updates.tailoredProjects;
     }
+    if (updates.tailoredEducation !== undefined) {
+      resume.tailoredEducation = updates.tailoredEducation;
+    }
     if (updates.tailoredCertifications !== undefined) {
       resume.tailoredCertifications = updates.tailoredCertifications;
     }
@@ -371,6 +378,7 @@ Return ONLY a valid JSON object matching the requested schema.`;
       summary: resume.tailoredSummary,
       experiences: resume.tailoredExperiences,
       projects: resume.tailoredProjects,
+      education: resume.tailoredEducation || [],
       certifications: resume.tailoredCertifications || [],
       skills: resume.selectedSkills,
     });
@@ -441,14 +449,24 @@ Start with a strong action verb (e.g. Engineered, Spearheaded, Architected, Acce
     summary: string;
     experiences: WorkExperience[];
     projects: Project[];
+    education?: EducationItem[];
     certifications?: Certification[];
     skills: SkillItem[];
   }): string {
-    const { profile, summary, experiences, projects, certifications, skills } = params;
+    const { profile, summary, experiences, projects, education, certifications, skills } = params;
     const c = profile.contact;
 
     const header = `# ${c.fullName}\n${c.headline ? `*${c.headline}*\n` : ""}${c.email} | ${c.phone} | ${c.location}\n${c.linkedinUrl} | ${c.githubUrl}\n\n`;
     const summarySec = `## Professional Summary\n${summary}\n\n`;
+
+    let eduSec = "";
+    if (education && education.length > 0) {
+      eduSec = `## Education\n`;
+      for (const edu of education) {
+        const dateStr = edu.startDate || edu.endDate ? ` | ${[edu.startDate, edu.endDate || "Present"].filter(Boolean).join(" – ")}` : "";
+        eduSec += `### ${edu.degree || edu.institution}\n**${edu.institution}**${dateStr}\n\n`;
+      }
+    }
 
     let expSec = `## Work Experience\n`;
     for (const exp of experiences) {
@@ -482,7 +500,7 @@ Start with a strong action verb (e.g. Engineered, Spearheaded, Architected, Acce
 
     const skillsSec = `## Core Competencies\n${skills.map((s) => s.name).join(", ")}\n`;
 
-    return header + summarySec + expSec + projSec + certSec + skillsSec;
+    return header + summarySec + eduSec + expSec + projSec + certSec + skillsSec;
   }
 
   private fallbackParseJd(raw: string): ExtractedJd {

@@ -42,6 +42,7 @@ const mockProfile: Profile = {
       isHidden: false,
     },
   ],
+  education: [],
   skills: [
     { id: "c3d4e5f6-a7b8-49ca-8d12-345678901234", name: "TypeScript", category: "languages", isHidden: false },
     { id: "d4e5f6a7-b8c9-4adb-9e23-456789012345", name: "Next.js", category: "frameworks", isHidden: false },
@@ -113,6 +114,7 @@ describe("Fit Studio UI: StudioClient", () => {
       tailoredSummary: "Experienced engineer",
       tailoredExperiences: mockProfile.experiences,
       tailoredProjects: mockProfile.projects,
+      tailoredEducation: [],
       tailoredCertifications: [
         {
           id: "cert-1",
