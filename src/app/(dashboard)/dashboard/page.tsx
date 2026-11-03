@@ -36,6 +36,7 @@ export default async function DashboardPage() {
       initialResumes={resumes}
       jobs={jobsMap}
       userName={session.name || "Candidate"}
+      userId={session.userId}
     />
   );
 }

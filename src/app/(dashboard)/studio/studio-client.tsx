@@ -320,9 +320,17 @@ export function StudioClient({ profile, savedResumes = [], savedJobs = {} }: Stu
       });
       if (!tailorRes.ok) throw new Error("Failed to tailor resume");
       const resume: TailoredResume = await tailorRes.json();
+      const updatedResumes = [resume, ...resumesList.filter((r) => r.id !== resume.id)];
+      const updatedJobs = { ...jobsMap, [job.id]: job };
       setTailoredResume(resume);
-      setResumesList((prev) => [resume, ...prev.filter((r) => r.id !== resume.id)]);
-      setJobsMap((prev) => ({ ...prev, [job.id]: job }));
+      setResumesList(updatedResumes);
+      setJobsMap(updatedJobs);
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.setItem(`fitme_resumes_cache_${profile.userId}`, JSON.stringify(updatedResumes));
+          localStorage.setItem(`fitme_jobs_cache_${profile.userId}`, JSON.stringify(updatedJobs));
+        } catch {}
+      }
     } catch (err) {
       console.error("Tailoring failed", err);
     } finally {
@@ -507,19 +515,31 @@ export function StudioClient({ profile, savedResumes = [], savedJobs = {} }: Stu
 
       const html = exportService.generateHtmlDocument(tailoredResume, profile, preset);
 
-      const container = document.createElement("div");
-      container.innerHTML = html;
-      container.style.position = "fixed";
-      container.style.left = "-9999px";
-      container.style.top = "0";
-      container.style.width = "794px";
-      container.style.background = "#ffffff";
-      container.style.color = "#111827";
+      // Create an on-screen but invisible rendering iframe so html2canvas renders with full CSS stylesheets
+      const iframe = document.createElement("iframe");
+      iframe.style.position = "fixed";
+      iframe.style.left = "0";
+      iframe.style.top = "0";
+      iframe.style.width = "794px";
+      iframe.style.height = "1123px";
+      iframe.style.border = "none";
+      iframe.style.zIndex = "-99999";
+      iframe.style.opacity = "0.01";
+      iframe.style.pointerEvents = "none";
+      document.body.appendChild(iframe);
 
-      const noPrintEls = container.querySelectorAll(".no-print");
+      const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+      if (!iframeDoc) throw new Error("Could not initialize rendering frame");
+
+      iframeDoc.open();
+      iframeDoc.write(html);
+      iframeDoc.close();
+
+      // Wait a tick for iframe stylesheets and fonts to render
+      await new Promise((resolve) => setTimeout(resolve, 300));
+
+      const noPrintEls = iframeDoc.querySelectorAll(".no-print");
       noPrintEls.forEach((el) => el.remove());
-
-      document.body.appendChild(container);
 
       try {
         const html2pdfModule = await import("html2pdf.js");
@@ -527,17 +547,17 @@ export function StudioClient({ profile, savedResumes = [], savedJobs = {} }: Stu
         const cleanTitle = (tailoredResume.title || `${profile.contact?.fullName || "Resume"}`).replace(/[^a-zA-Z0-9_-]/g, "_");
 
         const opt = {
-          margin: [7, 9, 7, 9] as [number, number, number, number],
+          margin: [8, 11, 8, 11] as [number, number, number, number],
           filename: `${cleanTitle}.pdf`,
           image: { type: "jpeg" as const, quality: 0.98 },
-          html2canvas: { scale: 2, useCORS: true, logging: false },
+          html2canvas: { scale: 2, useCORS: true, logging: false, windowWidth: 794 },
           jsPDF: { unit: "mm", format: "a4", orientation: "portrait" as const },
         };
 
-        await html2pdf().set(opt).from(container).save();
+        await html2pdf().set(opt).from(iframeDoc.body).save();
       } finally {
-        if (document.body.contains(container)) {
-          document.body.removeChild(container);
+        if (document.body.contains(iframe)) {
+          document.body.removeChild(iframe);
         }
       }
     } catch (err) {

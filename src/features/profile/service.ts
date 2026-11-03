@@ -37,12 +37,6 @@ export class ProfileService {
 
     const existing = await this.repo.getProfile(userId);
     if (existing) {
-      let needsSave = false;
-      if (!existing.certifications) {
-        existing.certifications = [];
-        needsSave = true;
-      }
-
       // Check if this profile belongs to Rhinn Cabas (or our primary candidate / dev user)
       const isTestEnv = !!process.env.VITEST || process.env.NODE_ENV === "test";
       const isRhinnExplicit =
@@ -65,7 +59,36 @@ export class ProfileService {
           (existing.contact.fullName === "Candidate" ||
             existing.contact.email === "candidate@fitme.dev"));
 
-      if (isRhinn) {
+      let needsSave = false;
+      // Ensure backwards-compatible fields exist on legacy records
+      if (!existing.education) {
+        existing.education = [];
+        needsSave = true;
+      }
+      if (!existing.certifications) {
+        existing.certifications = [];
+        needsSave = true;
+      }
+      if (!existing.projects) {
+        existing.projects = [];
+        needsSave = true;
+      }
+      if (!existing.experiences) {
+        existing.experiences = [];
+        needsSave = true;
+      }
+      if (!existing.skills) {
+        existing.skills = [];
+        needsSave = true;
+      }
+
+      // If user profile is completely empty (brand new initialization for Rhinn)
+      if (
+        isRhinn &&
+        existing.experiences.length === 0 &&
+        existing.projects.length === 0 &&
+        existing.skills.length === 0
+      ) {
         const masterEmail =
           existing.contact.email && existing.contact.email !== "candidate@fitme.dev"
             ? existing.contact.email
@@ -74,120 +97,8 @@ export class ProfileService {
           existing.contact.fullName && existing.contact.fullName !== "Candidate"
             ? existing.contact.fullName
             : defaultName || "Rhinn Anthon William Cabas";
-
         const master = buildRhinnMasterProfile(userId, masterEmail, masterName);
-
-        // Auto-fix placeholder or typo names
-        if (
-          existing.contact.fullName.toLowerCase().includes("chinn") ||
-          existing.contact.fullName === "Candidate" ||
-          !existing.contact.fullName
-        ) {
-          existing.contact.fullName = "Rhinn Anthon William Cabas";
-          needsSave = true;
-        }
-
-        if (
-          existing.contact.email === "candidate@fitme.dev" ||
-          !existing.contact.email
-        ) {
-          existing.contact.email = masterEmail;
-          needsSave = true;
-        }
-
-        // Ensure comprehensive headline covering both IT and Embedded Tracks
-        if (!existing.contact.headline || !existing.contact.headline.includes("IT")) {
-          existing.contact.headline = master.contact.headline;
-          needsSave = true;
-        }
-
-        if (!existing.contact.phone) {
-          existing.contact.phone = master.contact.phone;
-          needsSave = true;
-        }
-
-        if (!existing.contact.location) {
-          existing.contact.location = master.contact.location;
-          needsSave = true;
-        }
-
-        if (!existing.summary) {
-          existing.summary = master.summary;
-          needsSave = true;
-        }
-
-        // Merge Work Experiences (SCENG + McDonald's)
-        for (const exp of master.experiences) {
-          const matchIdx = existing.experiences.findIndex(
-            (e) => e.company.toLowerCase().includes(exp.company.toLowerCase().slice(0, 10))
-          );
-          if (matchIdx === -1) {
-            existing.experiences.push(exp);
-            needsSave = true;
-          } else {
-            // Ensure bullets exist
-            if (existing.experiences[matchIdx].bullets.length === 0) {
-              existing.experiences[matchIdx].bullets = exp.bullets;
-              needsSave = true;
-            }
-          }
-        }
-
-        // Clean up TESDA if it was previously entered as a project
-        const tesdaProjIdx = existing.projects.findIndex(
-          (p) => p.name.includes("TESDA") || p.name.includes("Certifications")
-        );
-        if (tesdaProjIdx !== -1) {
-          existing.projects.splice(tesdaProjIdx, 1);
-          needsSave = true;
-        }
-
-        // Merge Technical Projects (SCENG + Computer Systems & Network Setup)
-        for (const proj of master.projects) {
-          const matchIdx = existing.projects.findIndex(
-            (p) => p.name.toLowerCase().includes(proj.name.toLowerCase().slice(0, 8))
-          );
-          if (matchIdx === -1) {
-            existing.projects.push(proj);
-            needsSave = true;
-          }
-        }
-
-        // Merge all 5 TESDA Certifications
-        for (const cert of master.certifications) {
-          const hasCert = existing.certifications.some(
-            (c) => c.name.toLowerCase().includes(cert.name.toLowerCase().slice(0, 10))
-          );
-          if (!hasCert) {
-            existing.certifications.push(cert);
-            needsSave = true;
-          }
-        }
-
-        // Clean up dummy 2024-01-01 date on certs so user has a clean slate or can input custom date
-        for (const cert of existing.certifications) {
-          if (cert.issueDate === "2024-01-01") {
-            cert.issueDate = null;
-            needsSave = true;
-          }
-        }
-
-        // Merge Education (College, High School, Elementary)
-        if (!existing.education || existing.education.length === 0) {
-          existing.education = master.education;
-          needsSave = true;
-        }
-
-        // Merge all 24 Skills covering IT Support and Software/Embedded Tracks
-        for (const skill of master.skills) {
-          const hasSkill = existing.skills.some(
-            (s) => s.name.toLowerCase() === skill.name.toLowerCase()
-          );
-          if (!hasSkill) {
-            existing.skills.push(skill);
-            needsSave = true;
-          }
-        }
+        return await this.repo.saveProfile(master);
       }
 
       if (needsSave) {

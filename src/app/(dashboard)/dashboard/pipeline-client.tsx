@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { 
   Sparkles, 
@@ -25,12 +25,100 @@ interface PipelineClientProps {
   initialResumes: TailoredResume[];
   jobs: Record<string, JobOpportunity>;
   userName: string;
+  userId?: string;
 }
 
-export function PipelineClient({ initialResumes, jobs, userName }: PipelineClientProps) {
+export function PipelineClient({ initialResumes, jobs, userName, userId }: PipelineClientProps) {
   const [resumes, setResumes] = useState<TailoredResume[]>(initialResumes);
+  const [jobsState, setJobsState] = useState<Record<string, JobOpportunity>>(jobs);
   const [filter, setFilter] = useState<"all" | ResumeStatus>("all");
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+
+  // Restore & sync tailored resumes from client cache and API
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    // 1. Read from localStorage cache
+    try {
+      const keysToScan: string[] = [];
+      if (userId) keysToScan.push(`fitme_resumes_cache_${userId}`);
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.startsWith("fitme_resumes_cache_") && !keysToScan.includes(k)) {
+          keysToScan.push(k);
+        }
+      }
+
+      for (const k of keysToScan) {
+        const cachedRaw = localStorage.getItem(k);
+        if (cachedRaw) {
+          const cachedList: TailoredResume[] = JSON.parse(cachedRaw);
+          if (Array.isArray(cachedList) && cachedList.length > 0) {
+            setResumes((current) => {
+              const map = new Map<string, TailoredResume>();
+              current.forEach((r) => map.set(r.id, r));
+              cachedList.forEach((r) => {
+                if (!map.has(r.id)) map.set(r.id, r);
+              });
+              return Array.from(map.values()).sort(
+                (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+              );
+            });
+          }
+        }
+      }
+
+      // Restore cached jobs
+      const jobKeys: string[] = [];
+      if (userId) jobKeys.push(`fitme_jobs_cache_${userId}`);
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.startsWith("fitme_jobs_cache_") && !jobKeys.includes(k)) {
+          jobKeys.push(k);
+        }
+      }
+
+      for (const jk of jobKeys) {
+        const rawJ = localStorage.getItem(jk);
+        if (rawJ) {
+          const parsedJobs = JSON.parse(rawJ);
+          if (parsedJobs && typeof parsedJobs === "object") {
+            setJobsState((prev) => ({ ...parsedJobs, ...prev }));
+          }
+        }
+      }
+    } catch (e) {
+      console.error("Failed to load cached resumes on dashboard", e);
+    }
+
+    // 2. Fetch fresh list from API in browser
+    if (typeof window !== "undefined" && window.location?.origin && !process.env.VITEST) {
+      fetch("/api/tailor/resumes")
+        .then((res) => (res.ok ? res.json() : []))
+        .then((serverResumes: TailoredResume[]) => {
+          if (Array.isArray(serverResumes) && serverResumes.length > 0) {
+            setResumes((current) => {
+              const map = new Map<string, TailoredResume>();
+              current.forEach((r) => map.set(r.id, r));
+              serverResumes.forEach((r) => map.set(r.id, r));
+              return Array.from(map.values()).sort(
+                (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+              );
+            });
+          }
+        })
+        .catch((err) => console.warn("Failed to fetch fresh resumes from API:", err));
+    }
+  }, [userId]);
+
+  // Keep localStorage updated when resumes change
+  useEffect(() => {
+    if (typeof window === "undefined" || resumes.length === 0) return;
+    try {
+      const activeKey = userId ? `fitme_resumes_cache_${userId}` : "fitme_resumes_cache_default";
+      localStorage.setItem(activeKey, JSON.stringify(resumes));
+    } catch {}
+  }, [resumes, userId]);
 
   // Compute status counts
   const counts = {
@@ -113,7 +201,7 @@ export function PipelineClient({ initialResumes, jobs, userName }: PipelineClien
           </p>
           <div className="flex flex-wrap gap-2 pt-1">
             {agingApplications.map((app) => {
-              const job = jobs[app.jobOpportunityId];
+              const job = jobsState[app.jobOpportunityId] || jobs[app.jobOpportunityId];
               return (
                 <div
                   key={app.id}
@@ -266,7 +354,7 @@ export function PipelineClient({ initialResumes, jobs, userName }: PipelineClien
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredResumes.map((resume) => {
-            const job = jobs[resume.jobOpportunityId];
+            const job = jobsState[resume.jobOpportunityId] || jobs[resume.jobOpportunityId];
             const isUpdating = updatingId === resume.id;
 
             return (

@@ -221,37 +221,37 @@ export class ExportService {
         body {
           font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
           color: #111827;
-          line-height: 1.32;
+          line-height: 1.42;
         }
         .header-container {
-          margin-bottom: 2pt;
+          margin-bottom: 4pt;
         }
         h1 {
-          font-size: 19pt;
+          font-size: 21pt;
           font-weight: 900;
           letter-spacing: 0.02em;
           text-transform: uppercase;
-          margin: 0 0 2pt 0;
+          margin: 0 0 3pt 0;
           color: #111827;
-          line-height: 1.1;
+          line-height: 1.15;
         }
         .headline {
-          font-size: 8.5pt;
+          font-size: 9.5pt;
           color: #111827;
           font-weight: 700;
-          letter-spacing: 0.03em;
+          letter-spacing: 0.04em;
           text-transform: uppercase;
-          margin-bottom: 3pt;
-          line-height: 1.2;
+          margin-bottom: 4pt;
+          line-height: 1.25;
         }
         .contact-row {
-          font-size: 8pt;
+          font-size: 8.5pt;
           color: #374151;
           display: flex;
           flex-wrap: wrap;
-          gap: 2pt 8pt;
+          gap: 2pt 10pt;
           align-items: center;
-          line-height: 1.2;
+          line-height: 1.3;
         }
         .contact-row a {
           color: #374151;
@@ -259,56 +259,56 @@ export class ExportService {
         }
         .header-divider {
           border-bottom: 2px solid #111827;
-          margin: 3.5pt 0 4.5pt 0;
+          margin: 4.5pt 0 6pt 0;
         }
         h2 {
-          font-size: 9pt;
+          font-size: 10.5pt;
           font-weight: 800;
           text-transform: uppercase;
           letter-spacing: 0.04em;
           color: #111827;
           border-bottom: 1.5px solid #111827;
-          padding-bottom: 1pt;
-          margin-top: 4.5pt;
-          margin-bottom: 2pt;
+          padding-bottom: 1.5pt;
+          margin-top: 7pt;
+          margin-bottom: 3.5pt;
         }
         .item-header {
           display: flex;
           justify-content: space-between;
-          font-size: 8.5pt;
+          font-size: 9.5pt;
           font-weight: 700;
           color: #111827;
-          margin-top: 2pt;
+          margin-top: 3.5pt;
         }
         .item-sub {
           display: flex;
           justify-content: space-between;
-          font-size: 8pt;
+          font-size: 9pt;
           font-style: italic;
-          color: #4b5563;
-          margin-bottom: 1.5pt;
+          color: #374151;
+          margin-bottom: 2pt;
         }
         ul {
-          margin: 1pt 0 2.5pt 0;
-          padding-left: 12pt;
+          margin: 2pt 0 4pt 0;
+          padding-left: 14pt;
         }
         li {
-          font-size: 8pt;
+          font-size: 9pt;
           color: #1f2937;
-          margin-bottom: 1pt;
-          line-height: 1.24;
+          margin-bottom: 2pt;
+          line-height: 1.38;
         }
         .summary-text {
-          font-size: 8pt;
+          font-size: 9pt;
           color: #1f2937;
-          line-height: 1.28;
+          line-height: 1.42;
           text-align: justify;
         }
         .skills-category-row {
-          font-size: 8pt;
+          font-size: 9pt;
           color: #1f2937;
-          margin-bottom: 1.5pt;
-          line-height: 1.25;
+          margin-bottom: 2.5pt;
+          line-height: 1.35;
         }
         .skills-category-label {
           font-weight: 700;
@@ -563,14 +563,14 @@ export class ExportService {
   <style>
     @page {
       size: A4 portrait;
-      margin: 7mm 9mm;
+      margin: 8mm 11mm;
     }
     *, *::before, *::after {
       box-sizing: border-box;
     }
     body {
       margin: 0;
-      padding: 7mm 9mm;
+      padding: 8mm 11mm;
       background: #ffffff;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
@@ -578,7 +578,7 @@ export class ExportService {
     @media print {
       @page {
         size: A4 portrait;
-        margin: 7mm 9mm;
+        margin: 8mm 11mm;
       }
       body {
         padding: 0 !important;

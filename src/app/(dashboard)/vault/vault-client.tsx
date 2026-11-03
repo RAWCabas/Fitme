@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   Briefcase, 
   Code2, 
@@ -91,6 +91,17 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
   const [contactGithub, setContactGithub] = useState(profile.contact.githubUrl || "");
   const [contactSummary, setContactSummary] = useState(profile.summary || "");
 
+  useEffect(() => {
+    setContactName(profile.contact.fullName);
+    setContactHeadline(profile.contact.headline || "");
+    setContactEmail(profile.contact.email);
+    setContactPhone(profile.contact.phone || "");
+    setContactLocation(profile.contact.location || "");
+    setContactLinkedin(profile.contact.linkedinUrl || "");
+    setContactGithub(profile.contact.githubUrl || "");
+    setContactSummary(profile.summary || "");
+  }, [profile.contact, profile.summary]);
+
   // Editing Existing Items State
   const [editingExp, setEditingExp] = useState<WorkExperience | null>(null);
   const [editExpCompany, setEditExpCompany] = useState("");
@@ -131,6 +142,39 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
     setSuccessMessage(msg);
     setTimeout(() => setSuccessMessage(null), 3000);
   }
+
+  // Restore cached edits & hidden toggles on mount
+  useEffect(() => {
+    if (typeof window === "undefined" || !profile.userId) return;
+    try {
+      const cachedRaw = localStorage.getItem(`fitme_vault_cache_${profile.userId}`);
+      if (cachedRaw) {
+        const cached: Profile = JSON.parse(cachedRaw);
+        if (cached && (cached.experiences?.length || cached.skills?.length || cached.contact?.fullName)) {
+          setProfile((curr) => ({
+            ...curr,
+            ...cached,
+            contact: { ...curr.contact, ...cached.contact },
+            experiences: cached.experiences || curr.experiences,
+            projects: cached.projects || curr.projects,
+            education: cached.education || curr.education,
+            certifications: cached.certifications || curr.certifications,
+            skills: cached.skills || curr.skills,
+          }));
+        }
+      }
+    } catch (e) {
+      console.error("Failed to restore vault cache", e);
+    }
+  }, [profile.userId]);
+
+  // Persist profile edits and hidden toggles to localStorage
+  useEffect(() => {
+    if (typeof window === "undefined" || !profile.userId) return;
+    try {
+      localStorage.setItem(`fitme_vault_cache_${profile.userId}`, JSON.stringify(profile));
+    } catch {}
+  }, [profile]);
 
   // Handle AI Resume Import
   async function handleImportResume(e: React.FormEvent) {

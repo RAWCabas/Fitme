@@ -22,7 +22,7 @@ export async function invokeBedrockJson<T>({
 }: BedrockJsonParams<T>): Promise<T> {
   const credentials = getAwsCredentials();
   const region = getAwsRegion();
-  const modelId = process.env.BEDROCK_MODEL_ID || "anthropic.claude-3-5-haiku-20241022-v1:0";
+  const modelId = process.env.BEDROCK_MODEL_ID || "amazon.nova-lite-v1:0";
 
   // If AWS credentials are provided, invoke Amazon Bedrock
   if (credentials) {
@@ -32,12 +32,24 @@ export async function invokeBedrockJson<T>({
         credentials,
       });
 
-      const payload = {
-        anthropic_version: "bedrock-2023-05-31",
-        max_tokens: 4096,
-        system: `${systemPrompt}\n\nIMPORTANT: You must respond ONLY with a valid JSON object matching the requested schema. Do not enclose in markdown blocks.`,
-        messages: [{ role: "user", content: userPrompt }],
-      };
+      const isNova = modelId.startsWith("amazon.nova");
+      const jsonSystemPrompt = `${systemPrompt}\n\nIMPORTANT: You must respond ONLY with a valid JSON object matching the requested schema. Do not enclose in markdown blocks.`;
+
+      const payload = isNova
+        ? {
+            system: [{ text: jsonSystemPrompt }],
+            messages: [{ role: "user", content: [{ text: userPrompt }] }],
+            inferenceConfig: {
+              max_new_tokens: 4096,
+              temperature: 0.2,
+            },
+          }
+        : {
+            anthropic_version: "bedrock-2023-05-31",
+            max_tokens: 4096,
+            system: jsonSystemPrompt,
+            messages: [{ role: "user", content: userPrompt }],
+          };
 
       const command = new InvokeModelCommand({
         modelId,
@@ -49,7 +61,9 @@ export async function invokeBedrockJson<T>({
       const response = await client.send(command);
       const responseBody = new TextDecoder().decode(response.body);
       const parsedBody = JSON.parse(responseBody);
-      const textContent = parsedBody.content?.[0]?.text || "";
+      const textContent = isNova
+        ? parsedBody.output?.message?.content?.[0]?.text || parsedBody.content?.[0]?.text || ""
+        : parsedBody.content?.[0]?.text || "";
 
       const cleanJson = extractJsonSubstring(textContent);
       const rawObj = JSON.parse(cleanJson);
