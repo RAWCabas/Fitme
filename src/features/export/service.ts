@@ -1,9 +1,6 @@
 import { Profile } from "@/features/profile/schema";
 import { TailoredResume, TypographyPreset } from "@/features/tailor/schema";
 
-const RHINN_GRAD_PHOTO_DATA_URI =
-  "data:image/jpeg;base64,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";
-
 export class ExportService {
   /**
    * Generates clean, machine-readable standard ATS Markdown.
@@ -261,8 +258,8 @@ export class ExportService {
           text-decoration: none;
         }
         .header-divider {
-          border-bottom: 2px solid #111827;
-          margin: 4.5pt 0 6pt 0;
+          border-bottom: 1.5px solid #111827;
+          margin: 6pt 0 8pt 0;
         }
         h2 {
           font-size: 10.5pt;
@@ -271,9 +268,9 @@ export class ExportService {
           letter-spacing: 0.04em;
           color: #111827;
           border-bottom: 1.5px solid #111827;
-          padding-bottom: 1.5pt;
-          margin-top: 7pt;
-          margin-bottom: 3.5pt;
+          padding-bottom: 3.5pt;
+          margin-top: 9pt;
+          margin-bottom: 5.5pt;
         }
         .item-header {
           display: flex;
@@ -610,8 +607,8 @@ export class ExportService {
   </div>
 
   <div id="printable-resume" style="width: 100%; max-width: 794px; background: #ffffff; color: #000000; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; box-sizing: border-box;">
-    <header class="header-container" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2pt;">
-      <div style="flex: 1; padding-right: 12px;">
+    <header class="header-container" style="margin-bottom: 2pt;">
+      <div>
         <h1 style="font-size: 21pt; font-weight: 900; letter-spacing: 0.02em; text-transform: uppercase; margin: 0 0 2pt 0; color: #000000; line-height: 1.15; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
           ${escapeHtml(c.fullName)}
         </h1>
@@ -622,7 +619,7 @@ export class ExportService {
               </div>`
             : ""
         }
-        <div class="contact-row" style="font-size: 8.5pt; color: #111827; display: flex; flex-direction: column; gap: 1.5pt; line-height: 1.35;">
+        <div class="contact-row" style="font-size: 8.5pt; color: #111827; display: flex; flex-wrap: wrap; gap: 2pt 10pt; align-items: center; line-height: 1.35;">
           ${c.location ? `<div style="display: flex; align-items: center; gap: 4px;"><span>📍</span><span>${escapeHtml(c.location)}</span></div>` : ""}
           ${c.phone ? `<div style="display: flex; align-items: center; gap: 4px;"><span>📞</span><span>${escapeHtml(c.phone)}</span></div>` : ""}
           ${c.email ? `<div style="display: flex; align-items: center; gap: 4px;"><span>✉️</span><a href="mailto:${escapeHtml(c.email)}" style="color: #111827; text-decoration: none;">${escapeHtml(c.email)}</a></div>` : ""}
@@ -630,21 +627,14 @@ export class ExportService {
           ${c.githubUrl ? `<div style="display: flex; align-items: center; gap: 4px;"><span>💻</span><a href="${escapeHtml(c.githubUrl)}" style="color: #111827; text-decoration: none;">GitHub</a></div>` : ""}
         </div>
       </div>
-      ${
-        isCabasTemplate
-          ? `<div style="width: 100px; height: 110px; border: 1.5px solid #000000; overflow: hidden; flex-shrink: 0; background: #f8fafc; margin-top: 1pt;">
-              <img src="${RHINN_GRAD_PHOTO_DATA_URI}" alt="${escapeHtml(c.fullName)}" style="width: 100%; height: 100%; object-fit: cover; display: block;" />
-             </div>`
-          : ""
-      }
     </header>
 
-    <div class="header-divider" style="border-top: 2px solid #000000; margin: 4pt 0 5pt 0;"></div>
+    <div class="header-divider" style="border-top: 1.5px solid #000000; margin: 6pt 0 8pt 0;"></div>
 
     ${
       resume.tailoredSummary
-        ? `<section style="margin-bottom: 4pt;">
-      <h2 style="font-size: 10.5pt; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; color: #000000; border-bottom: 1.5px solid #000000; padding-bottom: 1.5pt; margin-top: 6pt; margin-bottom: 3.5pt;">
+        ? `<section style="margin-bottom: 5pt;">
+      <h2 style="font-size: 10.5pt; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; color: #000000; border-bottom: 1.5px solid #000000; padding-bottom: 3.5pt; margin-top: 9pt; margin-bottom: 5.5pt;">
         ${summaryTitle}
       </h2>
       <div class="summary-text" style="font-size: 9pt; color: #000000; line-height: 1.38; text-align: justify;">
@@ -656,8 +646,8 @@ export class ExportService {
 
     ${
       activeEdu.length > 0
-        ? `<section style="margin-bottom: 4pt;">
-      <h2 style="font-size: 10.5pt; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; color: #000000; border-bottom: 1.5px solid #000000; padding-bottom: 1.5pt; margin-top: 6pt; margin-bottom: 3.5pt;">
+        ? `<section style="margin-bottom: 5pt;">
+      <h2 style="font-size: 10.5pt; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; color: #000000; border-bottom: 1.5px solid #000000; padding-bottom: 3.5pt; margin-top: 9pt; margin-bottom: 5.5pt;">
         Education
       </h2>
       ${activeEdu
@@ -681,8 +671,8 @@ export class ExportService {
 
     ${
       resume.tailoredExperiences.length > 0
-        ? `<section style="margin-bottom: 4pt;">
-      <h2 style="font-size: 10.5pt; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; color: #000000; border-bottom: 1.5px solid #000000; padding-bottom: 1.5pt; margin-top: 6pt; margin-bottom: 3.5pt;">
+        ? `<section style="margin-bottom: 5pt;">
+      <h2 style="font-size: 10.5pt; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; color: #000000; border-bottom: 1.5px solid #000000; padding-bottom: 3.5pt; margin-top: 9pt; margin-bottom: 5.5pt;">
         ${expTitle}
       </h2>
       ${resume.tailoredExperiences
@@ -708,8 +698,8 @@ export class ExportService {
 
     ${
       Object.keys(categorizedSkills).length > 0
-        ? `<section style="margin-bottom: 4pt;">
-      <h2 style="font-size: 10.5pt; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; color: #000000; border-bottom: 1.5px solid #000000; padding-bottom: 1.5pt; margin-top: 6pt; margin-bottom: 3.5pt;">
+        ? `<section style="margin-bottom: 5pt;">
+      <h2 style="font-size: 10.5pt; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; color: #000000; border-bottom: 1.5px solid #000000; padding-bottom: 3.5pt; margin-top: 9pt; margin-bottom: 5.5pt;">
         ${skillsTitle}
       </h2>
       <div class="skills-list">
@@ -730,8 +720,8 @@ export class ExportService {
 
     ${
       activeCerts.length > 0
-        ? `<section style="margin-bottom: 4pt;">
-      <h2 style="font-size: 10.5pt; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; color: #000000; border-bottom: 1.5px solid #000000; padding-bottom: 1.5pt; margin-top: 6pt; margin-bottom: 3.5pt;">
+        ? `<section style="margin-bottom: 5pt;">
+      <h2 style="font-size: 10.5pt; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; color: #000000; border-bottom: 1.5px solid #000000; padding-bottom: 3.5pt; margin-top: 9pt; margin-bottom: 5.5pt;">
         TESDA Trainings and Certificates
       </h2>
       <ul style="margin: 1.5pt 0 4pt 0; padding-left: 14pt;">
@@ -750,8 +740,8 @@ export class ExportService {
 
     ${
       resume.tailoredProjects && resume.tailoredProjects.length > 0
-        ? `<section style="margin-bottom: 4pt;">
-      <h2 style="font-size: 10.5pt; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; color: #000000; border-bottom: 1.5px solid #000000; padding-bottom: 1.5pt; margin-top: 6pt; margin-bottom: 3.5pt;">
+        ? `<section style="margin-bottom: 5pt;">
+      <h2 style="font-size: 10.5pt; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; color: #000000; border-bottom: 1.5px solid #000000; padding-bottom: 3.5pt; margin-top: 9pt; margin-bottom: 5.5pt;">
         Technical Projects
       </h2>
       ${resume.tailoredProjects
