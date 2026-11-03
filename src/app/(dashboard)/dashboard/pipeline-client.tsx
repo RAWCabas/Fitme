@@ -357,6 +357,16 @@ export function PipelineClient({ initialResumes, jobs, userName, userId }: Pipel
             const job = jobsState[resume.jobOpportunityId] || jobs[resume.jobOpportunityId];
             const isUpdating = updatingId === resume.id;
 
+            const rawRole = job?.role || "";
+            const isRoleParagraph = rawRole.length > 50 || rawRole.includes("\n") || (rawRole.includes(".") && rawRole.length > 30);
+            const cleanRole = isRoleParagraph ? "IT Technical Support" : rawRole;
+            const cleanTitle = resume.title && resume.title.length < 50 && !resume.title.includes("\n") ? resume.title : null;
+            const displayTitle = cleanTitle || cleanRole || "IT Technical Support";
+
+            const rawCompany = job?.company || "";
+            const isCompanyParagraph = rawCompany.length > 50 || rawCompany.includes("\n");
+            const displayCompany = isCompanyParagraph ? "Target Company" : (rawCompany || "Target Company");
+
             return (
               <div
                 key={resume.id}
@@ -394,12 +404,17 @@ export function PipelineClient({ initialResumes, jobs, userName, userId }: Pipel
 
                   {/* Company & Role */}
                   <div className="space-y-0.5">
-                    <h3 className="font-bold text-base text-foreground leading-tight">
-                      {job?.role || "Tailored Position"}
-                    </h3>
-                    <p className="text-xs font-semibold text-muted-foreground flex items-center gap-1">
+                    <Link
+                      href={`/studio?resumeId=${resume.id}`}
+                      className="hover:text-primary transition-colors block"
+                    >
+                      <h3 className="font-bold text-base text-foreground leading-tight line-clamp-1">
+                        {displayTitle}
+                      </h3>
+                    </Link>
+                    <p className="text-xs font-semibold text-muted-foreground flex items-center gap-1 mt-0.5">
                       <Building className="w-3.5 h-3.5" />
-                      <span>{job?.company || "Target Tech Inc."}</span>
+                      <span>{displayCompany}</span>
                     </p>
                   </div>
 
@@ -417,7 +432,7 @@ export function PipelineClient({ initialResumes, jobs, userName, userId }: Pipel
 
                   <div className="flex items-center gap-1.5">
                     <Link
-                      href="/studio"
+                      href={`/studio?resumeId=${resume.id}`}
                       className="flex-1 inline-flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 text-xs font-semibold transition-colors"
                     >
                       <span>Studio</span>
@@ -433,7 +448,7 @@ export function PipelineClient({ initialResumes, jobs, userName, userId }: Pipel
                     </button>
 
                     <button
-                      onClick={() => window.open(`/api/export/${resume.id}/html?print=true`, "_blank")}
+                      onClick={() => window.open(`/api/export/${resume.id}/html?preset=cabas_executive&print=true`, "_blank")}
                       title="Print / Save PDF"
                       className="p-1.5 rounded-lg border hover:bg-muted text-muted-foreground hover:text-foreground"
                     >

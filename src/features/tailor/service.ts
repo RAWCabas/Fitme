@@ -55,11 +55,21 @@ Return ONLY a valid JSON object matching the requested schema.`;
       fallbackGenerator: () => this.fallbackParseJd(rawDescription),
     });
 
+    let cleanRole = (extracted.role || "").trim();
+    if (!cleanRole || cleanRole.length > 50 || cleanRole.includes("\n") || cleanRole.includes(".")) {
+      cleanRole = "IT Technical Support";
+    }
+
+    let cleanCompany = (extracted.company || "").trim();
+    if (!cleanCompany || cleanCompany.length > 50 || cleanCompany.includes("\n")) {
+      cleanCompany = "Target Company";
+    }
+
     const job: JobOpportunity = {
       id: crypto.randomUUID(),
       userId,
-      company: extracted.company || "Target Company",
-      role: extracted.role || "Software Engineer",
+      company: cleanCompany,
+      role: cleanRole,
       location: extracted.location || "",
       sourceUrl,
       rawDescription,
@@ -545,9 +555,13 @@ Start with a strong action verb (e.g. Engineered, Spearheaded, Architected, Acce
           break;
         }
       }
-      if (role === "IT Technical Support / Associate" && meaningfulLines[0] && meaningfulLines[0].length < 50) {
+      if (role === "IT Technical Support / Associate" && meaningfulLines[0] && meaningfulLines[0].length < 40 && !meaningfulLines[0].includes(".")) {
         role = meaningfulLines[0];
       }
+    }
+
+    if (role.length > 50 || role.includes("\n") || (role.includes(".") && role.length > 30)) {
+      role = "IT Technical Support";
     }
 
     // 2. Company Detection

@@ -1,6 +1,9 @@
 import { Profile } from "@/features/profile/schema";
 import { TailoredResume, TypographyPreset } from "@/features/tailor/schema";
 
+const RHINN_GRAD_PHOTO_DATA_URI =
+  "data:image/jpeg;base64,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";
+
 export class ExportService {
   /**
    * Generates clean, machine-readable standard ATS Markdown.
@@ -554,6 +557,8 @@ export class ExportService {
     const skillsTitle = isCabasTemplate ? "Technical Skills" : "Core Competencies";
     const summaryTitle = isCabasTemplate ? "Professional Profile" : "Professional Summary";
 
+    const activePresetCss = presetStyles[preset] || presetStyles.modern_standard;
+
     return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -592,153 +597,187 @@ export class ExportService {
         color: inherit;
       }
     }
-    ${presetStyles[preset] || presetStyles.modern_standard}
+    ${activePresetCss}
   </style>
 </head>
 <body data-preset="${preset}">
+  <style>
+    ${activePresetCss}
+  </style>
   <div class="no-print" style="margin: -7mm -9mm 6mm -9mm; background: #f8fafc; border-bottom: 1px solid #e2e8f0; padding: 8px 14px; font-family: -apple-system, sans-serif; font-size: 12px; color: #475569; display: flex; justify-content: space-between; align-items: center;">
     <span>💡 <strong>Tip:</strong> In Chrome's print dialog, switch <strong>Destination</strong> from your physical printer to <strong>Save as PDF</strong> to download as a PDF file.</span>
     <button onclick="window.print()" style="background: #2563eb; color: #ffffff; border: none; padding: 4px 12px; border-radius: 4px; font-size: 12px; font-weight: 600; cursor: pointer;">Print / Save PDF</button>
   </div>
 
-  <header class="header-container">
-    <div>
-      <h1>${escapeHtml(c.fullName)}</h1>
-      ${c.headline ? `<div class="headline">${escapeHtml(c.headline)}</div>` : ""}
-      <div class="contact-row">
-        ${c.location ? `<span>📍 ${escapeHtml(c.location)}</span>` : ""}
-        ${c.phone ? `<span>• 📞 ${escapeHtml(c.phone)}</span>` : ""}
-        ${c.email ? `<span>• ✉️ <a href="mailto:${escapeHtml(c.email)}">${escapeHtml(c.email)}</a></span>` : ""}
-        ${c.linkedinUrl ? `<span>• 🔗 <a href="${escapeHtml(c.linkedinUrl)}">LinkedIn</a></span>` : ""}
-        ${c.githubUrl ? `<span>• 💻 <a href="${escapeHtml(c.githubUrl)}">GitHub</a></span>` : ""}
+  <div id="printable-resume" style="width: 100%; max-width: 794px; background: #ffffff; color: #000000; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; box-sizing: border-box;">
+    <header class="header-container" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2pt;">
+      <div style="flex: 1; padding-right: 12px;">
+        <h1 style="font-size: 21pt; font-weight: 900; letter-spacing: 0.02em; text-transform: uppercase; margin: 0 0 2pt 0; color: #000000; line-height: 1.15; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+          ${escapeHtml(c.fullName)}
+        </h1>
+        ${
+          c.headline
+            ? `<div class="headline" style="font-size: 9.5pt; color: #000000; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; margin-bottom: 4pt; line-height: 1.25;">
+                ${escapeHtml(c.headline)}
+              </div>`
+            : ""
+        }
+        <div class="contact-row" style="font-size: 8.5pt; color: #111827; display: flex; flex-direction: column; gap: 1.5pt; line-height: 1.35;">
+          ${c.location ? `<div style="display: flex; align-items: center; gap: 4px;"><span>📍</span><span>${escapeHtml(c.location)}</span></div>` : ""}
+          ${c.phone ? `<div style="display: flex; align-items: center; gap: 4px;"><span>📞</span><span>${escapeHtml(c.phone)}</span></div>` : ""}
+          ${c.email ? `<div style="display: flex; align-items: center; gap: 4px;"><span>✉️</span><a href="mailto:${escapeHtml(c.email)}" style="color: #111827; text-decoration: none;">${escapeHtml(c.email)}</a></div>` : ""}
+          ${c.linkedinUrl ? `<div style="display: flex; align-items: center; gap: 4px;"><span>🔗</span><a href="${escapeHtml(c.linkedinUrl)}" style="color: #111827; text-decoration: none;">LinkedIn</a></div>` : ""}
+          ${c.githubUrl ? `<div style="display: flex; align-items: center; gap: 4px;"><span>💻</span><a href="${escapeHtml(c.githubUrl)}" style="color: #111827; text-decoration: none;">GitHub</a></div>` : ""}
+        </div>
       </div>
-    </div>
-  </header>
+      ${
+        isCabasTemplate
+          ? `<div style="width: 100px; height: 110px; border: 1.5px solid #000000; overflow: hidden; flex-shrink: 0; background: #f8fafc; margin-top: 1pt;">
+              <img src="${RHINN_GRAD_PHOTO_DATA_URI}" alt="${escapeHtml(c.fullName)}" style="width: 100%; height: 100%; object-fit: cover; display: block;" />
+             </div>`
+          : ""
+      }
+    </header>
 
-  <div class="header-divider"></div>
+    <div class="header-divider" style="border-top: 2px solid #000000; margin: 4pt 0 5pt 0;"></div>
 
-  ${
-    resume.tailoredSummary
-      ? `<section>
-    <h2>${summaryTitle}</h2>
-    <div class="summary-text">${escapeHtml(resume.tailoredSummary)}</div>
-  </section>`
-      : ""
-  }
+    ${
+      resume.tailoredSummary
+        ? `<section style="margin-bottom: 4pt;">
+      <h2 style="font-size: 10.5pt; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; color: #000000; border-bottom: 1.5px solid #000000; padding-bottom: 1.5pt; margin-top: 6pt; margin-bottom: 3.5pt;">
+        ${summaryTitle}
+      </h2>
+      <div class="summary-text" style="font-size: 9pt; color: #000000; line-height: 1.38; text-align: justify;">
+        ${escapeHtml(resume.tailoredSummary)}
+      </div>
+    </section>`
+        : ""
+    }
 
-  ${
-    activeEdu.length > 0
-      ? `<section>
-    <h2>Education</h2>
-    ${activeEdu
-      .map(
-        (edu) => `
-      <div class="education-item">
-        <div class="item-header">
-          <span>${escapeHtml(edu.degree || edu.institution)}</span>
-          ${(edu.startDate || edu.endDate) ? `<span style="font-weight: normal; font-size: 8pt;">${escapeHtml([edu.startDate, edu.endDate || "Present"].filter(Boolean).join(" – "))}</span>` : ""}
-        </div>
-        <div class="item-sub">
-          <span>${escapeHtml(edu.institution)}${edu.fieldOfStudy ? ` • ${escapeHtml(edu.fieldOfStudy)}` : ""}</span>
-          ${edu.honors ? `<span>${escapeHtml(edu.honors)}</span>` : ""}
-        </div>
-      </div>`
-      )
-      .join("")}
-  </section>`
-      : ""
-  }
+    ${
+      activeEdu.length > 0
+        ? `<section style="margin-bottom: 4pt;">
+      <h2 style="font-size: 10.5pt; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; color: #000000; border-bottom: 1.5px solid #000000; padding-bottom: 1.5pt; margin-top: 6pt; margin-bottom: 3.5pt;">
+        Education
+      </h2>
+      ${activeEdu
+        .map(
+          (edu) => `
+        <div class="education-item" style="margin-top: 2.5pt; margin-bottom: 3pt;">
+          <div class="item-header" style="display: flex; justify-content: space-between; font-size: 9.5pt; font-weight: 700; color: #000000;">
+            <span>${escapeHtml(edu.degree || edu.institution)}</span>
+            ${(edu.startDate || edu.endDate) ? `<span style="font-weight: normal; font-size: 8.5pt;">${escapeHtml([edu.startDate, edu.endDate || "Present"].filter(Boolean).join(" – "))}</span>` : ""}
+          </div>
+          <div class="item-sub" style="display: flex; justify-content: space-between; font-size: 9pt; color: #1f2937;">
+            <span>${escapeHtml(edu.institution)}${edu.fieldOfStudy ? ` • ${escapeHtml(edu.fieldOfStudy)}` : ""}</span>
+            ${edu.honors ? `<span>${escapeHtml(edu.honors)}</span>` : ""}
+          </div>
+        </div>`
+        )
+        .join("")}
+    </section>`
+        : ""
+    }
 
-  ${
-    resume.tailoredExperiences.length > 0
-      ? `<section>
-    <h2>${expTitle}</h2>
-    ${resume.tailoredExperiences
-      .map(
-        (exp) => `
-      <div class="experience-item">
-        <div class="item-header">
-          <span>${escapeHtml(exp.role)}</span>
-        </div>
-        <div class="item-sub">
-          <span>${escapeHtml(exp.company)} | ${exp.startDate?.slice(0, 4) || exp.endDate?.slice(0, 4) || "2026"}</span>
-          <span>${escapeHtml(exp.location || "")}</span>
-        </div>
-        <ul>
-          ${exp.bullets.map((b) => `<li>${escapeHtml(b.content)}</li>`).join("\n          ")}
+    ${
+      resume.tailoredExperiences.length > 0
+        ? `<section style="margin-bottom: 4pt;">
+      <h2 style="font-size: 10.5pt; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; color: #000000; border-bottom: 1.5px solid #000000; padding-bottom: 1.5pt; margin-top: 6pt; margin-bottom: 3.5pt;">
+        ${expTitle}
+      </h2>
+      ${resume.tailoredExperiences
+        .map(
+          (exp) => `
+        <div class="experience-item" style="margin-top: 3pt; margin-bottom: 4pt;">
+          <div class="item-header" style="display: flex; justify-content: space-between; font-size: 9.5pt; font-weight: 700; color: #000000;">
+            <span>${escapeHtml(exp.role)}</span>
+          </div>
+          <div class="item-sub" style="display: flex; justify-content: space-between; font-size: 8.5pt; font-style: italic; color: #374151; margin-bottom: 2pt;">
+            <span>${escapeHtml(exp.company)} | ${exp.startDate?.slice(0, 4) || exp.endDate?.slice(0, 4) || "2026"}</span>
+            <span>${escapeHtml(exp.location || "")}</span>
+          </div>
+          <ul style="margin: 1.5pt 0 4pt 0; padding-left: 14pt;">
+            ${exp.bullets.map((b) => `<li style="font-size: 9pt; color: #000000; line-height: 1.36; margin-bottom: 1.5pt;">${escapeHtml(b.content)}</li>`).join("\n            ")}
+          </ul>
+        </div>`
+        )
+        .join("")}
+    </section>`
+        : ""
+    }
+
+    ${
+      Object.keys(categorizedSkills).length > 0
+        ? `<section style="margin-bottom: 4pt;">
+      <h2 style="font-size: 10.5pt; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; color: #000000; border-bottom: 1.5px solid #000000; padding-bottom: 1.5pt; margin-top: 6pt; margin-bottom: 3.5pt;">
+        ${skillsTitle}
+      </h2>
+      <div class="skills-list">
+        <ul style="margin: 1.5pt 0 4pt 0; padding-left: 14pt;">
+          ${Object.entries(categorizedSkills)
+            .map(
+              ([cat, skills]) => `
+            <li class="skills-category-row" style="font-size: 9pt; color: #000000; line-height: 1.36; margin-bottom: 1.5pt;">
+              <strong style="color: #000000;">${escapeHtml(cat)}:</strong> ${escapeHtml(skills.join(", "))}
+            </li>`
+            )
+            .join("")}
         </ul>
-      </div>`
-      )
-      .join("")}
-  </section>`
-      : ""
-  }
+      </div>
+    </section>`
+        : ""
+    }
 
-  ${
-    Object.keys(categorizedSkills).length > 0
-      ? `<section>
-    <h2>${skillsTitle}</h2>
-    <div class="skills-list">
-      <ul>
-        ${Object.entries(categorizedSkills)
+    ${
+      activeCerts.length > 0
+        ? `<section style="margin-bottom: 4pt;">
+      <h2 style="font-size: 10.5pt; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; color: #000000; border-bottom: 1.5px solid #000000; padding-bottom: 1.5pt; margin-top: 6pt; margin-bottom: 3.5pt;">
+        TESDA Trainings and Certificates
+      </h2>
+      <ul style="margin: 1.5pt 0 4pt 0; padding-left: 14pt;">
+        ${activeCerts
           .map(
-            ([cat, skills]) => `
-          <li class="skills-category-row">
-            <span class="skills-category-label">${escapeHtml(cat)}:</span> ${escapeHtml(skills.join(", "))}
+            (cert) => `
+          <li style="font-size: 9pt; color: #000000; line-height: 1.36; margin-bottom: 1.5pt;">
+            ${escapeHtml(cert.name)}${cert.issuer ? ` – ${escapeHtml(cert.issuer)}` : ""}${cert.hours ? ` | ${escapeHtml(cert.hours)}` : ""}${cert.issueDate ? ` • Completed: ${escapeHtml(cert.issueDate)}` : ""}
           </li>`
           )
           .join("")}
       </ul>
-    </div>
-  </section>`
-      : ""
-  }
+    </section>`
+        : ""
+    }
 
-  ${
-    activeCerts.length > 0
-      ? `<section>
-    <h2>TESDA Trainings and Certificates</h2>
-    <ul>
-      ${activeCerts
+    ${
+      resume.tailoredProjects && resume.tailoredProjects.length > 0
+        ? `<section style="margin-bottom: 4pt;">
+      <h2 style="font-size: 10.5pt; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; color: #000000; border-bottom: 1.5px solid #000000; padding-bottom: 1.5pt; margin-top: 6pt; margin-bottom: 3.5pt;">
+        Technical Projects
+      </h2>
+      ${resume.tailoredProjects
+        .slice(0, resume.pageBudget === "1_page" ? 1 : undefined)
         .map(
-          (cert) => `
-        <li>
-          <strong>${escapeHtml(cert.name)}</strong>${cert.issuer ? ` – ${escapeHtml(cert.issuer)}` : ""}${cert.hours ? ` | ${escapeHtml(cert.hours)}` : ""}${cert.issueDate ? ` • Completed: ${escapeHtml(cert.issueDate)}` : ""}
-        </li>`
+          (p) => `
+        <div class="project-item" style="margin-top: 3pt; margin-bottom: 4pt;">
+          <div class="item-header" style="display: flex; justify-content: space-between; font-size: 9.5pt; font-weight: 700; color: #000000;">
+            <span>${escapeHtml(p.name)}</span>
+            <span style="font-weight: normal; font-size: 8.5pt;">${escapeHtml(p.technologies.join(", "))}</span>
+          </div>
+          ${p.description ? `<div style="font-size: 8.5pt; color: #374151; margin-bottom: 2pt;">${escapeHtml(p.description)}</div>` : ""}
+          ${
+            p.bullets.length > 0
+              ? `<ul style="margin: 1.5pt 0 4pt 0; padding-left: 14pt;">
+            ${p.bullets.map((b) => `<li style="font-size: 9pt; color: #000000; line-height: 1.36; margin-bottom: 1.5pt;">${escapeHtml(b.content)}</li>`).join("\n            ")}
+          </ul>`
+              : ""
+          }
+        </div>`
         )
         .join("")}
-    </ul>
-  </section>`
-      : ""
-  }
-
-  ${
-    resume.tailoredProjects && resume.tailoredProjects.length > 0
-      ? `<section>
-    <h2>Technical Projects</h2>
-    ${resume.tailoredProjects
-      .slice(0, resume.pageBudget === "1_page" ? 1 : undefined)
-      .map(
-        (p) => `
-      <div class="project-item">
-        <div class="item-header">
-          <span>${escapeHtml(p.name)}</span>
-          <span style="font-weight: normal; font-size: 8.5pt;">${escapeHtml(p.technologies.join(", "))}</span>
-        </div>
-        ${p.description ? `<div style="font-size: 8.5pt; color: #4b5563; margin-bottom: 2pt;">${escapeHtml(p.description)}</div>` : ""}
-        ${
-          p.bullets.length > 0
-            ? `<ul>
-          ${p.bullets.map((b) => `<li>${escapeHtml(b.content)}</li>`).join("\n          ")}
-        </ul>`
-            : ""
-        }
-      </div>`
-      )
-      .join("")}
-  </section>`
-      : ""
-  }
+    </section>`
+        : ""
+    }
+  </div>
 </body>
 </html>`;
   }

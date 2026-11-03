@@ -6,10 +6,16 @@ import { StudioClient } from "./studio-client";
 
 export const dynamic = "force-dynamic";
 
-export default async function StudioPage() {
+export default async function StudioPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ resumeId?: string }>;
+}) {
   const session = await requireSession();
   const repo = getTailorRepo();
   const profile = await profileService.getOrCreateProfile(session.userId, session.email, session.name);
+
+  const { resumeId } = (await searchParams) || {};
 
   let resumes: TailoredResume[] = [];
   try {
@@ -45,6 +51,7 @@ export default async function StudioPage() {
         profile={profile} 
         savedResumes={resumes} 
         savedJobs={jobsMap} 
+        initialResumeId={resumeId}
       />
     </div>
   );

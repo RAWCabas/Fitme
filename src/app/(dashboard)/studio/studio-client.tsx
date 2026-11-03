@@ -8,7 +8,6 @@ import {
   FileText, 
   Loader2, 
   Wand2, 
-  ArrowLeft,
   Building,
   MapPin,
   TrendingUp,
@@ -36,9 +35,15 @@ interface StudioClientProps {
   profile: Profile;
   savedResumes?: TailoredResume[];
   savedJobs?: Record<string, JobOpportunity>;
+  initialResumeId?: string;
 }
 
-export function StudioClient({ profile, savedResumes = [], savedJobs = {} }: StudioClientProps) {
+export function StudioClient({
+  profile,
+  savedResumes = [],
+  savedJobs = {},
+  initialResumeId,
+}: StudioClientProps) {
   // Ingestion form state
   const [jdText, setJdText] = useState("");
   const [sourceUrl, setSourceUrl] = useState("");
@@ -49,15 +54,22 @@ export function StudioClient({ profile, savedResumes = [], savedJobs = {} }: Stu
   // Active Tailoring state & Saved versions list
   const [resumesList, setResumesList] = useState<TailoredResume[]>(savedResumes);
   const [jobsMap, setJobsMap] = useState<Record<string, JobOpportunity>>(savedJobs);
-  const [activeJob, setActiveJob] = useState<JobOpportunity | null>(() => {
-    if (savedResumes.length > 0 && savedJobs[savedResumes[0].jobOpportunityId]) {
-      return savedJobs[savedResumes[0].jobOpportunityId];
+
+  const initialResume = (() => {
+    if (initialResumeId) {
+      const match = savedResumes.find((r) => r.id === initialResumeId);
+      if (match) return match;
     }
-    return null;
-  });
-  const [tailoredResume, setTailoredResume] = useState<TailoredResume | null>(() => {
     if (savedResumes.length > 0) {
       return savedResumes[0];
+    }
+    return null;
+  })();
+
+  const [tailoredResume, setTailoredResume] = useState<TailoredResume | null>(initialResume);
+  const [activeJob, setActiveJob] = useState<JobOpportunity | null>(() => {
+    if (initialResume && savedJobs[initialResume.jobOpportunityId]) {
+      return savedJobs[initialResume.jobOpportunityId];
     }
     return null;
   });
@@ -107,36 +119,62 @@ export function StudioClient({ profile, savedResumes = [], savedJobs = {} }: Stu
   const [editWorkMode, setEditWorkMode] = useState<"Onsite" | "Hybrid" | "Remote / WFH">("Onsite");
   const [savingJobDetails, setSavingJobDetails] = useState(false);
 
-  // LocalStorage Resilience: Restore cached resumes if server memory restarted / cold-started
+  // LocalStorage Resilience & Auto-Selection: Restore cached resumes and select requested / most recent resume
   React.useEffect(() => {
     if (typeof window === "undefined") return;
     try {
+      const sp = new URLSearchParams(window.location.search);
+      const requestedId = initialResumeId || sp.get("resumeId");
+
       const cachedRaw = localStorage.getItem(`fitme_resumes_cache_${profile.userId}`);
       const cachedJobsRaw = localStorage.getItem(`fitme_jobs_cache_${profile.userId}`);
+      let currentJobs: Record<string, JobOpportunity> = { ...jobsMap };
+
+      if (cachedJobsRaw) {
+        const cachedJ: Record<string, JobOpportunity> = JSON.parse(cachedJobsRaw);
+        currentJobs = { ...cachedJ, ...currentJobs };
+        setJobsMap(currentJobs);
+      }
+
       if (cachedRaw) {
         const cached: TailoredResume[] = JSON.parse(cachedRaw);
         if (cached.length > 0) {
-          setResumesList((current) => {
-            const map = new Map<string, TailoredResume>();
-            current.forEach((r) => map.set(r.id, r));
-            cached.forEach((r) => {
-              if (!map.has(r.id)) map.set(r.id, r);
-            });
-            const merged = Array.from(map.values()).sort(
-              (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-            );
-            return merged;
+          const map = new Map<string, TailoredResume>();
+          resumesList.forEach((r) => map.set(r.id, r));
+          cached.forEach((r) => {
+            if (!map.has(r.id)) map.set(r.id, r);
+          });
+          const merged = Array.from(map.values()).sort(
+            (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+          );
+          setResumesList(merged);
+
+          setTailoredResume((existing) => {
+            if (requestedId) {
+              const matched = merged.find((r) => r.id === requestedId);
+              if (matched) return matched;
+            }
+            return existing || merged[0] || null;
           });
         }
-      }
-      if (cachedJobsRaw) {
-        const cachedJ: Record<string, JobOpportunity> = JSON.parse(cachedJobsRaw);
-        setJobsMap((current) => ({ ...cachedJ, ...current }));
+      } else if (requestedId && resumesList.length > 0) {
+        const matched = resumesList.find((r) => r.id === requestedId);
+        if (matched) {
+          setTailoredResume(matched);
+        }
       }
     } catch (e) {
       console.error("Failed to load cached resumes from localStorage", e);
     }
-  }, [profile.userId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile.userId, initialResumeId]);
+
+  // Sync activeJob whenever tailoredResume changes
+  React.useEffect(() => {
+    if (!tailoredResume) return;
+    const j = jobsMap[tailoredResume.jobOpportunityId];
+    if (j) setActiveJob(j);
+  }, [tailoredResume, jobsMap]);
 
   // Persist to localStorage whenever resumesList or jobsMap updates
   React.useEffect(() => {
@@ -536,10 +574,12 @@ export function StudioClient({ profile, savedResumes = [], savedJobs = {} }: Stu
       iframeDoc.close();
 
       // Wait a tick for iframe stylesheets and fonts to render
-      await new Promise((resolve) => setTimeout(resolve, 300));
+      await new Promise((resolve) => setTimeout(resolve, 500));
 
       const noPrintEls = iframeDoc.querySelectorAll(".no-print");
       noPrintEls.forEach((el) => el.remove());
+
+      const targetEl = iframeDoc.getElementById("printable-resume") || iframeDoc.body;
 
       try {
         const html2pdfModule = await import("html2pdf.js");
@@ -547,14 +587,14 @@ export function StudioClient({ profile, savedResumes = [], savedJobs = {} }: Stu
         const cleanTitle = (tailoredResume.title || `${profile.contact?.fullName || "Resume"}`).replace(/[^a-zA-Z0-9_-]/g, "_");
 
         const opt = {
-          margin: [8, 11, 8, 11] as [number, number, number, number],
+          margin: [6, 8, 6, 8] as [number, number, number, number],
           filename: `${cleanTitle}.pdf`,
           image: { type: "jpeg" as const, quality: 0.98 },
           html2canvas: { scale: 2, useCORS: true, logging: false, windowWidth: 794 },
           jsPDF: { unit: "mm", format: "a4", orientation: "portrait" as const },
         };
 
-        await html2pdf().set(opt).from(iframeDoc.body).save();
+        await html2pdf().set(opt).from(targetEl).save();
       } finally {
         if (document.body.contains(iframe)) {
           document.body.removeChild(iframe);
@@ -843,10 +883,11 @@ export function StudioClient({ profile, savedResumes = [], savedJobs = {} }: Stu
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => setTailoredResume(null)}
-                  className="p-1.5 rounded-lg border hover:bg-muted text-muted-foreground hover:text-foreground"
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border hover:bg-muted text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
                   title="Back to input"
                 >
-                  <ArrowLeft className="w-4 h-4" />
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>New Job</span>
                 </button>
 
                 <div className="space-y-1">
