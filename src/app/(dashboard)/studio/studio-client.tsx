@@ -573,8 +573,15 @@ export function StudioClient({
       iframeDoc.write(html);
       iframeDoc.close();
 
+      // Wait for Google Fonts (Bebas Neue, Arimo, Nunito) to fully load and layout
+      try {
+        if (iframeDoc.fonts && iframeDoc.fonts.ready) {
+          await iframeDoc.fonts.ready;
+        }
+      } catch {}
+
       // Wait a tick for iframe stylesheets and fonts to render
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, 600));
 
       const noPrintEls = iframeDoc.querySelectorAll(".no-print");
       noPrintEls.forEach((el) => el.remove());
@@ -590,8 +597,9 @@ export function StudioClient({
           margin: [6, 8, 6, 8] as [number, number, number, number],
           filename: `${cleanTitle}.pdf`,
           image: { type: "jpeg" as const, quality: 0.98 },
-          html2canvas: { scale: 2, useCORS: true, logging: false, windowWidth: 794 },
+          html2canvas: { scale: 2, useCORS: true, logging: false, windowWidth: 794, letterRendering: true },
           jsPDF: { unit: "mm", format: "a4", orientation: "portrait" as const },
+          pagebreak: { mode: ["avoid-all", "css", "legacy"] },
         };
 
         await html2pdf().set(opt).from(targetEl).save();
