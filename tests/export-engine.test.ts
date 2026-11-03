@@ -179,7 +179,7 @@ describe("ATS Export Engine: Service", () => {
     expect(html).not.toContain("<Doe>");
   });
 
-  it("renders A4 portrait dimensions and compact cabas_executive layout", () => {
+  it("renders A4 portrait dimensions and compact cabas_executive layout without LinkedIn/GitHub", () => {
     const html = exportService.generateHtmlDocument(mockResume, mockProfile, "cabas_executive");
     expect(html).toContain("size: A4 portrait;");
     expect(html).toContain('data-preset="cabas_executive"');
@@ -191,6 +191,9 @@ describe("ATS Export Engine: Service", () => {
     expect(html).toContain("13pt");
     expect(html).toContain("12pt");
     expect(html).toContain("Technical Projects");
+    expect(html).toContain("section-divider");
+    expect(html).not.toContain("LinkedIn");
+    expect(html).not.toContain("GitHub");
   });
 
   it("caps projects to 1 on 1_page budget to prevent 2-page print overflow", () => {

@@ -253,18 +253,18 @@ export class ExportService {
           font-size: 12pt !important;
           color: #111827 !important;
           display: flex !important;
-          flex-wrap: wrap !important;
-          gap: 2pt 12pt !important;
-          align-items: center !important;
+          flex-direction: column !important;
+          gap: 2.5pt !important;
           line-height: 1.35 !important;
+          margin-bottom: 6pt !important;
         }
         .contact-row a {
           color: #111827 !important;
           text-decoration: none !important;
         }
-        .header-divider {
-          border-bottom: 1.5px solid #000000 !important;
-          margin: 7pt 0 9pt 0 !important;
+        .header-divider, .section-divider {
+          border-top: 1.5px solid #000000 !important;
+          margin: 7pt 0 6pt 0 !important;
         }
         h2 {
           font-family: "Nunito", -apple-system, BlinkMacSystemFont, sans-serif !important;
@@ -273,10 +273,10 @@ export class ExportService {
           text-transform: uppercase !important;
           letter-spacing: 0.04em !important;
           color: #000000 !important;
-          border-bottom: 1.5px solid #000000 !important;
-          padding-bottom: 4pt !important;
-          margin-top: 11pt !important;
-          margin-bottom: 7pt !important;
+          border-bottom: none !important;
+          padding-bottom: 0 !important;
+          margin-top: 5pt !important;
+          margin-bottom: 3.5pt !important;
         }
         .item-header {
           font-family: "Arimo", -apple-system, BlinkMacSystemFont, Arial, sans-serif !important;
@@ -285,15 +285,15 @@ export class ExportService {
           font-size: 12pt !important;
           font-weight: 700 !important;
           color: #000000 !important;
-          margin-top: 3pt !important;
+          margin-top: 2.5pt !important;
         }
         .item-sub {
           font-family: "Arimo", -apple-system, BlinkMacSystemFont, Arial, sans-serif !important;
           display: flex !important;
           justify-content: space-between !important;
           font-size: 12pt !important;
-          font-style: italic !important;
-          color: #374151 !important;
+          font-style: normal !important;
+          color: #111827 !important;
           margin-bottom: 2pt !important;
         }
         ul {
@@ -304,7 +304,7 @@ export class ExportService {
           font-family: "Arimo", -apple-system, BlinkMacSystemFont, Arial, sans-serif !important;
           font-size: 12pt !important;
           color: #111827 !important;
-          margin-bottom: 2.5pt !important;
+          margin-bottom: 2pt !important;
           line-height: 1.45 !important;
         }
         .summary-text {
@@ -318,7 +318,7 @@ export class ExportService {
           font-family: "Arimo", -apple-system, BlinkMacSystemFont, Arial, sans-serif !important;
           font-size: 12pt !important;
           color: #111827 !important;
-          margin-bottom: 2.5pt !important;
+          margin-bottom: 2pt !important;
           line-height: 1.42 !important;
         }
         .skills-category-label {
@@ -571,14 +571,15 @@ export class ExportService {
       ? {
           name: `font-family: "Bebas Neue", Impact, "Arial Narrow", sans-serif; font-size: 30pt; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; margin: 0 0 2pt 0; color: #000000; line-height: 1.1;`,
           headline: `font-family: "Arimo", -apple-system, BlinkMacSystemFont, Arial, sans-serif; font-size: 13pt; color: #111827; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; margin-bottom: 4pt; line-height: 1.25;`,
-          contact: `font-family: "Nunito", -apple-system, BlinkMacSystemFont, sans-serif; font-size: 12pt; color: #111827; display: flex; flex-wrap: wrap; gap: 2pt 12pt; align-items: center; line-height: 1.35;`,
-          divider: `border-top: 1.5px solid #000000; margin: 7pt 0 9pt 0;`,
-          h2: `font-family: "Nunito", -apple-system, BlinkMacSystemFont, sans-serif; font-size: 14pt; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; color: #000000; border-bottom: 1.5px solid #000000; padding-bottom: 4pt; margin-top: 11pt; margin-bottom: 7pt;`,
+          contact: `font-family: "Nunito", -apple-system, BlinkMacSystemFont, sans-serif; font-size: 12pt; color: #111827; display: flex; flex-direction: column; gap: 2.5pt; line-height: 1.35; margin-bottom: 6pt;`,
+          divider: `border-top: 1.5px solid #000000; margin: 7pt 0 6pt 0;`,
+          h2: `font-family: "Nunito", -apple-system, BlinkMacSystemFont, sans-serif; font-size: 14pt; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; color: #000000; border-bottom: none; padding-bottom: 0; margin-top: 5pt; margin-bottom: 3.5pt;`,
           summary: `font-family: "Arimo", -apple-system, BlinkMacSystemFont, Arial, sans-serif; font-size: 12pt; color: #111827; line-height: 1.45; text-align: justify;`,
-          itemHeader: `font-family: "Arimo", -apple-system, BlinkMacSystemFont, Arial, sans-serif; display: flex; justify-content: space-between; font-size: 12pt; font-weight: 700; color: #000000; margin-top: 3pt;`,
-          itemSub: `font-family: "Arimo", -apple-system, BlinkMacSystemFont, Arial, sans-serif; display: flex; justify-content: space-between; font-size: 12pt; font-style: italic; color: #374151; margin-bottom: 2pt;`,
-          li: `font-family: "Arimo", -apple-system, BlinkMacSystemFont, Arial, sans-serif; font-size: 12pt; color: #111827; line-height: 1.45; margin-bottom: 2.5pt;`,
-          skillsLi: `font-family: "Arimo", -apple-system, BlinkMacSystemFont, Arial, sans-serif; font-size: 12pt; color: #111827; line-height: 1.42; margin-bottom: 2.5pt;`,
+          itemHeader: `font-family: "Arimo", -apple-system, BlinkMacSystemFont, Arial, sans-serif; display: flex; justify-content: space-between; font-size: 12pt; font-weight: 700; color: #000000; margin-top: 2.5pt;`,
+          itemSub: `font-family: "Arimo", -apple-system, BlinkMacSystemFont, Arial, sans-serif; display: flex; justify-content: space-between; font-size: 12pt; font-style: normal; color: #111827; margin-bottom: 2pt;`,
+          itemSubItalic: `font-family: "Arimo", -apple-system, BlinkMacSystemFont, Arial, sans-serif; display: flex; justify-content: space-between; font-size: 12pt; font-style: italic; color: #374151; margin-bottom: 2pt;`,
+          li: `font-family: "Arimo", -apple-system, BlinkMacSystemFont, Arial, sans-serif; font-size: 12pt; color: #111827; line-height: 1.45; margin-bottom: 2pt;`,
+          skillsLi: `font-family: "Arimo", -apple-system, BlinkMacSystemFont, Arial, sans-serif; font-size: 12pt; color: #111827; line-height: 1.42; margin-bottom: 2pt;`,
           dateSpan: `font-weight: normal; font-size: 11pt;`,
         }
       : {
@@ -590,10 +591,13 @@ export class ExportService {
           summary: `font-size: 9pt; color: #000000; line-height: 1.38; text-align: justify;`,
           itemHeader: `display: flex; justify-content: space-between; font-size: 9.5pt; font-weight: 700; color: #000000;`,
           itemSub: `display: flex; justify-content: space-between; font-size: 8.5pt; font-style: italic; color: #374151; margin-bottom: 2pt;`,
+          itemSubItalic: `display: flex; justify-content: space-between; font-size: 8.5pt; font-style: italic; color: #374151; margin-bottom: 2pt;`,
           li: `font-size: 9pt; color: #000000; line-height: 1.36; margin-bottom: 1.5pt;`,
           skillsLi: `font-size: 9pt; color: #000000; line-height: 1.36; margin-bottom: 1.5pt;`,
           dateSpan: `font-weight: normal; font-size: 8.5pt;`,
         };
+
+    const sectionDivider = isCabasTemplate ? `<div class="section-divider" style="${fontStyles.divider}"></div>` : "";
 
     return `<!DOCTYPE html>
 <html lang="en">
@@ -662,11 +666,11 @@ export class ExportService {
             : ""
         }
         <div class="contact-row" style="${fontStyles.contact}">
-          ${c.location ? `<div style="display: flex; align-items: center; gap: 4px;"><span>📍</span><span>${escapeHtml(c.location)}</span></div>` : ""}
-          ${c.phone ? `<div style="display: flex; align-items: center; gap: 4px;"><span>📞</span><span>${escapeHtml(c.phone)}</span></div>` : ""}
-          ${c.email ? `<div style="display: flex; align-items: center; gap: 4px;"><span>✉️</span><a href="mailto:${escapeHtml(c.email)}" style="color: inherit; text-decoration: none;">${escapeHtml(c.email)}</a></div>` : ""}
-          ${c.linkedinUrl ? `<div style="display: flex; align-items: center; gap: 4px;"><span>🔗</span><a href="${escapeHtml(c.linkedinUrl)}" style="color: inherit; text-decoration: none;">LinkedIn</a></div>` : ""}
-          ${c.githubUrl ? `<div style="display: flex; align-items: center; gap: 4px;"><span>💻</span><a href="${escapeHtml(c.githubUrl)}" style="color: inherit; text-decoration: none;">GitHub</a></div>` : ""}
+          ${c.location ? `<div style="display: flex; align-items: center; gap: 6px;"><span>📍</span><span>${escapeHtml(c.location)}</span></div>` : ""}
+          ${c.phone ? `<div style="display: flex; align-items: center; gap: 6px;"><span>📞</span><span>${escapeHtml(c.phone)}</span></div>` : ""}
+          ${c.email ? `<div style="display: flex; align-items: center; gap: 6px;"><span>✉️</span><a href="mailto:${escapeHtml(c.email)}" style="color: inherit; text-decoration: none;">${escapeHtml(c.email)}</a></div>` : ""}
+          ${!isCabasTemplate && c.linkedinUrl ? `<div style="display: flex; align-items: center; gap: 4px;"><span>🔗</span><a href="${escapeHtml(c.linkedinUrl)}" style="color: inherit; text-decoration: none;">LinkedIn</a></div>` : ""}
+          ${!isCabasTemplate && c.githubUrl ? `<div style="display: flex; align-items: center; gap: 4px;"><span>💻</span><a href="${escapeHtml(c.githubUrl)}" style="color: inherit; text-decoration: none;">GitHub</a></div>` : ""}
         </div>
       </div>
     </header>
@@ -675,20 +679,21 @@ export class ExportService {
 
     ${
       resume.tailoredSummary
-        ? `<section style="margin-bottom: 5pt;">
+        ? `<section style="margin-bottom: 4pt;">
       <h2 style="${fontStyles.h2}">
         ${summaryTitle}
       </h2>
       <div class="summary-text" style="${fontStyles.summary}">
         ${escapeHtml(resume.tailoredSummary)}
       </div>
-    </section>`
+    </section>
+    ${sectionDivider}`
         : ""
     }
 
     ${
       activeEdu.length > 0
-        ? `<section style="margin-bottom: 5pt;">
+        ? `<section style="margin-bottom: 4pt;">
       <h2 style="${fontStyles.h2}">
         Education
       </h2>
@@ -698,22 +703,23 @@ export class ExportService {
         <div class="education-item" style="margin-top: 2.5pt; margin-bottom: 3pt;">
           <div class="item-header" style="${fontStyles.itemHeader}">
             <span>${escapeHtml(edu.degree || edu.institution)}</span>
-            ${(edu.startDate || edu.endDate) ? `<span style="${fontStyles.dateSpan}">${escapeHtml([edu.startDate, edu.endDate || "Present"].filter(Boolean).join(" – "))}</span>` : ""}
+            ${!isCabasTemplate && (edu.startDate || edu.endDate) ? `<span style="${fontStyles.dateSpan}">${escapeHtml([edu.startDate, edu.endDate || "Present"].filter(Boolean).join(" – "))}</span>` : ""}
           </div>
           <div class="item-sub" style="${fontStyles.itemSub}">
-            <span>${escapeHtml(edu.institution)}${edu.fieldOfStudy ? ` • ${escapeHtml(edu.fieldOfStudy)}` : ""}</span>
+            <span>${escapeHtml(edu.institution)}${!isCabasTemplate && edu.fieldOfStudy ? ` • ${escapeHtml(edu.fieldOfStudy)}` : ""}</span>
             ${edu.honors ? `<span>${escapeHtml(edu.honors)}</span>` : ""}
           </div>
         </div>`
         )
         .join("")}
-    </section>`
+    </section>
+    ${sectionDivider}`
         : ""
     }
 
     ${
       resume.tailoredExperiences.length > 0
-        ? `<section style="margin-bottom: 5pt;">
+        ? `<section style="margin-bottom: 4pt;">
       <h2 style="${fontStyles.h2}">
         ${expTitle}
       </h2>
@@ -724,9 +730,9 @@ export class ExportService {
           <div class="item-header" style="${fontStyles.itemHeader}">
             <span>${escapeHtml(exp.role)}</span>
           </div>
-          <div class="item-sub" style="${fontStyles.itemSub}">
+          <div class="item-sub" style="${fontStyles.itemSubItalic}">
             <span>${escapeHtml(exp.company)} | ${exp.startDate?.slice(0, 4) || exp.endDate?.slice(0, 4) || "2026"}</span>
-            <span>${escapeHtml(exp.location || "")}</span>
+            ${!isCabasTemplate && exp.location ? `<span>${escapeHtml(exp.location)}</span>` : ""}
           </div>
           <ul style="margin: 1.5pt 0 4pt 0; padding-left: 14pt;">
             ${exp.bullets.map((b) => `<li style="${fontStyles.li}">${escapeHtml(b.content)}</li>`).join("\n            ")}
@@ -734,13 +740,14 @@ export class ExportService {
         </div>`
         )
         .join("")}
-    </section>`
+    </section>
+    ${sectionDivider}`
         : ""
     }
 
     ${
       Object.keys(categorizedSkills).length > 0
-        ? `<section style="margin-bottom: 5pt;">
+        ? `<section style="margin-bottom: 4pt;">
       <h2 style="${fontStyles.h2}">
         ${skillsTitle}
       </h2>
@@ -756,13 +763,14 @@ export class ExportService {
             .join("")}
         </ul>
       </div>
-    </section>`
+    </section>
+    ${(activeCerts.length > 0 || (resume.tailoredProjects && resume.tailoredProjects.length > 0)) ? sectionDivider : ""}`
         : ""
     }
 
     ${
       activeCerts.length > 0
-        ? `<section style="margin-bottom: 5pt;">
+        ? `<section style="margin-bottom: 4pt;">
       <h2 style="${fontStyles.h2}">
         TESDA Trainings and Certificates
       </h2>
@@ -771,18 +779,19 @@ export class ExportService {
           .map(
             (cert) => `
           <li style="${fontStyles.li}">
-            ${escapeHtml(cert.name)}${cert.issuer ? ` – ${escapeHtml(cert.issuer)}` : ""}${cert.hours ? ` | ${escapeHtml(cert.hours)}` : ""}${cert.issueDate ? ` • Completed: ${escapeHtml(cert.issueDate)}` : ""}
+            ${escapeHtml(cert.name)}${cert.issuer ? ` – ${escapeHtml(cert.issuer)}` : ""}${cert.hours ? ` | ${escapeHtml(cert.hours)}` : ""}${!isCabasTemplate && cert.issueDate ? ` • Completed: ${escapeHtml(cert.issueDate)}` : ""}
           </li>`
           )
           .join("")}
       </ul>
-    </section>`
+    </section>
+    ${(resume.tailoredProjects && resume.tailoredProjects.length > 0) ? sectionDivider : ""}`
         : ""
     }
 
     ${
       resume.tailoredProjects && resume.tailoredProjects.length > 0
-        ? `<section style="margin-bottom: 5pt;">
+        ? `<section style="margin-bottom: 4pt;">
       <h2 style="${fontStyles.h2}">
         Technical Projects
       </h2>
