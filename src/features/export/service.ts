@@ -260,6 +260,7 @@ export class ExportService {
         }
         .header-divider, .section-divider {
           border-top: 1.5px solid #000000 !important;
+          margin: 6pt 0 3.5pt 0 !important;
         }
         h2 {
           font-family: "Arimo", Arial, "Helvetica Neue", Helvetica, sans-serif !important;
@@ -269,7 +270,7 @@ export class ExportService {
           color: #000000 !important;
           border-bottom: none !important;
           padding-bottom: 0 !important;
-          margin-top: 3pt !important;
+          margin-top: 2pt !important;
           margin-bottom: 2.5pt !important;
         }
         .item-header {
@@ -563,10 +564,10 @@ export class ExportService {
     const bodyFontSize = isDense ? "9.5pt" : (isOnePage ? "10pt" : "10.5pt");
     const bodyLineHeight = isDense ? "1.34" : (isOnePage ? "1.38" : "1.42");
     const headerFontSize = isDense ? "11.5pt" : (isOnePage ? "12pt" : "12.5pt");
-    const nameFontSize = isDense ? "23pt" : (isOnePage ? "25pt" : "26pt");
-    const titleFontSize = isDense ? "10.5pt" : (isOnePage ? "11pt" : "11.5pt");
-    const contactFontSize = isDense ? "9.5pt" : (isOnePage ? "10pt" : "10.5pt");
-    const dividerMargin = isDense ? "4.5pt 0 4pt 0" : (isOnePage ? "5.5pt 0 5pt 0" : "7pt 0 6pt 0");
+    const nameFontSize = isDense ? "20pt" : (isOnePage ? "21pt" : "22pt");
+    const titleFontSize = isDense ? "10pt" : (isOnePage ? "10.5pt" : "11pt");
+    const contactFontSize = isDense ? "9pt" : (isOnePage ? "9.5pt" : "10pt");
+    const dividerMargin = isDense ? "6pt 0 3.5pt 0" : (isOnePage ? "6.5pt 0 4pt 0" : "7.5pt 0 5pt 0");
     const maxBulletsPerExp = isOnePage && totalExp > 1 ? 2 : (isOnePage ? 3 : undefined);
 
     const activePresetCss = presetStyles[preset] || presetStyles.modern_standard;
@@ -575,9 +576,9 @@ export class ExportService {
       ? {
           name: `font-family: 'Arimo', Arial, 'Helvetica Neue', Helvetica, sans-serif; font-size: ${nameFontSize}; font-weight: 900; letter-spacing: 0.02em; text-transform: uppercase; margin: 0 0 2pt 0; color: #000000; line-height: 1.1;`,
           headline: `font-family: 'Arimo', Arial, 'Helvetica Neue', Helvetica, sans-serif; font-size: ${titleFontSize}; color: #111827; font-weight: 700; letter-spacing: 0.02em; text-transform: uppercase; margin-bottom: 3.5pt; line-height: 1.2;`,
-          contact: `font-family: 'Arimo', Arial, 'Helvetica Neue', Helvetica, sans-serif; font-size: ${contactFontSize}; color: #111827; display: flex; flex-direction: column; gap: 2pt; line-height: 1.3; margin-bottom: 4pt;`,
+          contact: `font-family: 'Arimo', Arial, 'Helvetica Neue', Helvetica, sans-serif; font-size: ${contactFontSize}; color: #111827; display: flex; flex-direction: column; gap: 2pt; line-height: 1.3; margin-bottom: 3.5pt;`,
           divider: `border-top: 1.5px solid #000000; margin: ${dividerMargin};`,
-          h2: `font-family: 'Arimo', Arial, 'Helvetica Neue', Helvetica, sans-serif; font-size: ${headerFontSize}; font-weight: 800; text-transform: uppercase; letter-spacing: 0.02em; color: #000000; border-bottom: none; padding-bottom: 0; margin-top: 3pt; margin-bottom: 2.5pt;`,
+          h2: `font-family: 'Arimo', Arial, 'Helvetica Neue', Helvetica, sans-serif; font-size: ${headerFontSize}; font-weight: 800; text-transform: uppercase; letter-spacing: 0.02em; color: #000000; border-bottom: none; padding-bottom: 0; margin-top: 2pt; margin-bottom: 2.5pt;`,
           summary: `font-family: 'Arimo', Arial, 'Helvetica Neue', Helvetica, sans-serif; font-size: ${bodyFontSize}; color: #111827; line-height: ${bodyLineHeight}; text-align: justify;`,
           itemHeader: `font-family: 'Arimo', Arial, 'Helvetica Neue', Helvetica, sans-serif; display: flex; justify-content: space-between; font-size: ${bodyFontSize}; font-weight: 700; color: #000000; margin-top: 2pt;`,
           itemSub: `font-family: 'Arimo', Arial, 'Helvetica Neue', Helvetica, sans-serif; display: flex; justify-content: space-between; font-size: ${bodyFontSize}; font-style: normal; color: #111827; margin-bottom: 1.5pt;`,
