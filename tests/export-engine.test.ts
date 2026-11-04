@@ -183,13 +183,9 @@ describe("ATS Export Engine: Service", () => {
     const html = exportService.generateHtmlDocument(mockResume, mockProfile, "cabas_executive");
     expect(html).toContain("size: A4 portrait;");
     expect(html).toContain('data-preset="cabas_executive"');
-    expect(html).toContain("Bebas Neue");
     expect(html).toContain("Arimo");
-    expect(html).toContain("Nunito");
-    expect(html).toContain("30pt");
-    expect(html).toContain("14pt");
-    expect(html).toContain("13pt");
-    expect(html).toContain("12pt");
+    expect(html).toContain("EXPERIENCE");
+    expect(html).toContain("ALEX CLOUD");
     expect(html).toContain("Technical Projects");
     expect(html).toContain("section-divider");
     expect(html).not.toContain("LinkedIn");

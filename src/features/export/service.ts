@@ -218,45 +218,41 @@ export class ExportService {
         }
       `,
       cabas_executive: `
-        @import url('https://fonts.googleapis.com/css2?family=Arimo:ital,wght@0,400..700;1,400..700&family=Bebas+Neue&family=Nunito:ital,wght@0,400..900;1,400..900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Arimo:ital,wght@0,400..700;1,400..700&display=swap');
 
         body {
-          font-family: "Arimo", -apple-system, BlinkMacSystemFont, Arial, sans-serif !important;
+          font-family: "Arimo", Arial, "Helvetica Neue", Helvetica, sans-serif !important;
           color: #111827 !important;
-          line-height: 1.45 !important;
         }
         .header-container {
           margin-bottom: 2pt !important;
         }
         h1 {
-          font-family: "Bebas Neue", Impact, "Arial Narrow", sans-serif !important;
-          font-size: 30pt !important;
-          font-weight: 700 !important;
-          letter-spacing: 0.04em !important;
+          font-family: "Arimo", Arial, "Helvetica Neue", Helvetica, sans-serif !important;
+          font-weight: 900 !important;
+          letter-spacing: 0.02em !important;
           text-transform: uppercase !important;
           margin: 0 0 2pt 0 !important;
           color: #000000 !important;
           line-height: 1.1 !important;
         }
         .headline {
-          font-family: "Arimo", -apple-system, BlinkMacSystemFont, Arial, sans-serif !important;
-          font-size: 13pt !important;
+          font-family: "Arimo", Arial, "Helvetica Neue", Helvetica, sans-serif !important;
           color: #111827 !important;
           font-weight: 700 !important;
-          letter-spacing: 0.03em !important;
+          letter-spacing: 0.02em !important;
           text-transform: uppercase !important;
-          margin-bottom: 4pt !important;
-          line-height: 1.25 !important;
+          margin-bottom: 3.5pt !important;
+          line-height: 1.2 !important;
         }
         .contact-row {
-          font-family: "Nunito", -apple-system, BlinkMacSystemFont, sans-serif !important;
-          font-size: 12pt !important;
+          font-family: "Arimo", Arial, "Helvetica Neue", Helvetica, sans-serif !important;
           color: #111827 !important;
           display: flex !important;
           flex-direction: column !important;
-          gap: 2.5pt !important;
-          line-height: 1.35 !important;
-          margin-bottom: 6pt !important;
+          gap: 2pt !important;
+          line-height: 1.3 !important;
+          margin-bottom: 3.5pt !important;
         }
         .contact-row a {
           color: #111827 !important;
@@ -264,62 +260,50 @@ export class ExportService {
         }
         .header-divider, .section-divider {
           border-top: 1.5px solid #000000 !important;
-          margin: 7pt 0 6pt 0 !important;
         }
         h2 {
-          font-family: "Nunito", -apple-system, BlinkMacSystemFont, sans-serif !important;
-          font-size: 14pt !important;
+          font-family: "Arimo", Arial, "Helvetica Neue", Helvetica, sans-serif !important;
           font-weight: 800 !important;
           text-transform: uppercase !important;
-          letter-spacing: 0.04em !important;
+          letter-spacing: 0.02em !important;
           color: #000000 !important;
           border-bottom: none !important;
           padding-bottom: 0 !important;
-          margin-top: 5pt !important;
-          margin-bottom: 3.5pt !important;
+          margin-top: 3pt !important;
+          margin-bottom: 2.5pt !important;
         }
         .item-header {
-          font-family: "Arimo", -apple-system, BlinkMacSystemFont, Arial, sans-serif !important;
+          font-family: "Arimo", Arial, "Helvetica Neue", Helvetica, sans-serif !important;
           display: flex !important;
           justify-content: space-between !important;
-          font-size: 12pt !important;
           font-weight: 700 !important;
           color: #000000 !important;
-          margin-top: 2.5pt !important;
+          margin-top: 2pt !important;
         }
         .item-sub {
-          font-family: "Arimo", -apple-system, BlinkMacSystemFont, Arial, sans-serif !important;
+          font-family: "Arimo", Arial, "Helvetica Neue", Helvetica, sans-serif !important;
           display: flex !important;
           justify-content: space-between !important;
-          font-size: 12pt !important;
           font-style: normal !important;
           color: #111827 !important;
-          margin-bottom: 2pt !important;
+          margin-bottom: 1.5pt !important;
         }
         ul {
-          margin: 2pt 0 4pt 0 !important;
+          margin: 1.5pt 0 3pt 0 !important;
           padding-left: 14pt !important;
         }
         li {
-          font-family: "Arimo", -apple-system, BlinkMacSystemFont, Arial, sans-serif !important;
-          font-size: 12pt !important;
+          font-family: "Arimo", Arial, "Helvetica Neue", Helvetica, sans-serif !important;
           color: #111827 !important;
-          margin-bottom: 2pt !important;
-          line-height: 1.45 !important;
         }
         .summary-text {
-          font-family: "Arimo", -apple-system, BlinkMacSystemFont, Arial, sans-serif !important;
-          font-size: 12pt !important;
+          font-family: "Arimo", Arial, "Helvetica Neue", Helvetica, sans-serif !important;
           color: #111827 !important;
-          line-height: 1.45 !important;
           text-align: justify !important;
         }
         .skills-category-row {
-          font-family: "Arimo", -apple-system, BlinkMacSystemFont, Arial, sans-serif !important;
-          font-size: 12pt !important;
+          font-family: "Arimo", Arial, "Helvetica Neue", Helvetica, sans-serif !important;
           color: #111827 !important;
-          margin-bottom: 2pt !important;
-          line-height: 1.42 !important;
         }
         .skills-category-label {
           font-weight: 700 !important;
@@ -561,26 +545,46 @@ export class ExportService {
     const activeEdu = eduList.filter((e) => !e.isHidden);
 
     const isCabasTemplate = isRhinn || preset === "cabas_executive";
-    const expTitle = isCabasTemplate ? "Research & Professional Experience" : "Work Experience";
-    const skillsTitle = isCabasTemplate ? "Technical Skills" : "Core Competencies";
-    const summaryTitle = isCabasTemplate ? "Professional Profile" : "Professional Summary";
+    const isOnePage = resume.pageBudget === "1_page";
+
+    // Strict titles matching Image 2
+    const expTitle = isCabasTemplate ? "EXPERIENCE" : "Work Experience";
+    const skillsTitle = isCabasTemplate ? "TECHNICAL SKILLS" : "Core Competencies";
+    const summaryTitle = isCabasTemplate ? "PROFESSIONAL PROFILE" : "Professional Summary";
+    const eduTitle = isCabasTemplate ? "EDUCATION" : "Education";
+    const certsTitle = isCabasTemplate ? "TESDA TRAININGS AND CERTIFICATES" : "TESDA Trainings and Certificates";
+
+    // Dynamic 1-page scaling so content gracefully fits down to the bottom margin on 1 page only
+    const totalExp = resume.tailoredExperiences.length;
+    const totalCerts = activeCerts.length;
+    const totalSkills = Object.keys(categorizedSkills).length;
+    const isDense = isOnePage && (totalExp >= 2 || totalCerts >= 4 || totalSkills >= 4);
+
+    const bodyFontSize = isDense ? "9.5pt" : (isOnePage ? "10pt" : "10.5pt");
+    const bodyLineHeight = isDense ? "1.34" : (isOnePage ? "1.38" : "1.42");
+    const headerFontSize = isDense ? "11.5pt" : (isOnePage ? "12pt" : "12.5pt");
+    const nameFontSize = isDense ? "23pt" : (isOnePage ? "25pt" : "26pt");
+    const titleFontSize = isDense ? "10.5pt" : (isOnePage ? "11pt" : "11.5pt");
+    const contactFontSize = isDense ? "9.5pt" : (isOnePage ? "10pt" : "10.5pt");
+    const dividerMargin = isDense ? "4.5pt 0 4pt 0" : (isOnePage ? "5.5pt 0 5pt 0" : "7pt 0 6pt 0");
+    const maxBulletsPerExp = isOnePage && totalExp > 1 ? 2 : (isOnePage ? 3 : undefined);
 
     const activePresetCss = presetStyles[preset] || presetStyles.modern_standard;
 
     const fontStyles = isCabasTemplate
       ? {
-          name: `font-family: "Bebas Neue", Impact, "Arial Narrow", sans-serif; font-size: 30pt; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; margin: 0 0 2pt 0; color: #000000; line-height: 1.1;`,
-          headline: `font-family: "Arimo", -apple-system, BlinkMacSystemFont, Arial, sans-serif; font-size: 13pt; color: #111827; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; margin-bottom: 4pt; line-height: 1.25;`,
-          contact: `font-family: "Nunito", -apple-system, BlinkMacSystemFont, sans-serif; font-size: 12pt; color: #111827; display: flex; flex-direction: column; gap: 2.5pt; line-height: 1.35; margin-bottom: 6pt;`,
-          divider: `border-top: 1.5px solid #000000; margin: 7pt 0 6pt 0;`,
-          h2: `font-family: "Nunito", -apple-system, BlinkMacSystemFont, sans-serif; font-size: 14pt; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; color: #000000; border-bottom: none; padding-bottom: 0; margin-top: 5pt; margin-bottom: 3.5pt;`,
-          summary: `font-family: "Arimo", -apple-system, BlinkMacSystemFont, Arial, sans-serif; font-size: 12pt; color: #111827; line-height: 1.45; text-align: justify;`,
-          itemHeader: `font-family: "Arimo", -apple-system, BlinkMacSystemFont, Arial, sans-serif; display: flex; justify-content: space-between; font-size: 12pt; font-weight: 700; color: #000000; margin-top: 2.5pt;`,
-          itemSub: `font-family: "Arimo", -apple-system, BlinkMacSystemFont, Arial, sans-serif; display: flex; justify-content: space-between; font-size: 12pt; font-style: normal; color: #111827; margin-bottom: 2pt;`,
-          itemSubItalic: `font-family: "Arimo", -apple-system, BlinkMacSystemFont, Arial, sans-serif; display: flex; justify-content: space-between; font-size: 12pt; font-style: italic; color: #374151; margin-bottom: 2pt;`,
-          li: `font-family: "Arimo", -apple-system, BlinkMacSystemFont, Arial, sans-serif; font-size: 12pt; color: #111827; line-height: 1.45; margin-bottom: 2pt;`,
-          skillsLi: `font-family: "Arimo", -apple-system, BlinkMacSystemFont, Arial, sans-serif; font-size: 12pt; color: #111827; line-height: 1.42; margin-bottom: 2pt;`,
-          dateSpan: `font-weight: normal; font-size: 11pt;`,
+          name: `font-family: 'Arimo', Arial, 'Helvetica Neue', Helvetica, sans-serif; font-size: ${nameFontSize}; font-weight: 900; letter-spacing: 0.02em; text-transform: uppercase; margin: 0 0 2pt 0; color: #000000; line-height: 1.1;`,
+          headline: `font-family: 'Arimo', Arial, 'Helvetica Neue', Helvetica, sans-serif; font-size: ${titleFontSize}; color: #111827; font-weight: 700; letter-spacing: 0.02em; text-transform: uppercase; margin-bottom: 3.5pt; line-height: 1.2;`,
+          contact: `font-family: 'Arimo', Arial, 'Helvetica Neue', Helvetica, sans-serif; font-size: ${contactFontSize}; color: #111827; display: flex; flex-direction: column; gap: 2pt; line-height: 1.3; margin-bottom: 4pt;`,
+          divider: `border-top: 1.5px solid #000000; margin: ${dividerMargin};`,
+          h2: `font-family: 'Arimo', Arial, 'Helvetica Neue', Helvetica, sans-serif; font-size: ${headerFontSize}; font-weight: 800; text-transform: uppercase; letter-spacing: 0.02em; color: #000000; border-bottom: none; padding-bottom: 0; margin-top: 3pt; margin-bottom: 2.5pt;`,
+          summary: `font-family: 'Arimo', Arial, 'Helvetica Neue', Helvetica, sans-serif; font-size: ${bodyFontSize}; color: #111827; line-height: ${bodyLineHeight}; text-align: justify;`,
+          itemHeader: `font-family: 'Arimo', Arial, 'Helvetica Neue', Helvetica, sans-serif; display: flex; justify-content: space-between; font-size: ${bodyFontSize}; font-weight: 700; color: #000000; margin-top: 2pt;`,
+          itemSub: `font-family: 'Arimo', Arial, 'Helvetica Neue', Helvetica, sans-serif; display: flex; justify-content: space-between; font-size: ${bodyFontSize}; font-style: normal; color: #111827; margin-bottom: 1.5pt;`,
+          itemSubItalic: `font-family: 'Arimo', Arial, 'Helvetica Neue', Helvetica, sans-serif; display: flex; justify-content: space-between; font-size: ${bodyFontSize}; font-style: italic; color: #374151; margin-bottom: 1.5pt;`,
+          li: `font-family: 'Arimo', Arial, 'Helvetica Neue', Helvetica, sans-serif; font-size: ${bodyFontSize}; color: #111827; line-height: ${bodyLineHeight}; margin-bottom: 1.5pt;`,
+          skillsLi: `font-family: 'Arimo', Arial, 'Helvetica Neue', Helvetica, sans-serif; font-size: ${bodyFontSize}; color: #111827; line-height: ${bodyLineHeight}; margin-bottom: 1.5pt;`,
+          dateSpan: `font-weight: normal; font-size: ${bodyFontSize};`,
         }
       : {
           name: `font-size: 21pt; font-weight: 900; letter-spacing: 0.02em; text-transform: uppercase; margin: 0 0 2pt 0; color: #000000; line-height: 1.15; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;`,
@@ -607,11 +611,11 @@ export class ExportService {
   <title>${escapeHtml(c.fullName)} - Resume</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Arimo:ital,wght@0,400..700;1,400..700&family=Bebas+Neue&family=Nunito:ital,wght@0,400..900;1,400..900&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Arimo:ital,wght@0,400..700;1,400..700&display=swap" rel="stylesheet" />
   <style>
     @page {
       size: A4 portrait;
-      margin: 8mm 10mm;
+      margin: 6mm 8mm;
     }
     *, *::before, *::after {
       box-sizing: border-box;
@@ -626,7 +630,7 @@ export class ExportService {
     @media print {
       @page {
         size: A4 portrait;
-        margin: 8mm 10mm;
+        margin: 6mm 8mm;
       }
       body {
         padding: 0 !important;
@@ -652,16 +656,16 @@ export class ExportService {
     <button onclick="window.print()" style="background: #2563eb; color: #ffffff; border: none; padding: 4px 12px; border-radius: 4px; font-size: 12px; font-weight: 600; cursor: pointer;">Print / Save PDF</button>
   </div>
 
-  <div id="printable-resume" style="width: 100%; max-width: 794px; background: #ffffff; color: #000000; box-sizing: border-box; ${isCabasTemplate ? 'font-family: \'Arimo\', Arial, sans-serif;' : 'font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, \'Helvetica Neue\', Arial, sans-serif;'}">
+  <div id="printable-resume" style="width: 100%; max-width: 794px; background: #ffffff; color: #000000; box-sizing: border-box; ${isCabasTemplate ? 'font-family: \'Arimo\', Arial, \'Helvetica Neue\', Helvetica, sans-serif;' : 'font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, \'Helvetica Neue\', Arial, sans-serif;'}">
     <header class="header-container" style="margin-bottom: 2pt;">
       <div>
         <h1 style="${fontStyles.name}">
-          ${escapeHtml(c.fullName)}
+          ${escapeHtml(c.fullName.toUpperCase())}
         </h1>
         ${
           c.headline
             ? `<div class="headline" style="${fontStyles.headline}">
-                ${escapeHtml(c.headline)}
+                ${escapeHtml(c.headline.toUpperCase())}
               </div>`
             : ""
         }
@@ -679,7 +683,7 @@ export class ExportService {
 
     ${
       resume.tailoredSummary
-        ? `<section style="margin-bottom: 4pt;">
+        ? `<section style="margin-bottom: 3pt;">
       <h2 style="${fontStyles.h2}">
         ${summaryTitle}
       </h2>
@@ -693,14 +697,14 @@ export class ExportService {
 
     ${
       activeEdu.length > 0
-        ? `<section style="margin-bottom: 4pt;">
+        ? `<section style="margin-bottom: 3pt;">
       <h2 style="${fontStyles.h2}">
-        Education
+        ${eduTitle}
       </h2>
       ${activeEdu
         .map(
           (edu) => `
-        <div class="education-item" style="margin-top: 2.5pt; margin-bottom: 3pt;">
+        <div class="education-item" style="margin-top: 2pt; margin-bottom: 2.5pt;">
           <div class="item-header" style="${fontStyles.itemHeader}">
             <span>${escapeHtml(edu.degree || edu.institution)}</span>
             ${!isCabasTemplate && (edu.startDate || edu.endDate) ? `<span style="${fontStyles.dateSpan}">${escapeHtml([edu.startDate, edu.endDate || "Present"].filter(Boolean).join(" – "))}</span>` : ""}
@@ -719,14 +723,17 @@ export class ExportService {
 
     ${
       resume.tailoredExperiences.length > 0
-        ? `<section style="margin-bottom: 4pt;">
+        ? `<section style="margin-bottom: 3pt;">
       <h2 style="${fontStyles.h2}">
         ${expTitle}
       </h2>
       ${resume.tailoredExperiences
         .map(
-          (exp) => `
-        <div class="experience-item" style="margin-top: 3pt; margin-bottom: 4pt;">
+          (exp) => {
+            const visibleBullets = exp.bullets.filter((b) => !b.isHidden);
+            const displayBullets = maxBulletsPerExp ? visibleBullets.slice(0, maxBulletsPerExp) : visibleBullets;
+            return `
+        <div class="experience-item" style="margin-top: 2pt; margin-bottom: 2.5pt;">
           <div class="item-header" style="${fontStyles.itemHeader}">
             <span>${escapeHtml(exp.role)}</span>
           </div>
@@ -734,10 +741,11 @@ export class ExportService {
             <span>${escapeHtml(exp.company)} | ${exp.startDate?.slice(0, 4) || exp.endDate?.slice(0, 4) || "2026"}</span>
             ${!isCabasTemplate && exp.location ? `<span>${escapeHtml(exp.location)}</span>` : ""}
           </div>
-          <ul style="margin: 1.5pt 0 4pt 0; padding-left: 14pt;">
-            ${exp.bullets.map((b) => `<li style="${fontStyles.li}">${escapeHtml(b.content)}</li>`).join("\n            ")}
+          <ul style="margin: 1.5pt 0 2.5pt 0; padding-left: 14pt;">
+            ${displayBullets.map((b) => `<li style="${fontStyles.li}">${escapeHtml(b.content)}</li>`).join("\n            ")}
           </ul>
-        </div>`
+        </div>`;
+          }
         )
         .join("")}
     </section>
@@ -747,12 +755,12 @@ export class ExportService {
 
     ${
       Object.keys(categorizedSkills).length > 0
-        ? `<section style="margin-bottom: 4pt;">
+        ? `<section style="margin-bottom: 3pt;">
       <h2 style="${fontStyles.h2}">
         ${skillsTitle}
       </h2>
       <div class="skills-list">
-        <ul style="margin: 1.5pt 0 4pt 0; padding-left: 14pt;">
+        <ul style="margin: 1.5pt 0 2.5pt 0; padding-left: 14pt;">
           ${Object.entries(categorizedSkills)
             .map(
               ([cat, skills]) => `
@@ -764,17 +772,17 @@ export class ExportService {
         </ul>
       </div>
     </section>
-    ${(activeCerts.length > 0 || (resume.tailoredProjects && resume.tailoredProjects.length > 0)) ? sectionDivider : ""}`
+    ${(activeCerts.length > 0 || (resume.tailoredProjects && resume.tailoredProjects.length > 0 && (!isOnePage || (totalExp <= 1 && totalCerts <= 2)))) ? sectionDivider : ""}`
         : ""
     }
 
     ${
       activeCerts.length > 0
-        ? `<section style="margin-bottom: 4pt;">
+        ? `<section style="margin-bottom: 3pt;">
       <h2 style="${fontStyles.h2}">
-        TESDA Trainings and Certificates
+        ${certsTitle}
       </h2>
-      <ul style="margin: 1.5pt 0 4pt 0; padding-left: 14pt;">
+      <ul style="margin: 1.5pt 0 2.5pt 0; padding-left: 14pt;">
         ${activeCerts
           .map(
             (cert) => `
@@ -785,13 +793,13 @@ export class ExportService {
           .join("")}
       </ul>
     </section>
-    ${(resume.tailoredProjects && resume.tailoredProjects.length > 0) ? sectionDivider : ""}`
+    ${(resume.tailoredProjects && resume.tailoredProjects.length > 0 && (!isOnePage || (totalExp <= 1 && totalCerts <= 2))) ? sectionDivider : ""}`
         : ""
     }
 
     ${
-      resume.tailoredProjects && resume.tailoredProjects.length > 0
-        ? `<section style="margin-bottom: 4pt;">
+      resume.tailoredProjects && resume.tailoredProjects.length > 0 && (!isOnePage || (totalExp <= 1 && totalCerts <= 2))
+        ? `<section style="margin-bottom: 3pt;">
       <h2 style="${fontStyles.h2}">
         Technical Projects
       </h2>
@@ -799,7 +807,7 @@ export class ExportService {
         .slice(0, resume.pageBudget === "1_page" ? 1 : undefined)
         .map(
           (p) => `
-        <div class="project-item" style="margin-top: 3pt; margin-bottom: 4pt;">
+        <div class="project-item" style="margin-top: 2pt; margin-bottom: 2.5pt;">
           <div class="item-header" style="${fontStyles.itemHeader}">
             <span>${escapeHtml(p.name)}</span>
             <span style="${fontStyles.dateSpan}">${escapeHtml(p.technologies.join(", "))}</span>
@@ -807,7 +815,7 @@ export class ExportService {
           ${p.description ? `<div style="font-size: 8.5pt; color: #374151; margin-bottom: 2pt;">${escapeHtml(p.description)}</div>` : ""}
           ${
             p.bullets.length > 0
-              ? `<ul style="margin: 1.5pt 0 4pt 0; padding-left: 14pt;">
+              ? `<ul style="margin: 1.5pt 0 2.5pt 0; padding-left: 14pt;">
             ${p.bullets.map((b) => `<li style="${fontStyles.li}">${escapeHtml(b.content)}</li>`).join("\n            ")}
           </ul>`
               : ""
