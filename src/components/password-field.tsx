@@ -64,3 +64,4 @@ export function PasswordRequirements({ password }: { password: string }) {
     </ul>
   );
 }
+
