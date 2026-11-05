@@ -25,3 +25,14 @@ export async function PATCH(req: NextRequest) {
   }
 }
 
+export async function PUT(req: NextRequest) {
+  try {
+    const session = await requireSession();
+    const body = await req.json();
+    const updated = await profileService.saveFullProfile(session.userId, body);
+    return jsonResponse(updated);
+  } catch (error) {
+    return errorResponse(error);
+  }
+}
+

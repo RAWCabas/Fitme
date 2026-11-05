@@ -40,6 +40,7 @@ export default async function DashboardLayout({
       education: [],
       certifications: [],
       skills: [],
+      hiddenContactFields: [],
       updatedAt: new Date().toISOString(),
     };
   }

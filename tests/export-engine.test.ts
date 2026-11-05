@@ -43,6 +43,7 @@ const mockProfile: Profile = {
   skills: [],
   certifications: [],
   summary: "Experienced cloud architect.",
+  hiddenContactFields: [],
   updatedAt: "2026-01-01T00:00:00.000Z",
 };
 
@@ -227,6 +228,85 @@ describe("ATS Export Engine: Service", () => {
     const html2Page = exportService.generateHtmlDocument({ ...multiProjectResume, pageBudget: "2_pages" }, mockProfile, "cabas_executive");
     expect(html2Page).toContain("Project One");
     expect(html2Page).toContain("Project Two");
+  });
+
+  it("strictly omits hidden experiences, hidden bullets, hidden skills, and hidden contact fields", () => {
+    const hiddenProfile: Profile = {
+      ...mockProfile,
+      hiddenContactFields: ["phone", "summary"],
+      skills: [
+        { id: "s1", name: "Ruby on Rails", category: "frameworks", isHidden: true },
+        { id: "s2", name: "TypeScript", category: "languages", isHidden: false },
+      ],
+      experiences: [
+        {
+          id: "exp1",
+          company: "Stripe",
+          role: "Staff Infrastructure Engineer",
+          location: "Remote",
+          startDate: "2022-01-01",
+          endDate: null,
+          isHidden: false,
+          bullets: [{ id: "b1", content: "Active bullet point", isHidden: false, hasMetrics: false }],
+        },
+        {
+          id: "exp2",
+          company: "OldCorp",
+          role: "Junior Dev",
+          location: "Remote",
+          startDate: "2020-01-01",
+          endDate: "2021-12-31",
+          isHidden: true,
+          bullets: [{ id: "b3", content: "OldCorp secret bullet", isHidden: false, hasMetrics: false }],
+        },
+      ],
+    };
+
+    const hiddenResume: TailoredResume = {
+      ...mockResume,
+      tailoredExperiences: [
+        {
+          ...mockResume.tailoredExperiences[0],
+          bullets: [
+            { id: "b1", content: "Active bullet point", isHidden: false, hasMetrics: true },
+            { id: "b2", content: "Confidential bullet point", isHidden: true, hasMetrics: false },
+          ],
+        },
+        {
+          id: "exp2",
+          company: "OldCorp",
+          role: "Junior Dev",
+          location: "Remote",
+          startDate: "2020-01-01",
+          endDate: "2021-12-31",
+          isHidden: true,
+          bullets: [{ id: "b3", content: "OldCorp secret bullet", isHidden: false, hasMetrics: false }],
+        },
+      ],
+      selectedSkills: [
+        { id: "s1", name: "Ruby on Rails", category: "frameworks", isHidden: true },
+        { id: "s2", name: "TypeScript", category: "languages", isHidden: false },
+      ],
+    };
+
+    // Test Markdown export
+    const md = exportService.generateMarkdown(hiddenResume, hiddenProfile);
+    expect(md).not.toContain("+1 (555) 019-2831"); // Phone hidden
+    expect(md).not.toContain("## Professional Summary"); // Summary hidden
+    expect(md).toContain("Active bullet point");
+    expect(md).not.toContain("Confidential bullet point"); // Bullet hidden
+    expect(md).not.toContain("OldCorp"); // Entire experience hidden
+    expect(md).toContain("TypeScript");
+    expect(md).not.toContain("Ruby on Rails"); // Skill hidden
+
+    // Test HTML export
+    const html = exportService.generateHtmlDocument(hiddenResume, hiddenProfile, "modern_standard");
+    expect(html).not.toContain("+1 (555) 019-2831");
+    expect(html).toContain("Active bullet point");
+    expect(html).not.toContain("Confidential bullet point");
+    expect(html).not.toContain("OldCorp");
+    expect(html).toContain("TypeScript");
+    expect(html).not.toContain("Ruby on Rails");
   });
 });
 

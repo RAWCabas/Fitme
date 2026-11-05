@@ -273,5 +273,47 @@ describe("Profile Vault: Schemas & Service", () => {
     expect(profileB.skills).toHaveLength(1);
     expect(profileB.skills[0].name).toBe("Angular");
   });
+
+  it("toggles visibility for contact and personal summary fields", async () => {
+    await service.getOrCreateProfile("user_contact_test");
+    
+    // Toggle phone hidden
+    const isPhoneHidden = await service.toggleContactFieldVisibility("user_contact_test", "phone");
+    expect(isPhoneHidden).toBe(true);
+
+    let profile = await service.getOrCreateProfile("user_contact_test");
+    expect(profile.hiddenContactFields).toContain("phone");
+
+    // Toggle summary hidden
+    const isSummaryHidden = await service.toggleContactFieldVisibility("user_contact_test", "summary");
+    expect(isSummaryHidden).toBe(true);
+
+    profile = await service.getOrCreateProfile("user_contact_test");
+    expect(profile.hiddenContactFields).toContain("summary");
+
+    // Toggle phone unhidden
+    const isPhoneHiddenAgain = await service.toggleContactFieldVisibility("user_contact_test", "phone");
+    expect(isPhoneHiddenAgain).toBe(false);
+
+    profile = await service.getOrCreateProfile("user_contact_test");
+    expect(profile.hiddenContactFields).not.toContain("phone");
+    expect(profile.hiddenContactFields).toContain("summary");
+  });
+
+  it("supports fallback matching by title/company when toggling item visibility", async () => {
+    await service.getOrCreateProfile("user_fallback_test");
+    const exp = await service.addExperience("user_fallback_test", {
+      company: "Tesla",
+      role: "Firmware Engineer",
+      bullets: [{ content: "Embedded C++" }],
+    });
+
+    // Toggle using company name fallback
+    const isHidden = await service.toggleExperienceVisibility("user_fallback_test", "Tesla");
+    expect(isHidden).toBe(true);
+
+    const profile = await service.getOrCreateProfile("user_fallback_test");
+    expect(profile.experiences[0].isHidden).toBe(true);
+  });
 });
 

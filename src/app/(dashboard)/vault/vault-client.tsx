@@ -227,18 +227,95 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
     }
   }
 
-  // Toggle Experience Visibility
+  // Helper to persist full profile to database and localStorage
+  async function persistFullProfile(updatedProfile: Profile) {
+    try {
+      if (typeof window !== "undefined" && updatedProfile.userId) {
+        localStorage.setItem(`fitme_vault_cache_${updatedProfile.userId}`, JSON.stringify(updatedProfile));
+      }
+      await fetch("/api/profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updatedProfile),
+      });
+    } catch (e) {
+      console.error("Failed to persist full profile to database", e);
+    }
+  }
+
+  // Toggle Experience Visibility (Optimistic + Fallback to Full Profile Persistence)
   async function toggleExperience(id: string) {
+    const nextExperiences = profile.experiences.map((e) => (e.id === id ? { ...e, isHidden: !e.isHidden } : e));
+    const nextProfile = { ...profile, experiences: nextExperiences };
+    setProfile(nextProfile);
     try {
       const res = await fetch(`/api/profile/experiences/${id}/toggle`, { method: "PATCH" });
-      if (res.ok) {
-        setProfile((prev) => ({
-          ...prev,
-          experiences: prev.experiences.map((e) => (e.id === id ? { ...e, isHidden: !e.isHidden } : e)),
-        }));
+      if (!res.ok) {
+        await persistFullProfile(nextProfile);
       }
-    } catch (err) {
-      console.error("Failed to toggle experience visibility", err);
+    } catch {
+      await persistFullProfile(nextProfile);
+    }
+  }
+
+  // Toggle Granular Bullet Visibility
+  async function toggleBullet(parentType: "experience" | "project", parentId: string, bulletId: string) {
+    let nextProfile: Profile;
+    if (parentType === "experience") {
+      const nextExperiences = profile.experiences.map((exp) =>
+        exp.id === parentId
+          ? {
+              ...exp,
+              bullets: exp.bullets.map((b) => (b.id === bulletId ? { ...b, isHidden: !b.isHidden } : b)),
+            }
+          : exp
+      );
+      nextProfile = { ...profile, experiences: nextExperiences };
+    } else {
+      const nextProjects = profile.projects.map((proj) =>
+        proj.id === parentId
+          ? {
+              ...proj,
+              bullets: proj.bullets.map((b) => (b.id === bulletId ? { ...b, isHidden: !b.isHidden } : b)),
+            }
+          : proj
+      );
+      nextProfile = { ...profile, projects: nextProjects };
+    }
+    setProfile(nextProfile);
+    try {
+      const res = await fetch(`/api/profile/${parentType === "experience" ? "experiences" : "projects"}/${parentId}/bullets/${bulletId}/toggle`, { method: "PATCH" });
+      if (!res.ok) {
+        await persistFullProfile(nextProfile);
+      }
+    } catch {
+      await persistFullProfile(nextProfile);
+    }
+  }
+
+  // Toggle Contact & Personal Summary Field Visibility
+  async function toggleContactField(fieldName: string) {
+    const currentHidden = profile.hiddenContactFields || [];
+    const isCurrentlyHidden = currentHidden.includes(fieldName);
+    const nextHidden = isCurrentlyHidden
+      ? currentHidden.filter((f) => f !== fieldName)
+      : [...currentHidden, fieldName];
+    const nextProfile: Profile = {
+      ...profile,
+      hiddenContactFields: nextHidden,
+    };
+    setProfile(nextProfile);
+    try {
+      const res = await fetch("/api/profile/contact/toggle", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ field: fieldName }),
+      });
+      if (!res.ok) {
+        await persistFullProfile(nextProfile);
+      }
+    } catch {
+      await persistFullProfile(nextProfile);
     }
   }
 
@@ -300,18 +377,18 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
     }
   }
 
-  // Toggle Project Visibility
+  // Toggle Project Visibility (Optimistic + Fallback)
   async function toggleProject(id: string) {
+    const nextProjects = profile.projects.map((p) => (p.id === id ? { ...p, isHidden: !p.isHidden } : p));
+    const nextProfile = { ...profile, projects: nextProjects };
+    setProfile(nextProfile);
     try {
       const res = await fetch(`/api/profile/projects/${id}/toggle`, { method: "PATCH" });
-      if (res.ok) {
-        setProfile((prev) => ({
-          ...prev,
-          projects: prev.projects.map((p) => (p.id === id ? { ...p, isHidden: !p.isHidden } : p)),
-        }));
+      if (!res.ok) {
+        await persistFullProfile(nextProfile);
       }
-    } catch (err) {
-      console.error("Failed to toggle project visibility", err);
+    } catch {
+      await persistFullProfile(nextProfile);
     }
   }
 
@@ -369,18 +446,18 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
     }
   }
 
-  // Toggle Education Visibility
+  // Toggle Education Visibility (Optimistic + Fallback)
   async function toggleEducation(id: string) {
+    const nextEducation = (profile.education || []).map((e) => (e.id === id ? { ...e, isHidden: !e.isHidden } : e));
+    const nextProfile = { ...profile, education: nextEducation };
+    setProfile(nextProfile);
     try {
       const res = await fetch(`/api/profile/education/${id}/toggle`, { method: "PATCH" });
-      if (res.ok) {
-        setProfile((prev) => ({
-          ...prev,
-          education: (prev.education || []).map((e) => (e.id === id ? { ...e, isHidden: !e.isHidden } : e)),
-        }));
+      if (!res.ok) {
+        await persistFullProfile(nextProfile);
       }
-    } catch (err) {
-      console.error("Failed to toggle education visibility", err);
+    } catch {
+      await persistFullProfile(nextProfile);
     }
   }
 
@@ -446,18 +523,18 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
     }
   }
 
-  // Toggle Certification Visibility
+  // Toggle Certification Visibility (Optimistic + Fallback)
   async function toggleCertification(id: string) {
+    const nextCerts = (profile.certifications || []).map((c) => (c.id === id ? { ...c, isHidden: !c.isHidden } : c));
+    const nextProfile = { ...profile, certifications: nextCerts };
+    setProfile(nextProfile);
     try {
       const res = await fetch(`/api/profile/certifications/${id}/toggle`, { method: "PATCH" });
-      if (res.ok) {
-        setProfile((prev) => ({
-          ...prev,
-          certifications: (prev.certifications || []).map((c) => (c.id === id ? { ...c, isHidden: !c.isHidden } : c)),
-        }));
+      if (!res.ok) {
+        await persistFullProfile(nextProfile);
       }
-    } catch (err) {
-      console.error("Failed to toggle certification visibility", err);
+    } catch {
+      await persistFullProfile(nextProfile);
     }
   }
 
@@ -519,18 +596,18 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
     }
   }
 
-  // Toggle Skill Visibility
+  // Toggle Skill Visibility (Optimistic + Fallback)
   async function toggleSkill(id: string) {
+    const nextSkills = profile.skills.map((s) => (s.id === id ? { ...s, isHidden: !s.isHidden } : s));
+    const nextProfile = { ...profile, skills: nextSkills };
+    setProfile(nextProfile);
     try {
       const res = await fetch(`/api/profile/skills/${id}/toggle`, { method: "PATCH" });
-      if (res.ok) {
-        setProfile((prev) => ({
-          ...prev,
-          skills: prev.skills.map((s) => (s.id === id ? { ...s, isHidden: !s.isHidden } : s)),
-        }));
+      if (!res.ok) {
+        await persistFullProfile(nextProfile);
       }
-    } catch (err) {
-      console.error("Failed to toggle skill visibility", err);
+    } catch {
+      await persistFullProfile(nextProfile);
     }
   }
 
@@ -833,7 +910,10 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
 
       if (res.ok) {
         const updated: Profile = await res.json();
-        setProfile(updated);
+        setProfile((prev) => ({
+          ...updated,
+          hiddenContactFields: prev.hiddenContactFields || updated.hiddenContactFields || [],
+        }));
         flashSuccess("Contact details & summary updated");
       }
     } catch (err) {
@@ -1245,10 +1325,28 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
                       </div>
 
                       {exp.bullets.length > 0 && (
-                        <ul className="mt-3 space-y-1.5 list-disc list-inside text-sm text-muted-foreground">
+                        <ul className="mt-3 space-y-1.5 text-sm text-muted-foreground">
                           {exp.bullets.map((b) => (
-                            <li key={b.id} className={b.isHidden ? "line-through opacity-40" : ""}>
-                              {b.content}
+                            <li
+                              key={b.id}
+                              className={`flex items-start justify-between gap-2 p-1.5 rounded-lg border border-transparent hover:border-border hover:bg-muted/30 transition-colors ${
+                                b.isHidden ? "line-through opacity-45 bg-muted/20" : ""
+                              }`}
+                            >
+                              <span className="flex-1 leading-relaxed">• {b.content}</span>
+                              <button
+                                type="button"
+                                onClick={() => toggleBullet("experience", exp.id, b.id)}
+                                className={`shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium border transition-colors ${
+                                  b.isHidden
+                                    ? "bg-muted text-muted-foreground hover:bg-muted/80"
+                                    : "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-800"
+                                }`}
+                                title={b.isHidden ? "Show bullet in resumes" : "Hide bullet from resumes"}
+                              >
+                                {b.isHidden ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                                <span className="hidden sm:inline">{b.isHidden ? "Hidden" : "Visible"}</span>
+                              </button>
                             </li>
                           ))}
                         </ul>
@@ -1469,6 +1567,34 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
 
                         {proj.description && (
                           <p className="text-xs text-muted-foreground">{proj.description}</p>
+                        )}
+
+                        {proj.bullets && proj.bullets.length > 0 && (
+                          <ul className="mt-2 space-y-1.5 text-sm text-muted-foreground">
+                            {proj.bullets.map((b) => (
+                              <li
+                                key={b.id}
+                                className={`flex items-start justify-between gap-2 p-1.5 rounded-lg border border-transparent hover:border-border hover:bg-muted/30 transition-colors ${
+                                  b.isHidden ? "line-through opacity-45 bg-muted/20" : ""
+                                }`}
+                              >
+                                <span className="flex-1 leading-relaxed">• {b.content}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => toggleBullet("project", proj.id, b.id)}
+                                  className={`shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium border transition-colors ${
+                                    b.isHidden
+                                      ? "bg-muted text-muted-foreground hover:bg-muted/80"
+                                      : "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-800"
+                                  }`}
+                                  title={b.isHidden ? "Show bullet in resumes" : "Hide bullet from resumes"}
+                                >
+                                  {b.isHidden ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                                  <span className="hidden sm:inline">{b.isHidden ? "Hidden" : "Visible"}</span>
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
                         )}
                       </div>
 
@@ -2222,12 +2348,29 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-medium">Professional Headline</label>
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-medium">Professional Headline</label>
+                <button
+                  type="button"
+                  onClick={() => toggleContactField("headline")}
+                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold border transition-colors ${
+                    (profile.hiddenContactFields || []).includes("headline")
+                      ? "bg-muted text-muted-foreground hover:bg-muted/80"
+                      : "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-800"
+                  }`}
+                  title={(profile.hiddenContactFields || []).includes("headline") ? "Show headline on resumes" : "Hide headline from resumes"}
+                >
+                  {(profile.hiddenContactFields || []).includes("headline") ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                  <span>{(profile.hiddenContactFields || []).includes("headline") ? "Hidden from Resumes" : "Visible"}</span>
+                </button>
+              </div>
               <input
                 placeholder="Senior Fullstack Engineer"
                 value={contactHeadline}
                 onChange={(e) => setContactHeadline(e.target.value)}
-                className="w-full px-3 py-2 text-sm rounded-lg border bg-background"
+                className={`w-full px-3 py-2 text-sm rounded-lg border bg-background transition-opacity ${
+                  (profile.hiddenContactFields || []).includes("headline") ? "opacity-60 bg-muted/30" : ""
+                }`}
               />
             </div>
 
@@ -2243,53 +2386,138 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-medium">Phone</label>
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-medium">Phone</label>
+                <button
+                  type="button"
+                  onClick={() => toggleContactField("phone")}
+                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold border transition-colors ${
+                    (profile.hiddenContactFields || []).includes("phone")
+                      ? "bg-muted text-muted-foreground hover:bg-muted/80"
+                      : "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-800"
+                  }`}
+                  title={(profile.hiddenContactFields || []).includes("phone") ? "Show phone on resumes" : "Hide phone from resumes"}
+                >
+                  {(profile.hiddenContactFields || []).includes("phone") ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                  <span>{(profile.hiddenContactFields || []).includes("phone") ? "Hidden from Resumes" : "Visible"}</span>
+                </button>
+              </div>
               <input
                 placeholder="+1 (555) 000-0000"
                 value={contactPhone}
                 onChange={(e) => setContactPhone(e.target.value)}
-                className="w-full px-3 py-2 text-sm rounded-lg border bg-background"
+                className={`w-full px-3 py-2 text-sm rounded-lg border bg-background transition-opacity ${
+                  (profile.hiddenContactFields || []).includes("phone") ? "opacity-60 bg-muted/30" : ""
+                }`}
               />
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-medium">Location</label>
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-medium">Location</label>
+                <button
+                  type="button"
+                  onClick={() => toggleContactField("location")}
+                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold border transition-colors ${
+                    (profile.hiddenContactFields || []).includes("location")
+                      ? "bg-muted text-muted-foreground hover:bg-muted/80"
+                      : "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-800"
+                  }`}
+                  title={(profile.hiddenContactFields || []).includes("location") ? "Show location on resumes" : "Hide location from resumes"}
+                >
+                  {(profile.hiddenContactFields || []).includes("location") ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                  <span>{(profile.hiddenContactFields || []).includes("location") ? "Hidden from Resumes" : "Visible"}</span>
+                </button>
+              </div>
               <input
                 placeholder="San Francisco, CA"
                 value={contactLocation}
                 onChange={(e) => setContactLocation(e.target.value)}
-                className="w-full px-3 py-2 text-sm rounded-lg border bg-background"
+                className={`w-full px-3 py-2 text-sm rounded-lg border bg-background transition-opacity ${
+                  (profile.hiddenContactFields || []).includes("location") ? "opacity-60 bg-muted/30" : ""
+                }`}
               />
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-medium">LinkedIn URL</label>
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-medium">LinkedIn URL</label>
+                <button
+                  type="button"
+                  onClick={() => toggleContactField("linkedinUrl")}
+                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold border transition-colors ${
+                    (profile.hiddenContactFields || []).includes("linkedinUrl")
+                      ? "bg-muted text-muted-foreground hover:bg-muted/80"
+                      : "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-800"
+                  }`}
+                  title={(profile.hiddenContactFields || []).includes("linkedinUrl") ? "Show LinkedIn on resumes" : "Hide LinkedIn from resumes"}
+                >
+                  {(profile.hiddenContactFields || []).includes("linkedinUrl") ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                  <span>{(profile.hiddenContactFields || []).includes("linkedinUrl") ? "Hidden from Resumes" : "Visible"}</span>
+                </button>
+              </div>
               <input
                 placeholder="https://linkedin.com/in/..."
                 value={contactLinkedin}
                 onChange={(e) => setContactLinkedin(e.target.value)}
-                className="w-full px-3 py-2 text-sm rounded-lg border bg-background"
+                className={`w-full px-3 py-2 text-sm rounded-lg border bg-background transition-opacity ${
+                  (profile.hiddenContactFields || []).includes("linkedinUrl") ? "opacity-60 bg-muted/30" : ""
+                }`}
               />
             </div>
 
             <div className="space-y-1 sm:col-span-2">
-              <label className="text-xs font-medium">GitHub / Portfolio URL</label>
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-medium">GitHub / Portfolio URL</label>
+                <button
+                  type="button"
+                  onClick={() => toggleContactField("githubUrl")}
+                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold border transition-colors ${
+                    (profile.hiddenContactFields || []).includes("githubUrl")
+                      ? "bg-muted text-muted-foreground hover:bg-muted/80"
+                      : "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-800"
+                  }`}
+                  title={(profile.hiddenContactFields || []).includes("githubUrl") ? "Show GitHub on resumes" : "Hide GitHub from resumes"}
+                >
+                  {(profile.hiddenContactFields || []).includes("githubUrl") ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                  <span>{(profile.hiddenContactFields || []).includes("githubUrl") ? "Hidden from Resumes" : "Visible"}</span>
+                </button>
+              </div>
               <input
                 placeholder="https://github.com/..."
                 value={contactGithub}
                 onChange={(e) => setContactGithub(e.target.value)}
-                className="w-full px-3 py-2 text-sm rounded-lg border bg-background"
+                className={`w-full px-3 py-2 text-sm rounded-lg border bg-background transition-opacity ${
+                  (profile.hiddenContactFields || []).includes("githubUrl") ? "opacity-60 bg-muted/30" : ""
+                }`}
               />
             </div>
 
             <div className="space-y-1 sm:col-span-2">
-              <label className="text-xs font-medium">Executive Professional Summary</label>
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-medium">Executive Professional Summary</label>
+                <button
+                  type="button"
+                  onClick={() => toggleContactField("summary")}
+                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold border transition-colors ${
+                    (profile.hiddenContactFields || []).includes("summary")
+                      ? "bg-muted text-muted-foreground hover:bg-muted/80"
+                      : "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-800"
+                  }`}
+                  title={(profile.hiddenContactFields || []).includes("summary") ? "Show summary on resumes" : "Hide summary from resumes"}
+                >
+                  {(profile.hiddenContactFields || []).includes("summary") ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                  <span>{(profile.hiddenContactFields || []).includes("summary") ? "Hidden from Resumes" : "Visible"}</span>
+                </button>
+              </div>
               <textarea
                 rows={4}
                 placeholder="Brief summary of your background, core strengths, and engineering career objectives..."
                 value={contactSummary}
                 onChange={(e) => setContactSummary(e.target.value)}
-                className="w-full px-3 py-2 text-sm rounded-lg border bg-background"
+                className={`w-full px-3 py-2 text-sm rounded-lg border bg-background transition-opacity ${
+                  (profile.hiddenContactFields || []).includes("summary") ? "opacity-60 bg-muted/30" : ""
+                }`}
               />
             </div>
           </div>

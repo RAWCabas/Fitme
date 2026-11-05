@@ -55,6 +55,7 @@ const mockProfile: Profile = {
     },
   ],
   summary: "Results-driven principal engineer specializing in low-latency systems.",
+  hiddenContactFields: [],
   updatedAt: "2026-01-01T00:00:00.000Z",
 };
 

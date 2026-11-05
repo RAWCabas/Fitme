@@ -81,6 +81,10 @@ export class ProfileService {
         existing.skills = [];
         needsSave = true;
       }
+      if (!existing.hiddenContactFields) {
+        existing.hiddenContactFields = [];
+        needsSave = true;
+      }
 
       // If user profile is completely empty (brand new initialization for Rhinn)
       if (
@@ -147,6 +151,7 @@ export class ProfileService {
           certifications: [],
           skills: [],
           summary: "",
+          hiddenContactFields: [],
           updatedAt: nowIso(),
         };
 
@@ -228,7 +233,14 @@ export class ProfileService {
    */
   async toggleExperienceVisibility(userId: string, experienceId: string): Promise<boolean> {
     const profile = await this.getOrCreateProfile(userId);
-    const item = profile.experiences.find((e) => e.id === experienceId);
+    let item = profile.experiences.find((e) => e.id === experienceId);
+    if (!item) {
+      item = profile.experiences.find(
+        (e) =>
+          e.company.toLowerCase().trim() === experienceId.toLowerCase().trim() ||
+          e.role.toLowerCase().trim() === experienceId.toLowerCase().trim()
+      );
+    }
     if (!item) throw AppError.notFound("Experience not found");
 
     item.isHidden = !item.isHidden;
@@ -325,7 +337,12 @@ export class ProfileService {
    */
   async toggleProjectVisibility(userId: string, projectId: string): Promise<boolean> {
     const profile = await this.getOrCreateProfile(userId);
-    const item = profile.projects.find((p) => p.id === projectId);
+    let item = profile.projects.find((p) => p.id === projectId);
+    if (!item) {
+      item = profile.projects.find(
+        (p) => p.name.toLowerCase().trim() === projectId.toLowerCase().trim()
+      );
+    }
     if (!item) throw AppError.notFound("Project not found");
 
     item.isHidden = !item.isHidden;
@@ -416,7 +433,12 @@ export class ProfileService {
    */
   async toggleSkillVisibility(userId: string, skillId: string): Promise<boolean> {
     const profile = await this.getOrCreateProfile(userId);
-    const item = profile.skills.find((s) => s.id === skillId);
+    let item = profile.skills.find((s) => s.id === skillId);
+    if (!item) {
+      item = profile.skills.find(
+        (s) => s.name.toLowerCase().trim() === skillId.toLowerCase().trim()
+      );
+    }
     if (!item) throw AppError.notFound("Skill not found");
 
     item.isHidden = !item.isHidden;
@@ -497,7 +519,12 @@ export class ProfileService {
   async toggleCertificationVisibility(userId: string, certificationId: string): Promise<boolean> {
     const profile = await this.getOrCreateProfile(userId);
     if (!profile.certifications) profile.certifications = [];
-    const item = profile.certifications.find((c) => c.id === certificationId);
+    let item = profile.certifications.find((c) => c.id === certificationId);
+    if (!item) {
+      item = profile.certifications.find(
+        (c) => c.name.toLowerCase().trim() === certificationId.toLowerCase().trim()
+      );
+    }
     if (!item) throw AppError.notFound("Certification not found");
 
     item.isHidden = !item.isHidden;
@@ -584,7 +611,14 @@ export class ProfileService {
   async toggleEducationVisibility(userId: string, educationId: string): Promise<boolean> {
     const profile = await this.getOrCreateProfile(userId);
     if (!profile.education) profile.education = [];
-    const item = profile.education.find((e) => e.id === educationId);
+    let item = profile.education.find((e) => e.id === educationId);
+    if (!item) {
+      item = profile.education.find(
+        (e) =>
+          e.institution.toLowerCase().trim() === educationId.toLowerCase().trim() ||
+          e.degree.toLowerCase().trim() === educationId.toLowerCase().trim()
+      );
+    }
     if (!item) throw AppError.notFound("Education item not found");
 
     item.isHidden = !item.isHidden;
@@ -652,24 +686,77 @@ export class ProfileService {
     const profile = await this.getOrCreateProfile(userId);
 
     if (parentType === "experience") {
-      const parent = profile.experiences.find((e) => e.id === parentId);
+      let parent = profile.experiences.find((e) => e.id === parentId);
+      if (!parent) {
+        parent = profile.experiences.find(
+          (e) =>
+            e.company.toLowerCase().trim() === parentId.toLowerCase().trim() ||
+            e.role.toLowerCase().trim() === parentId.toLowerCase().trim()
+        );
+      }
       if (!parent) throw AppError.notFound("Experience not found");
-      const bullet = parent.bullets.find((b) => b.id === bulletId);
+      let bullet = parent.bullets.find((b) => b.id === bulletId);
+      if (!bullet) {
+        bullet = parent.bullets.find((b) => b.content.toLowerCase().trim() === bulletId.toLowerCase().trim());
+      }
       if (!bullet) throw AppError.notFound("Bullet not found");
       bullet.isHidden = !bullet.isHidden;
       profile.updatedAt = nowIso();
       await this.repo.saveProfile(profile);
       return bullet.isHidden;
     } else {
-      const parent = profile.projects.find((p) => p.id === parentId);
+      let parent = profile.projects.find((p) => p.id === parentId);
+      if (!parent) {
+        parent = profile.projects.find(
+          (p) => p.name.toLowerCase().trim() === parentId.toLowerCase().trim()
+        );
+      }
       if (!parent) throw AppError.notFound("Project not found");
-      const bullet = parent.bullets.find((b) => b.id === bulletId);
+      let bullet = parent.bullets.find((b) => b.id === bulletId);
+      if (!bullet) {
+        bullet = parent.bullets.find((b) => b.content.toLowerCase().trim() === bulletId.toLowerCase().trim());
+      }
       if (!bullet) throw AppError.notFound("Bullet not found");
       bullet.isHidden = !bullet.isHidden;
       profile.updatedAt = nowIso();
       await this.repo.saveProfile(profile);
       return bullet.isHidden;
     }
+  }
+
+  /**
+   * Toggles visibility for a contact or personal summary field (e.g. phone, location, headline, linkedinUrl, githubUrl, summary).
+   */
+  async toggleContactFieldVisibility(userId: string, fieldName: string): Promise<boolean> {
+    const profile = await this.getOrCreateProfile(userId);
+    if (!profile.hiddenContactFields) profile.hiddenContactFields = [];
+    const normalized = fieldName.trim();
+    const idx = profile.hiddenContactFields.indexOf(normalized);
+    let isHidden = false;
+    if (idx >= 0) {
+      profile.hiddenContactFields.splice(idx, 1);
+      isHidden = false;
+    } else {
+      profile.hiddenContactFields.push(normalized);
+      isHidden = true;
+    }
+    profile.updatedAt = nowIso();
+    await this.repo.saveProfile(profile);
+    return isHidden;
+  }
+
+  /**
+   * Saves the complete profile atomically, validating against profileSchema.
+   */
+  async saveFullProfile(userId: string, input: unknown): Promise<Profile> {
+    if (!userId) throw AppError.unauthorized();
+    const raw = typeof input === "object" && input !== null ? (input as Record<string, unknown>) : {};
+    const validated = profileSchema.parse({
+      ...raw,
+      userId,
+      updatedAt: nowIso(),
+    });
+    return await this.repo.saveProfile(validated);
   }
 }
 
@@ -957,6 +1044,7 @@ export function buildRhinnMasterProfile(
       { id: crypto.randomUUID(), name: "Customer Service & High-Volume Operations", category: "soft", isHidden: false },
       { id: crypto.randomUUID(), name: "Team Collaboration & Conflict Resolution", category: "soft", isHidden: false },
     ],
+    hiddenContactFields: [],
     updatedAt: nowIso(),
   };
 }

@@ -65,6 +65,7 @@ const mockProfile: Profile = {
   ],
   certifications: [],
   summary: "Cloud architect with 7+ years scaling distributed systems.",
+  hiddenContactFields: [],
   updatedAt: "2026-01-01T00:00:00.000Z",
 };
 

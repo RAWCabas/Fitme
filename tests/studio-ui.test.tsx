@@ -49,6 +49,7 @@ const mockProfile: Profile = {
   ],
   certifications: [],
   summary: "Experienced Fullstack Engineer building cloud-native apps.",
+  hiddenContactFields: [],
   updatedAt: "2026-01-01T00:00:00.000Z",
 };
 

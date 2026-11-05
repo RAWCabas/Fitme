@@ -7,40 +7,49 @@ export class ExportService {
    */
   generateMarkdown(resume: TailoredResume, profile: Profile): string {
     const c = profile.contact;
+    const hiddenContact = new Set(profile.hiddenContactFields || []);
     const lines: string[] = [];
 
     // Header
     lines.push(`# ${c.fullName}`);
-    if (c.headline) {
+    if (c.headline && !hiddenContact.has("headline")) {
       lines.push(`*${c.headline}*`);
     }
 
-    const contactParts: string[] = [c.email];
-    if (c.phone) contactParts.push(c.phone);
-    if (c.location) contactParts.push(c.location);
-    lines.push(contactParts.join(" | "));
+    const contactParts: string[] = [];
+    if (c.email && !hiddenContact.has("email")) contactParts.push(c.email);
+    if (c.phone && !hiddenContact.has("phone")) contactParts.push(c.phone);
+    if (c.location && !hiddenContact.has("location")) contactParts.push(c.location);
+    if (contactParts.length > 0) {
+      lines.push(contactParts.join(" | "));
+    }
 
     const linkParts: string[] = [];
-    if (c.linkedinUrl) linkParts.push(c.linkedinUrl);
-    if (c.githubUrl) linkParts.push(c.githubUrl);
-    if (c.portfolioUrl) linkParts.push(c.portfolioUrl);
+    if (c.linkedinUrl && !hiddenContact.has("linkedinUrl")) linkParts.push(c.linkedinUrl);
+    if (c.githubUrl && !hiddenContact.has("githubUrl")) linkParts.push(c.githubUrl);
+    if (c.portfolioUrl && !hiddenContact.has("portfolioUrl")) linkParts.push(c.portfolioUrl);
     if (linkParts.length > 0) {
       lines.push(linkParts.join(" | "));
     }
     lines.push("");
 
     // Professional Summary
-    if (resume.tailoredSummary) {
+    const summaryText = resume.tailoredSummary || profile.summary;
+    if (summaryText && !hiddenContact.has("summary")) {
       lines.push("## Professional Summary");
-      lines.push(resume.tailoredSummary);
+      lines.push(summaryText);
       lines.push("");
     }
 
     // Education
+    const hiddenEduIds = new Set((profile.education || []).filter((e) => e.isHidden).map((e) => e.id));
+    const hiddenEduInsts = new Set((profile.education || []).filter((e) => e.isHidden).map((e) => e.institution.toLowerCase().trim()));
     const eduList = (resume.tailoredEducation && resume.tailoredEducation.length > 0)
       ? resume.tailoredEducation
       : (profile.education || []);
-    const activeEdu = eduList.filter((e) => !e.isHidden);
+    const activeEdu = eduList.filter(
+      (e) => !e.isHidden && !hiddenEduIds.has(e.id) && !hiddenEduInsts.has(e.institution.toLowerCase().trim())
+    );
     if (activeEdu.length > 0) {
       lines.push("## Education");
       for (const edu of activeEdu) {
@@ -54,14 +63,21 @@ export class ExportService {
     }
 
     // Work Experience
-    if (resume.tailoredExperiences.length > 0) {
+    const hiddenExpIds = new Set((profile.experiences || []).filter((e) => e.isHidden).map((e) => e.id));
+    const hiddenExpCompanies = new Set((profile.experiences || []).filter((e) => e.isHidden).map((e) => e.company.toLowerCase().trim()));
+    const activeExperiences = (resume.tailoredExperiences || []).filter(
+      (e) => !e.isHidden && !hiddenExpIds.has(e.id) && !hiddenExpCompanies.has(e.company.toLowerCase().trim())
+    );
+    if (activeExperiences.length > 0) {
       lines.push("## Work Experience");
-      for (const exp of resume.tailoredExperiences) {
+      for (const exp of activeExperiences) {
+        const visibleBullets = exp.bullets.filter((b) => !b.isHidden);
+        if (visibleBullets.length === 0) continue;
         lines.push(`### ${exp.role} — ${exp.company}`);
         const dateStr = `${exp.startDate || "N/A"} – ${exp.endDate || "Present"}`;
         const locStr = exp.location ? ` | ${exp.location}` : "";
         lines.push(`*${dateStr}${locStr}*`);
-        for (const bullet of exp.bullets) {
+        for (const bullet of visibleBullets) {
           lines.push(`- ${bullet.content}`);
         }
         lines.push("");
@@ -69,15 +85,21 @@ export class ExportService {
     }
 
     // Technical Projects
-    if (resume.tailoredProjects && resume.tailoredProjects.length > 0) {
+    const hiddenProjIds = new Set((profile.projects || []).filter((p) => p.isHidden).map((p) => p.id));
+    const hiddenProjNames = new Set((profile.projects || []).filter((p) => p.isHidden).map((p) => p.name.toLowerCase().trim()));
+    const activeProjects = (resume.tailoredProjects || []).filter(
+      (p) => !p.isHidden && !hiddenProjIds.has(p.id) && !hiddenProjNames.has(p.name.toLowerCase().trim())
+    );
+    if (activeProjects.length > 0) {
       lines.push("## Technical Projects");
-      for (const proj of resume.tailoredProjects) {
+      for (const proj of activeProjects) {
+        const visibleBullets = proj.bullets.filter((b) => !b.isHidden);
         const techStr = proj.technologies.length > 0 ? ` (${proj.technologies.join(", ")})` : "";
         lines.push(`### ${proj.name}${techStr}`);
         if (proj.description) {
           lines.push(proj.description);
         }
-        for (const bullet of proj.bullets) {
+        for (const bullet of visibleBullets) {
           lines.push(`- ${bullet.content}`);
         }
         lines.push("");
@@ -85,15 +107,29 @@ export class ExportService {
     }
 
     // Core Competencies / Skills
-    if (resume.selectedSkills && resume.selectedSkills.length > 0) {
+    const hiddenSkillIds = new Set((profile.skills || []).filter((s) => s.isHidden).map((s) => s.id));
+    const hiddenSkillNames = new Set((profile.skills || []).filter((s) => s.isHidden).map((s) => s.name.toLowerCase().trim()));
+    const candidateSkills = (resume.selectedSkills && resume.selectedSkills.length > 0)
+      ? resume.selectedSkills
+      : (profile.skills || []);
+    const activeSkills = candidateSkills.filter(
+      (s) => !s.isHidden && !hiddenSkillIds.has(s.id) && !hiddenSkillNames.has(s.name.toLowerCase().trim())
+    );
+    if (activeSkills.length > 0) {
       lines.push("## Core Competencies");
-      lines.push(resume.selectedSkills.map((s) => s.name).join(", "));
+      lines.push(activeSkills.map((s) => s.name).join(", "));
       lines.push("");
     }
 
     // Certifications
-    const certs = resume.tailoredCertifications || profile.certifications || [];
-    const activeCerts = certs.filter((cert) => !cert.isHidden);
+    const hiddenCertIds = new Set((profile.certifications || []).filter((c) => c.isHidden).map((c) => c.id));
+    const hiddenCertNames = new Set((profile.certifications || []).filter((c) => c.isHidden).map((c) => c.name.toLowerCase().trim()));
+    const certs = (resume.tailoredCertifications && resume.tailoredCertifications.length > 0)
+      ? resume.tailoredCertifications
+      : (profile.certifications || []);
+    const activeCerts = certs.filter(
+      (c) => !c.isHidden && !hiddenCertIds.has(c.id) && !hiddenCertNames.has(c.name.toLowerCase().trim())
+    );
 
     if (activeCerts.length > 0) {
       lines.push("## Trainings and Certificates");
@@ -488,40 +524,75 @@ export class ExportService {
       `,
     };
 
-    // Build categorized skills
+    // Build categorized skills from active (unhidden) skills
+    const hiddenSkillIds = new Set((profile.skills || []).filter((s) => s.isHidden).map((s) => s.id));
+    const hiddenSkillNames = new Set((profile.skills || []).filter((s) => s.isHidden).map((s) => s.name.toLowerCase().trim()));
+
+    const candidateSkills = (resume.selectedSkills && resume.selectedSkills.length > 0)
+      ? resume.selectedSkills
+      : (profile.skills || []);
+
+    const activeSkills = candidateSkills.filter(
+      (s) => !s.isHidden && !hiddenSkillIds.has(s.id) && !hiddenSkillNames.has(s.name.toLowerCase().trim())
+    );
+
     const categorizedSkills: Record<string, string[]> = {};
     if (isRhinn) {
-      categorizedSkills["Hardware & IT Support"] = [
-        "PC assembly",
-        "hardware diagnostics & maintenance",
-        "OS installation (Windows)",
-        "printer/scanner setup",
-      ];
-      categorizedSkills["Networking"] = [
-        "LAN/WAN fundamentals",
-        "TCP/IP",
-        "Wi-Fi & router configuration",
-        "network troubleshooting",
-      ];
-      categorizedSkills["Software & Tools"] = [
-        "Microsoft Office (Word, Excel, PowerPoint)",
-        "Google Workspace",
-        "Arduino IDE",
-        "VS Code",
-      ];
-      categorizedSkills["Programming & CAD"] = [
-        "Java (TESDA NC III)",
-        "C/C++ basics",
-        "HTML/CSS",
-        "Autodesk Fusion 360",
-      ];
-      categorizedSkills["Design Suite"] = [
-        "Adobe Photoshop",
-        "Illustrator",
-        "Premiere Pro",
-      ];
+      for (const skill of activeSkills) {
+        const lower = skill.name.toLowerCase();
+        let cat = "Software & Tools";
+        if (
+          lower.includes("assembly") ||
+          lower.includes("hardware") ||
+          lower.includes("installation") ||
+          lower.includes("printer") ||
+          lower.includes("scanner") ||
+          lower.includes("pc ")
+        ) {
+          cat = "Hardware & IT Support";
+        } else if (
+          lower.includes("lan") ||
+          lower.includes("wan") ||
+          lower.includes("tcp") ||
+          lower.includes("ip") ||
+          lower.includes("router") ||
+          lower.includes("wi-fi") ||
+          lower.includes("wifi") ||
+          lower.includes("network")
+        ) {
+          cat = "Networking";
+        } else if (
+          lower.includes("java") ||
+          lower.includes("c/c++") ||
+          lower.includes("c++") ||
+          lower.includes("html") ||
+          lower.includes("css") ||
+          lower.includes("fusion") ||
+          lower.includes("cad") ||
+          lower.includes("edge impulse")
+        ) {
+          cat = "Programming & CAD";
+        } else if (
+          lower.includes("photoshop") ||
+          lower.includes("illustrator") ||
+          lower.includes("premiere") ||
+          lower.includes("adobe")
+        ) {
+          cat = "Design Suite";
+        } else if (skill.category === "cloud") {
+          cat = "Networking";
+        } else if (skill.category === "languages") {
+          cat = "Programming & CAD";
+        } else if (skill.category === "tools") {
+          cat = "Hardware & IT Support";
+        } else if (skill.category === "frameworks") {
+          cat = "Software & Tools";
+        }
+        if (!categorizedSkills[cat]) categorizedSkills[cat] = [];
+        categorizedSkills[cat].push(skill.name);
+      }
     } else {
-      for (const skill of resume.selectedSkills) {
+      for (const skill of activeSkills) {
         const catName =
           skill.category === "languages"
             ? "Programming & Languages"
@@ -537,13 +608,35 @@ export class ExportService {
       }
     }
 
-    const certs = resume.tailoredCertifications || profile.certifications || [];
-    const activeCerts = certs.filter((cert) => !cert.isHidden);
+    const hiddenCertIds = new Set((profile.certifications || []).filter((c) => c.isHidden).map((c) => c.id));
+    const hiddenCertNames = new Set((profile.certifications || []).filter((c) => c.isHidden).map((c) => c.name.toLowerCase().trim()));
+    const certs = (resume.tailoredCertifications && resume.tailoredCertifications.length > 0)
+      ? resume.tailoredCertifications
+      : (profile.certifications || []);
+    const activeCerts = certs.filter(
+      (c) => !c.isHidden && !hiddenCertIds.has(c.id) && !hiddenCertNames.has(c.name.toLowerCase().trim())
+    );
 
+    const hiddenEduIds = new Set((profile.education || []).filter((e) => e.isHidden).map((e) => e.id));
+    const hiddenEduInsts = new Set((profile.education || []).filter((e) => e.isHidden).map((e) => e.institution.toLowerCase().trim()));
     const eduList = (resume.tailoredEducation && resume.tailoredEducation.length > 0)
       ? resume.tailoredEducation
       : (profile.education || []);
-    const activeEdu = eduList.filter((e) => !e.isHidden);
+    const activeEdu = eduList.filter(
+      (e) => !e.isHidden && !hiddenEduIds.has(e.id) && !hiddenEduInsts.has(e.institution.toLowerCase().trim())
+    );
+
+    const hiddenExpIds = new Set((profile.experiences || []).filter((e) => e.isHidden).map((e) => e.id));
+    const hiddenExpCompanies = new Set((profile.experiences || []).filter((e) => e.isHidden).map((e) => e.company.toLowerCase().trim()));
+    const activeExperiences = (resume.tailoredExperiences || []).filter(
+      (e) => !e.isHidden && !hiddenExpIds.has(e.id) && !hiddenExpCompanies.has(e.company.toLowerCase().trim())
+    );
+
+    const hiddenProjIds = new Set((profile.projects || []).filter((p) => p.isHidden).map((p) => p.id));
+    const hiddenProjNames = new Set((profile.projects || []).filter((p) => p.isHidden).map((p) => p.name.toLowerCase().trim()));
+    const activeProjects = (resume.tailoredProjects || []).filter(
+      (p) => !p.isHidden && !hiddenProjIds.has(p.id) && !hiddenProjNames.has(p.name.toLowerCase().trim())
+    );
 
     const isCabasTemplate = isRhinn || preset === "cabas_executive";
     const isOnePage = resume.pageBudget === "1_page";
@@ -556,7 +649,7 @@ export class ExportService {
     const certsTitle = isCabasTemplate ? "TESDA TRAININGS AND CERTIFICATES" : "TESDA Trainings and Certificates";
 
     // Dynamic 1-page scaling so content gracefully fits down to the bottom margin on 1 page only
-    const totalExp = resume.tailoredExperiences.length;
+    const totalExp = activeExperiences.length;
     const totalCerts = activeCerts.length;
     const totalSkills = Object.keys(categorizedSkills).length;
     const isDense = isOnePage && (totalExp >= 2 || totalCerts >= 4 || totalSkills >= 4);
@@ -571,6 +664,15 @@ export class ExportService {
     const maxBulletsPerExp = isOnePage && totalExp > 1 ? 2 : (isOnePage ? 3 : undefined);
 
     const activePresetCss = presetStyles[preset] || presetStyles.modern_standard;
+
+    const hiddenContact = new Set(profile.hiddenContactFields || []);
+    const showHeadline = !hiddenContact.has("headline") && Boolean(c.headline);
+    const showLocation = !hiddenContact.has("location") && Boolean(c.location);
+    const showPhone = !hiddenContact.has("phone") && Boolean(c.phone);
+    const showEmail = !hiddenContact.has("email") && Boolean(c.email);
+    const showLinkedin = !hiddenContact.has("linkedinUrl") && !isCabasTemplate && Boolean(c.linkedinUrl);
+    const showGithub = !hiddenContact.has("githubUrl") && !isCabasTemplate && Boolean(c.githubUrl);
+    const showSummary = !hiddenContact.has("summary") && Boolean(resume.tailoredSummary || profile.summary);
 
     const fontStyles = isCabasTemplate
       ? {
@@ -664,18 +766,18 @@ export class ExportService {
           ${escapeHtml(c.fullName.toUpperCase())}
         </h1>
         ${
-          c.headline
+          showHeadline
             ? `<div class="headline" style="${fontStyles.headline}">
                 ${escapeHtml(c.headline.toUpperCase())}
               </div>`
             : ""
         }
         <div class="contact-row" style="${fontStyles.contact}">
-          ${c.location ? `<div style="display: flex; align-items: center; gap: 6px;"><span>📍</span><span>${escapeHtml(c.location)}</span></div>` : ""}
-          ${c.phone ? `<div style="display: flex; align-items: center; gap: 6px;"><span>📞</span><span>${escapeHtml(c.phone)}</span></div>` : ""}
-          ${c.email ? `<div style="display: flex; align-items: center; gap: 6px;"><span>✉️</span><a href="mailto:${escapeHtml(c.email)}" style="color: inherit; text-decoration: none;">${escapeHtml(c.email)}</a></div>` : ""}
-          ${!isCabasTemplate && c.linkedinUrl ? `<div style="display: flex; align-items: center; gap: 4px;"><span>🔗</span><a href="${escapeHtml(c.linkedinUrl)}" style="color: inherit; text-decoration: none;">LinkedIn</a></div>` : ""}
-          ${!isCabasTemplate && c.githubUrl ? `<div style="display: flex; align-items: center; gap: 4px;"><span>💻</span><a href="${escapeHtml(c.githubUrl)}" style="color: inherit; text-decoration: none;">GitHub</a></div>` : ""}
+          ${showLocation ? `<div style="display: flex; align-items: center; gap: 6px;"><span>📍</span><span>${escapeHtml(c.location)}</span></div>` : ""}
+          ${showPhone ? `<div style="display: flex; align-items: center; gap: 6px;"><span>📞</span><span>${escapeHtml(c.phone)}</span></div>` : ""}
+          ${showEmail ? `<div style="display: flex; align-items: center; gap: 6px;"><span>✉️</span><a href="mailto:${escapeHtml(c.email)}" style="color: inherit; text-decoration: none;">${escapeHtml(c.email)}</a></div>` : ""}
+          ${showLinkedin ? `<div style="display: flex; align-items: center; gap: 4px;"><span>🔗</span><a href="${escapeHtml(c.linkedinUrl)}" style="color: inherit; text-decoration: none;">LinkedIn</a></div>` : ""}
+          ${showGithub ? `<div style="display: flex; align-items: center; gap: 4px;"><span>💻</span><a href="${escapeHtml(c.githubUrl)}" style="color: inherit; text-decoration: none;">GitHub</a></div>` : ""}
         </div>
       </div>
     </header>
@@ -683,13 +785,13 @@ export class ExportService {
     <div class="header-divider" style="${fontStyles.divider}"></div>
 
     ${
-      resume.tailoredSummary
+      showSummary
         ? `<section style="margin-bottom: 3pt;">
       <h2 style="${fontStyles.h2}">
         ${summaryTitle}
       </h2>
       <div class="summary-text" style="${fontStyles.summary}">
-        ${escapeHtml(resume.tailoredSummary)}
+        ${escapeHtml(resume.tailoredSummary || profile.summary)}
       </div>
     </section>
     ${sectionDivider}`
@@ -723,12 +825,12 @@ export class ExportService {
     }
 
     ${
-      resume.tailoredExperiences.length > 0
+      activeExperiences.length > 0
         ? `<section style="margin-bottom: 3pt;">
       <h2 style="${fontStyles.h2}">
         ${expTitle}
       </h2>
-      ${resume.tailoredExperiences
+      ${activeExperiences
         .map(
           (exp) => {
             const visibleBullets = exp.bullets.filter((b) => !b.isHidden);
@@ -773,7 +875,7 @@ export class ExportService {
         </ul>
       </div>
     </section>
-    ${(activeCerts.length > 0 || (resume.tailoredProjects && resume.tailoredProjects.length > 0 && (!isOnePage || (totalExp <= 1 && totalCerts <= 2)))) ? sectionDivider : ""}`
+    ${(activeCerts.length > 0 || (activeProjects.length > 0 && (!isOnePage || (totalExp <= 1 && totalCerts <= 2)))) ? sectionDivider : ""}`
         : ""
     }
 
@@ -794,17 +896,17 @@ export class ExportService {
           .join("")}
       </ul>
     </section>
-    ${(resume.tailoredProjects && resume.tailoredProjects.length > 0 && (!isOnePage || (totalExp <= 1 && totalCerts <= 2))) ? sectionDivider : ""}`
+    ${(activeProjects.length > 0 && (!isOnePage || (totalExp <= 1 && totalCerts <= 2))) ? sectionDivider : ""}`
         : ""
     }
 
     ${
-      resume.tailoredProjects && resume.tailoredProjects.length > 0 && (!isOnePage || (totalExp <= 1 && totalCerts <= 2))
+      activeProjects.length > 0 && (!isOnePage || (totalExp <= 1 && totalCerts <= 2))
         ? `<section style="margin-bottom: 3pt;">
       <h2 style="${fontStyles.h2}">
         Technical Projects
       </h2>
-      ${resume.tailoredProjects
+      ${activeProjects
         .slice(0, resume.pageBudget === "1_page" ? 1 : undefined)
         .map(
           (p) => `
@@ -815,9 +917,9 @@ export class ExportService {
           </div>
           ${p.description ? `<div style="font-size: 8.5pt; color: #374151; margin-bottom: 2pt;">${escapeHtml(p.description)}</div>` : ""}
           ${
-            p.bullets.length > 0
+            p.bullets.filter((b) => !b.isHidden).length > 0
               ? `<ul style="margin: 1.5pt 0 2.5pt 0; padding-left: 14pt;">
-            ${p.bullets.map((b) => `<li style="${fontStyles.li}">${escapeHtml(b.content)}</li>`).join("\n            ")}
+            ${p.bullets.filter((b) => !b.isHidden).map((b) => `<li style="${fontStyles.li}">${escapeHtml(b.content)}</li>`).join("\n            ")}
           </ul>`
               : ""
           }

@@ -104,6 +104,7 @@ export const profileSchema = z.strictObject({
   certifications: z.array(certificationSchema).default([]),
   skills: z.array(skillItemSchema).default([]),
   summary: text(2000).default(""),
+  hiddenContactFields: z.array(z.string()).default([]),
   updatedAt: z.string().datetime(),
 });
 
