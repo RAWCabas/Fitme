@@ -153,20 +153,7 @@ export default function ForgotPasswordPage() {
         {error && (
           <div className="flex items-start gap-2 p-3 text-sm rounded-lg bg-destructive/10 text-destructive border border-destructive/20">
             <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-            <span className="leading-snug">
-              {error}
-              {error.toLowerCase().includes("not been activated") && (
-                <>
-                  {" "}
-                  <Link
-                    href={`/confirm?email=${encodeURIComponent(email)}`}
-                    className="font-semibold underline"
-                  >
-                    Verify your account
-                  </Link>
-                </>
-              )}
-            </span>
+            <span className="leading-snug">{error}</span>
           </div>
         )}
 

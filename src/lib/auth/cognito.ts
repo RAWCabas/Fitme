@@ -100,8 +100,8 @@ export async function cognitoSignIn({ email, password }: CognitoAuthParams): Pro
       if (err instanceof AppError) throw err;
       const cognitoErr = err as { name?: string; message?: string };
       if (cognitoErr.name === "UserNotConfirmedException") {
-        throw AppError.badRequest(
-          "USER_NOT_CONFIRMED: Your account is not confirmed yet. Please verify your email with the confirmation code sent to you."
+        throw AppError.forbidden(
+          "Your account isn't verified yet. Enter the verification code we emailed you to finish."
         );
       }
       if (cognitoErr.name === "NotAuthorizedException") {
@@ -360,7 +360,7 @@ export async function cognitoForgotPassword(email: string): Promise<ForgotPasswo
         if (data.__type === "InvalidParameterException") {
           if (data.message?.includes("no registered/verified email")) {
             throw AppError.badRequest(
-              "This account has not been activated yet. Please verify your email using the confirmation code sent when you registered."
+              "This account hasn't been verified yet. Sign in with your email and password and you'll be asked for the verification code."
             );
           }
           throw AppError.badRequest(data.message || "Cannot reset password for this user");
