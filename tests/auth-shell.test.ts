@@ -1,10 +1,17 @@
 import { describe, it, expect, vi } from "vitest";
 import { NextRequest } from "next/server";
-import { cognitoSignIn, cognitoSignUp } from "@/lib/auth/cognito";
+import {
+  cognitoSignIn,
+  cognitoSignUp,
+  cognitoForgotPassword,
+  cognitoConfirmForgotPassword,
+} from "@/lib/auth/cognito";
 import { POST as loginHandler } from "@/app/api/auth/login/route";
 import { POST as registerHandler } from "@/app/api/auth/register/route";
 import { POST as logoutHandler } from "@/app/api/auth/logout/route";
 import { GET as meHandler } from "@/app/api/auth/me/route";
+import { POST as forgotPasswordHandler } from "@/app/api/auth/forgot-password/route";
+import { POST as resetPasswordHandler } from "@/app/api/auth/reset-password/route";
 
 // Mock next/headers cookies
 const mockCookieStore = new Map<string, string>();
@@ -62,6 +69,31 @@ describe("Auth: Cognito Service", () => {
       })
     ).rejects.toThrow("Password must be at least 8 characters");
   });
+  it("initiates password recovery in dev mode", async () => {
+    const res = await cognitoForgotPassword("user@fitme.dev");
+    expect(res.deliveryMedium).toBe("EMAIL");
+    expect(res.destination).toBe("user@fitme.dev");
+  });
+
+  it("confirms password reset with valid code and password in dev mode", async () => {
+    await expect(
+      cognitoConfirmForgotPassword({
+        email: "user@fitme.dev",
+        confirmationCode: "123456",
+        newPassword: "newsecurepassword123",
+      })
+    ).resolves.toBeUndefined();
+  });
+
+  it("rejects password reset with short password", async () => {
+    await expect(
+      cognitoConfirmForgotPassword({
+        email: "user@fitme.dev",
+        confirmationCode: "123456",
+        newPassword: "short",
+      })
+    ).rejects.toThrow("Password must be at least 8 characters");
+  });
 });
 
 describe("Auth: API Route Handlers", () => {
@@ -105,6 +137,67 @@ describe("Auth: API Route Handlers", () => {
     // Subsequent /api/auth/me should answer 401
     const meRes = await meHandler();
     expect(meRes.status).toBe(401);
+  });
+
+  it("handles forgot-password route with valid and invalid email", async () => {
+    // Malformed email
+    const badReq = new NextRequest("http://localhost:3000/api/auth/forgot-password", {
+      method: "POST",
+      body: JSON.stringify({ email: "invalid-email" }),
+    });
+    const badRes = await forgotPasswordHandler(badReq);
+    expect(badRes.status).toBe(400);
+
+    // Valid email
+    const goodReq = new NextRequest("http://localhost:3000/api/auth/forgot-password", {
+      method: "POST",
+      body: JSON.stringify({ email: "valid@example.com" }),
+    });
+    const goodRes = await forgotPasswordHandler(goodReq);
+    expect(goodRes.status).toBe(200);
+    const body = await goodRes.json();
+    expect(body.ok).toBe(true);
+    expect(body.message).toContain("Verification code sent");
+  });
+
+  it("handles reset-password route with valid and invalid parameters", async () => {
+    // Invalid: missing code
+    const missingCodeReq = new NextRequest("http://localhost:3000/api/auth/reset-password", {
+      method: "POST",
+      body: JSON.stringify({
+        email: "valid@example.com",
+        confirmationCode: "",
+        newPassword: "newpassword123",
+      }),
+    });
+    const missingCodeRes = await resetPasswordHandler(missingCodeReq);
+    expect(missingCodeRes.status).toBe(400);
+
+    // Invalid: password too short
+    const shortPassReq = new NextRequest("http://localhost:3000/api/auth/reset-password", {
+      method: "POST",
+      body: JSON.stringify({
+        email: "valid@example.com",
+        confirmationCode: "123456",
+        newPassword: "short",
+      }),
+    });
+    const shortPassRes = await resetPasswordHandler(shortPassReq);
+    expect(shortPassRes.status).toBe(400);
+
+    // Valid
+    const validReq = new NextRequest("http://localhost:3000/api/auth/reset-password", {
+      method: "POST",
+      body: JSON.stringify({
+        email: "valid@example.com",
+        confirmationCode: "123456",
+        newPassword: "brandnewpassword123",
+      }),
+    });
+    const validRes = await resetPasswordHandler(validReq);
+    expect(validRes.status).toBe(200);
+    const validBody = await validRes.json();
+    expect(validBody.ok).toBe(true);
   });
 });
 
