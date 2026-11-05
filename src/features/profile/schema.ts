@@ -39,7 +39,7 @@ export const workExperienceSchema = z.strictObject({
 export const projectSchema = z.strictObject({
   id: z.string().uuid(),
   name: text(120).min(1, "Project name is required"),
-  description: text(500).default(""),
+  description: text(2000).default(""),
   technologies: z.array(text(40)).default([]),
   liveUrl: z.union([z.literal(""), z.string().url()]).default(""),
   repoUrl: z.union([z.literal(""), z.string().url()]).default(""),

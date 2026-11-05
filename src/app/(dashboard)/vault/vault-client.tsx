@@ -409,17 +409,40 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
     }
   }
 
+  // Helper to normalize web URLs
+  function normalizeWebUrl(val: string): string {
+    const trimmed = (val || "").trim();
+    if (!trimmed) return "";
+    if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) return trimmed;
+    return `https://${trimmed}`;
+  }
+
   // Add Project
   async function handleAddProject(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     try {
+      const cleanTech = (newProjTech ? newProjTech.split(",") : [])
+        .map((t) => t.trim().slice(0, 40))
+        .filter(Boolean);
+
+      const descLines = newProjDesc.split("\n").map((l) => l.trim()).filter(Boolean);
+      const parsedBullets = descLines.length > 1
+        ? descLines.map((content) => ({
+            id: crypto.randomUUID(),
+            content: content.slice(0, 1000),
+            isHidden: false,
+            hasMetrics: false,
+          }))
+        : [];
+
       const payload = {
-        name: newProjName,
-        description: newProjDesc,
-        technologies: newProjTech ? newProjTech.split(",").map((t) => t.trim()).filter(Boolean) : [],
-        liveUrl: newProjLive || "",
-        repoUrl: newProjRepo || "",
+        name: newProjName.trim(),
+        description: newProjDesc.trim(),
+        technologies: cleanTech,
+        liveUrl: normalizeWebUrl(newProjLive),
+        repoUrl: normalizeWebUrl(newProjRepo),
+        bullets: parsedBullets,
       };
 
       const res = await fetch("/api/profile/projects", {
@@ -430,7 +453,31 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
 
       if (res.ok) {
         const created: Project = await res.json();
-        setProfile((prev) => ({ ...prev, projects: [created, ...prev.projects] }));
+        const nextProfile = { ...profile, projects: [created, ...profile.projects] };
+        setProfile(nextProfile);
+        persistFullProfile(nextProfile);
+        setShowProjForm(false);
+        setNewProjName("");
+        setNewProjDesc("");
+        setNewProjTech("");
+        setNewProjLive("");
+        setNewProjRepo("");
+        flashSuccess("Project added to vault");
+      } else {
+        // Fallback: save directly via persistFullProfile
+        const fallbackProject: Project = {
+          id: crypto.randomUUID(),
+          name: newProjName.trim(),
+          description: newProjDesc.trim(),
+          technologies: cleanTech,
+          liveUrl: normalizeWebUrl(newProjLive),
+          repoUrl: normalizeWebUrl(newProjRepo),
+          bullets: parsedBullets,
+          isHidden: false,
+        };
+        const nextProfile = { ...profile, projects: [fallbackProject, ...profile.projects] };
+        setProfile(nextProfile);
+        await persistFullProfile(nextProfile);
         setShowProjForm(false);
         setNewProjName("");
         setNewProjDesc("");
@@ -723,12 +770,16 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
     if (!editingProj) return;
     setLoading(true);
     try {
+      const cleanTech = (editProjTech ? editProjTech.split(",") : [])
+        .map((t) => t.trim().slice(0, 40))
+        .filter(Boolean);
+
       const payload = {
         name: editProjName.trim(),
         description: editProjDesc.trim(),
-        technologies: editProjTech.split(",").map((t) => t.trim()).filter(Boolean),
-        liveUrl: editProjLive.trim(),
-        repoUrl: editProjRepo.trim(),
+        technologies: cleanTech,
+        liveUrl: normalizeWebUrl(editProjLive),
+        repoUrl: normalizeWebUrl(editProjRepo),
       };
 
       const res = await fetch(`/api/profile/projects/${editingProj.id}`, {
@@ -739,10 +790,29 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
 
       if (res.ok) {
         const updated: Project = await res.json();
-        setProfile((prev) => ({
-          ...prev,
-          projects: prev.projects.map((p) => (p.id === updated.id ? updated : p)),
-        }));
+        const nextProfile = {
+          ...profile,
+          projects: profile.projects.map((p) => (p.id === updated.id ? updated : p)),
+        };
+        setProfile(nextProfile);
+        persistFullProfile(nextProfile);
+        setEditingProj(null);
+        flashSuccess("Project updated");
+      } else {
+        const updatedProject: Project = {
+          ...editingProj,
+          name: editProjName.trim(),
+          description: editProjDesc.trim(),
+          technologies: cleanTech,
+          liveUrl: normalizeWebUrl(editProjLive),
+          repoUrl: normalizeWebUrl(editProjRepo),
+        };
+        const nextProfile = {
+          ...profile,
+          projects: profile.projects.map((p) => (p.id === editingProj.id ? updatedProject : p)),
+        };
+        setProfile(nextProfile);
+        await persistFullProfile(nextProfile);
         setEditingProj(null);
         flashSuccess("Project updated");
       }
