@@ -18,6 +18,14 @@ import {
   SkillItem 
 } from "./schema";
 
+/**
+ * Detects whether a bullet contains quantifiable achievements / Google XYZ metrics.
+ */
+export function detectMetrics(text: string): boolean {
+  if (!text) return false;
+  return /\b\d+([.,]\d+)?\s*(%|\+|x|k|m|hours?|hrs?|users?|devices?|tickets?|workstations?|pts?|days?|months?|years?)?\b|\$\s*\d+/i.test(text);
+}
+
 export class ProfileService {
   private customRepo?: ProfileRepo;
 
@@ -210,11 +218,12 @@ export class ProfileService {
       bullets: Array.isArray(raw.bullets)
         ? raw.bullets.map((b: unknown) => {
             const bulletObj = typeof b === "object" && b !== null ? (b as Record<string, unknown>) : { content: String(b) };
+            const content = String(bulletObj.content || "").trim();
             return {
               id: bulletObj.id || crypto.randomUUID(),
-              content: bulletObj.content,
+              content,
               isHidden: Boolean(bulletObj.isHidden),
-              hasMetrics: Boolean(bulletObj.hasMetrics),
+              hasMetrics: bulletObj.hasMetrics !== undefined ? Boolean(bulletObj.hasMetrics) : detectMetrics(content),
             };
           })
         : [],
@@ -283,11 +292,12 @@ export class ProfileService {
       bullets: Array.isArray(raw.bullets)
         ? raw.bullets.map((b: unknown) => {
             const bulletObj = typeof b === "object" && b !== null ? (b as Record<string, unknown>) : { content: String(b) };
+            const content = String(bulletObj.content || "").trim();
             return {
               id: bulletObj.id || crypto.randomUUID(),
-              content: String(bulletObj.content || "").trim(),
+              content,
               isHidden: Boolean(bulletObj.isHidden),
-              hasMetrics: Boolean(bulletObj.hasMetrics),
+              hasMetrics: bulletObj.hasMetrics !== undefined ? Boolean(bulletObj.hasMetrics) : detectMetrics(content),
             };
           })
         : existing.bullets,
@@ -314,11 +324,12 @@ export class ProfileService {
       bullets: Array.isArray(raw.bullets)
         ? raw.bullets.map((b: unknown) => {
             const bulletObj = typeof b === "object" && b !== null ? (b as Record<string, unknown>) : { content: String(b) };
+            const content = String(bulletObj.content || "").trim();
             return {
               id: bulletObj.id || crypto.randomUUID(),
-              content: bulletObj.content,
+              content,
               isHidden: Boolean(bulletObj.isHidden),
-              hasMetrics: Boolean(bulletObj.hasMetrics),
+              hasMetrics: bulletObj.hasMetrics !== undefined ? Boolean(bulletObj.hasMetrics) : detectMetrics(content),
             };
           })
         : [],
@@ -390,11 +401,12 @@ export class ProfileService {
       bullets: Array.isArray(raw.bullets)
         ? raw.bullets.map((b: unknown) => {
             const bulletObj = typeof b === "object" && b !== null ? (b as Record<string, unknown>) : { content: String(b) };
+            const content = String(bulletObj.content || "").trim();
             return {
               id: bulletObj.id || crypto.randomUUID(),
-              content: String(bulletObj.content || "").trim(),
+              content,
               isHidden: Boolean(bulletObj.isHidden),
-              hasMetrics: Boolean(bulletObj.hasMetrics),
+              hasMetrics: bulletObj.hasMetrics !== undefined ? Boolean(bulletObj.hasMetrics) : detectMetrics(content),
             };
           })
         : existing.bullets,

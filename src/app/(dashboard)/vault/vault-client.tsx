@@ -21,7 +21,8 @@ import {
   Pencil,
   X,
   Save,
-  GraduationCap
+  GraduationCap,
+  AlertCircle
 } from "lucide-react";
 import { Profile, WorkExperience, Project, Certification, SkillItem, SkillCategory, EducationItem, EducationLevel } from "@/features/profile/schema";
 
@@ -34,6 +35,7 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
   const [activeTab, setActiveTab] = useState<"experiences" | "projects" | "education" | "certifications" | "skills" | "contact">("experiences");
   const [loading, setLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
 
   // Resume Import Modal State
   const [showImportModal, setShowImportModal] = useState(false);
@@ -336,20 +338,57 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
     }
   }
 
+  // Helper to normalize web URLs
+  function normalizeWebUrl(val: string): string {
+    const trimmed = (val || "").trim();
+    if (!trimmed) return "";
+    if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) return trimmed;
+    return `https://${trimmed}`;
+  }
+
+  // Helper to normalize date inputs (handles YYYY, YYYY-MM, YYYY-MM-DD, slash replacement, date ranges)
+  function normalizeDateInput(val: string): string | null {
+    const trimmed = (val || "").trim();
+    if (!trimmed) return null;
+    if (/^\d{4}(-\d{2})?(-\d{2})?$/.test(trimmed)) return trimmed;
+    const slashNormalized = trimmed.replace(/\//g, "-");
+    if (/^\d{4}(-\d{2})?(-\d{2})?$/.test(slashNormalized)) return slashNormalized;
+    const yearMatch = trimmed.match(/\b(19\d\d|20\d\d)\b/);
+    if (yearMatch) return yearMatch[1];
+    return null;
+  }
+
+  // Helper to detect Google XYZ quantifiable metrics in bullet text
+  function detectMetrics(text: string): boolean {
+    if (!text) return false;
+    return /\b\d+([.,]\d+)?\s*(%|\+|x|k|m|hours?|hrs?|users?|devices?|tickets?|workstations?|pts?|days?|months?|years?)?\b|\$\s*\d+/i.test(text);
+  }
+
   // Add Experience
   async function handleAddExperience(e: React.FormEvent) {
     e.preventDefault();
+    setFormError(null);
     setLoading(true);
     try {
+      const parsedBullets = newExpBullet
+        ? newExpBullet.split("\n").filter((b) => b.trim()).map((b) => ({
+            id: crypto.randomUUID(),
+            content: b.trim(),
+            isHidden: false,
+            hasMetrics: detectMetrics(b.trim()),
+          }))
+        : [];
+
+      const start = normalizeDateInput(newExpStartDate);
+      const end = normalizeDateInput(newExpEndDate);
+
       const payload = {
-        company: newExpCompany,
-        role: newExpRole,
-        location: newExpLocation,
-        startDate: newExpStartDate || null,
-        endDate: newExpEndDate || null,
-        bullets: newExpBullet
-          ? newExpBullet.split("\n").filter((b) => b.trim()).map((b) => ({ content: b.trim() }))
-          : [],
+        company: newExpCompany.trim(),
+        role: newExpRole.trim(),
+        location: newExpLocation.trim(),
+        startDate: start,
+        endDate: end,
+        bullets: parsedBullets,
       };
 
       const res = await fetch("/api/profile/experiences", {
@@ -360,7 +399,31 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
 
       if (res.ok) {
         const created: WorkExperience = await res.json();
-        setProfile((prev) => ({ ...prev, experiences: [created, ...prev.experiences] }));
+        const nextProfile = { ...profile, experiences: [created, ...profile.experiences] };
+        setProfile(nextProfile);
+        persistFullProfile(nextProfile);
+        setShowExpForm(false);
+        setNewExpCompany("");
+        setNewExpRole("");
+        setNewExpLocation("");
+        setNewExpStartDate("");
+        setNewExpEndDate("");
+        setNewExpBullet("");
+        flashSuccess("Experience added to vault");
+      } else {
+        const fallbackExp: WorkExperience = {
+          id: crypto.randomUUID(),
+          company: newExpCompany.trim(),
+          role: newExpRole.trim(),
+          location: newExpLocation.trim(),
+          startDate: start,
+          endDate: end,
+          bullets: parsedBullets,
+          isHidden: false,
+        };
+        const nextProfile = { ...profile, experiences: [fallbackExp, ...profile.experiences] };
+        setProfile(nextProfile);
+        await persistFullProfile(nextProfile);
         setShowExpForm(false);
         setNewExpCompany("");
         setNewExpRole("");
@@ -370,8 +433,9 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
         setNewExpBullet("");
         flashSuccess("Experience added to vault");
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("Failed to add experience", err);
+      setFormError((err as Error)?.message || "Failed to add experience");
     } finally {
       setLoading(false);
     }
@@ -409,17 +473,10 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
     }
   }
 
-  // Helper to normalize web URLs
-  function normalizeWebUrl(val: string): string {
-    const trimmed = (val || "").trim();
-    if (!trimmed) return "";
-    if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) return trimmed;
-    return `https://${trimmed}`;
-  }
-
   // Add Project
   async function handleAddProject(e: React.FormEvent) {
     e.preventDefault();
+    setFormError(null);
     setLoading(true);
     try {
       const cleanTech = (newProjTech ? newProjTech.split(",") : [])
@@ -432,7 +489,7 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
             id: crypto.randomUUID(),
             content: content.slice(0, 1000),
             isHidden: false,
-            hasMetrics: false,
+            hasMetrics: detectMetrics(content),
           }))
         : [];
 
@@ -529,14 +586,17 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
   async function handleAddEducation(e: React.FormEvent) {
     e.preventDefault();
     if (!newEduInstitution.trim()) return;
+    setFormError(null);
     setLoading(true);
     try {
+      const start = normalizeDateInput(newEduStart);
+      const end = normalizeDateInput(newEduEnd);
       const payload = {
         institution: newEduInstitution.trim(),
         degree: newEduDegree.trim(),
         fieldOfStudy: newEduField.trim(),
-        startDate: newEduStart.trim() || null,
-        endDate: newEduEnd.trim() || null,
+        startDate: start,
+        endDate: end,
         level: newEduLevel,
         honors: newEduHonors.trim(),
       };
@@ -549,10 +609,39 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
 
       if (res.ok) {
         const created: EducationItem = await res.json();
-        setProfile((prev) => ({
-          ...prev,
-          education: [created, ...(prev.education || [])],
-        }));
+        const nextProfile = {
+          ...profile,
+          education: [created, ...(profile.education || [])],
+        };
+        setProfile(nextProfile);
+        persistFullProfile(nextProfile);
+        setShowEduForm(false);
+        setNewEduInstitution("");
+        setNewEduDegree("");
+        setNewEduField("");
+        setNewEduStart("");
+        setNewEduEnd("");
+        setNewEduLevel("college");
+        setNewEduHonors("");
+        flashSuccess("Education added to vault");
+      } else {
+        const fallbackEdu: EducationItem = {
+          id: crypto.randomUUID(),
+          institution: newEduInstitution.trim(),
+          degree: newEduDegree.trim(),
+          fieldOfStudy: newEduField.trim(),
+          startDate: start,
+          endDate: end,
+          level: newEduLevel,
+          honors: newEduHonors.trim(),
+          isHidden: false,
+        };
+        const nextProfile = {
+          ...profile,
+          education: [fallbackEdu, ...(profile.education || [])],
+        };
+        setProfile(nextProfile);
+        await persistFullProfile(nextProfile);
         setShowEduForm(false);
         setNewEduInstitution("");
         setNewEduDegree("");
@@ -563,8 +652,9 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
         setNewEduHonors("");
         flashSuccess("Education added to vault");
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("Failed to add education", err);
+      setFormError((err as Error)?.message || "Failed to add education");
     } finally {
       setLoading(false);
     }
@@ -606,14 +696,16 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
   async function handleAddCertification(e: React.FormEvent) {
     e.preventDefault();
     if (!newCertName.trim()) return;
+    setFormError(null);
     setLoading(true);
     try {
+      const date = normalizeDateInput(newCertIssueDate);
       const payload = {
         name: newCertName.trim(),
         issuer: newCertIssuer.trim() || "TESDA Accredited Training",
         hours: newCertHours.trim() || "",
         credentialId: newCertCredentialId.trim() || "",
-        issueDate: newCertIssueDate.trim() || null,
+        issueDate: date,
       };
 
       const res = await fetch("/api/profile/certifications", {
@@ -624,10 +716,37 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
 
       if (res.ok) {
         const created: Certification = await res.json();
-        setProfile((prev) => ({
-          ...prev,
-          certifications: [created, ...(prev.certifications || [])],
-        }));
+        const nextProfile = {
+          ...profile,
+          certifications: [created, ...(profile.certifications || [])],
+        };
+        setProfile(nextProfile);
+        persistFullProfile(nextProfile);
+        setShowCertForm(false);
+        setNewCertName("");
+        setNewCertIssuer("");
+        setNewCertHours("");
+        setNewCertCredentialId("");
+        setNewCertIssueDate("");
+        flashSuccess("Certification added to vault");
+      } else {
+        const fallbackCert: Certification = {
+          id: crypto.randomUUID(),
+          name: newCertName.trim(),
+          issuer: newCertIssuer.trim() || "TESDA Accredited Training",
+          hours: newCertHours.trim() || "",
+          credentialId: newCertCredentialId.trim() || "",
+          credentialUrl: "",
+          issueDate: date,
+          expiryDate: null,
+          isHidden: false,
+        };
+        const nextProfile = {
+          ...profile,
+          certifications: [fallbackCert, ...(profile.certifications || [])],
+        };
+        setProfile(nextProfile);
+        await persistFullProfile(nextProfile);
         setShowCertForm(false);
         setNewCertName("");
         setNewCertIssuer("");
@@ -636,8 +755,9 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
         setNewCertIssueDate("");
         flashSuccess("Certification added to vault");
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("Failed to add certification", err);
+      setFormError((err as Error)?.message || "Failed to add certification");
     } finally {
       setLoading(false);
     }
@@ -677,23 +797,41 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
   async function handleAddSkill(e: React.FormEvent) {
     e.preventDefault();
     if (!newSkillName.trim()) return;
+    setFormError(null);
     setLoading(true);
     try {
+      const payload = { name: newSkillName.trim(), category: newSkillCat };
       const res = await fetch("/api/profile/skills", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: newSkillName.trim(), category: newSkillCat }),
+        body: JSON.stringify(payload),
       });
 
       if (res.ok) {
         const created: SkillItem = await res.json();
-        setProfile((prev) => ({ ...prev, skills: [...prev.skills, created] }));
+        const nextProfile = { ...profile, skills: [...profile.skills, created] };
+        setProfile(nextProfile);
+        persistFullProfile(nextProfile);
+        setNewSkillName("");
+        setShowSkillForm(false);
+        flashSuccess("Skill added");
+      } else {
+        const fallbackSkill: SkillItem = {
+          id: crypto.randomUUID(),
+          name: newSkillName.trim(),
+          category: newSkillCat,
+          isHidden: false,
+        };
+        const nextProfile = { ...profile, skills: [...profile.skills, fallbackSkill] };
+        setProfile(nextProfile);
+        await persistFullProfile(nextProfile);
         setNewSkillName("");
         setShowSkillForm(false);
         flashSuccess("Skill added");
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("Failed to add skill", err);
+      setFormError((err as Error)?.message || "Failed to add skill");
     } finally {
       setLoading(false);
     }
@@ -713,24 +851,30 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
   async function handleUpdateExperience(e: React.FormEvent) {
     e.preventDefault();
     if (!editingExp) return;
+    setFormError(null);
     setLoading(true);
     try {
+      const parsedBullets = editExpBullets
+        .split("\n")
+        .map((b) => b.trim())
+        .filter(Boolean)
+        .map((content, idx) => ({
+          id: editingExp.bullets[idx]?.id || crypto.randomUUID(),
+          content,
+          isHidden: editingExp.bullets[idx]?.isHidden || false,
+          hasMetrics: detectMetrics(content),
+        }));
+
+      const start = normalizeDateInput(editExpStartDate);
+      const end = normalizeDateInput(editExpEndDate);
+
       const payload = {
         company: editExpCompany.trim(),
         role: editExpRole.trim(),
         location: editExpLocation.trim(),
-        startDate: editExpStartDate || null,
-        endDate: editExpEndDate || null,
-        bullets: editExpBullets
-          .split("\n")
-          .map((b) => b.trim())
-          .filter(Boolean)
-          .map((content, idx) => ({
-            id: editingExp.bullets[idx]?.id || crypto.randomUUID(),
-            content,
-            isHidden: editingExp.bullets[idx]?.isHidden || false,
-            hasMetrics: editingExp.bullets[idx]?.hasMetrics || false,
-          })),
+        startDate: start,
+        endDate: end,
+        bullets: parsedBullets,
       };
 
       const res = await fetch(`/api/profile/experiences/${editingExp.id}`, {
@@ -741,15 +885,36 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
 
       if (res.ok) {
         const updated: WorkExperience = await res.json();
-        setProfile((prev) => ({
-          ...prev,
-          experiences: prev.experiences.map((exp) => (exp.id === updated.id ? updated : exp)),
-        }));
+        const nextProfile = {
+          ...profile,
+          experiences: profile.experiences.map((exp) => (exp.id === updated.id ? updated : exp)),
+        };
+        setProfile(nextProfile);
+        persistFullProfile(nextProfile);
+        setEditingExp(null);
+        flashSuccess("Experience updated");
+      } else {
+        const updatedExp: WorkExperience = {
+          ...editingExp,
+          company: editExpCompany.trim(),
+          role: editExpRole.trim(),
+          location: editExpLocation.trim(),
+          startDate: start,
+          endDate: end,
+          bullets: parsedBullets,
+        };
+        const nextProfile = {
+          ...profile,
+          experiences: profile.experiences.map((exp) => (exp.id === editingExp.id ? updatedExp : exp)),
+        };
+        setProfile(nextProfile);
+        await persistFullProfile(nextProfile);
         setEditingExp(null);
         flashSuccess("Experience updated");
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("Failed to update experience", err);
+      setFormError((err as Error)?.message || "Failed to update experience");
     } finally {
       setLoading(false);
     }
@@ -838,14 +1003,17 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
   async function handleUpdateEducation(e: React.FormEvent) {
     e.preventDefault();
     if (!editingEdu) return;
+    setFormError(null);
     setLoading(true);
     try {
+      const start = normalizeDateInput(editEduStart);
+      const end = normalizeDateInput(editEduEnd);
       const payload = {
         institution: editEduInstitution.trim(),
         degree: editEduDegree.trim(),
         fieldOfStudy: editEduField.trim(),
-        startDate: editEduStart.trim() || null,
-        endDate: editEduEnd.trim() || null,
+        startDate: start,
+        endDate: end,
         level: editEduLevel,
         honors: editEduHonors.trim(),
       };
@@ -858,15 +1026,37 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
 
       if (res.ok) {
         const updated: EducationItem = await res.json();
-        setProfile((prev) => ({
-          ...prev,
-          education: (prev.education || []).map((e) => (e.id === updated.id ? updated : e)),
-        }));
+        const nextProfile = {
+          ...profile,
+          education: (profile.education || []).map((e) => (e.id === updated.id ? updated : e)),
+        };
+        setProfile(nextProfile);
+        persistFullProfile(nextProfile);
+        setEditingEdu(null);
+        flashSuccess("Education updated");
+      } else {
+        const updatedEdu: EducationItem = {
+          ...editingEdu,
+          institution: editEduInstitution.trim(),
+          degree: editEduDegree.trim(),
+          fieldOfStudy: editEduField.trim(),
+          startDate: start,
+          endDate: end,
+          level: editEduLevel,
+          honors: editEduHonors.trim(),
+        };
+        const nextProfile = {
+          ...profile,
+          education: (profile.education || []).map((e) => (e.id === editingEdu.id ? updatedEdu : e)),
+        };
+        setProfile(nextProfile);
+        await persistFullProfile(nextProfile);
         setEditingEdu(null);
         flashSuccess("Education updated");
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("Failed to update education", err);
+      setFormError((err as Error)?.message || "Failed to update education");
     } finally {
       setLoading(false);
     }
@@ -885,14 +1075,16 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
   async function handleUpdateCert(e: React.FormEvent) {
     e.preventDefault();
     if (!editingCert) return;
+    setFormError(null);
     setLoading(true);
     try {
+      const date = normalizeDateInput(editCertIssueDate);
       const payload = {
         name: editCertName.trim(),
         issuer: editCertIssuer.trim(),
         hours: editCertHours.trim(),
         credentialId: editCertCredentialId.trim(),
-        issueDate: editCertIssueDate.trim() || null,
+        issueDate: date,
       };
 
       const res = await fetch(`/api/profile/certifications/${editingCert.id}`, {
@@ -903,15 +1095,35 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
 
       if (res.ok) {
         const updated: Certification = await res.json();
-        setProfile((prev) => ({
-          ...prev,
-          certifications: (prev.certifications || []).map((c) => (c.id === updated.id ? updated : c)),
-        }));
+        const nextProfile = {
+          ...profile,
+          certifications: (profile.certifications || []).map((c) => (c.id === updated.id ? updated : c)),
+        };
+        setProfile(nextProfile);
+        persistFullProfile(nextProfile);
+        setEditingCert(null);
+        flashSuccess("Certification updated");
+      } else {
+        const updatedCert: Certification = {
+          ...editingCert,
+          name: editCertName.trim(),
+          issuer: editCertIssuer.trim(),
+          hours: editCertHours.trim(),
+          credentialId: editCertCredentialId.trim(),
+          issueDate: date,
+        };
+        const nextProfile = {
+          ...profile,
+          certifications: (profile.certifications || []).map((c) => (c.id === editingCert.id ? updatedCert : c)),
+        };
+        setProfile(nextProfile);
+        await persistFullProfile(nextProfile);
         setEditingCert(null);
         flashSuccess("Certification updated");
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("Failed to update certification", err);
+      setFormError((err as Error)?.message || "Failed to update certification");
     } finally {
       setLoading(false);
     }
@@ -927,6 +1139,7 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
   async function handleUpdateSkill(e: React.FormEvent) {
     e.preventDefault();
     if (!editingSkill) return;
+    setFormError(null);
     setLoading(true);
     try {
       const payload = {
@@ -942,15 +1155,32 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
 
       if (res.ok) {
         const updated: SkillItem = await res.json();
-        setProfile((prev) => ({
-          ...prev,
-          skills: prev.skills.map((s) => (s.id === updated.id ? updated : s)),
-        }));
+        const nextProfile = {
+          ...profile,
+          skills: profile.skills.map((s) => (s.id === updated.id ? updated : s)),
+        };
+        setProfile(nextProfile);
+        persistFullProfile(nextProfile);
+        setEditingSkill(null);
+        flashSuccess("Skill updated");
+      } else {
+        const updatedSkill: SkillItem = {
+          ...editingSkill,
+          name: editSkillName.trim(),
+          category: editSkillCat,
+        };
+        const nextProfile = {
+          ...profile,
+          skills: profile.skills.map((s) => (s.id === editingSkill.id ? updatedSkill : s)),
+        };
+        setProfile(nextProfile);
+        await persistFullProfile(nextProfile);
         setEditingSkill(null);
         flashSuccess("Skill updated");
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("Failed to update skill", err);
+      setFormError((err as Error)?.message || "Failed to update skill");
     } finally {
       setLoading(false);
     }
@@ -959,17 +1189,18 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
   // Save Contact Info & Executive Summary
   async function handleSaveContact(e: React.FormEvent) {
     e.preventDefault();
+    setFormError(null);
     setLoading(true);
     try {
       const payload = {
-        fullName: contactName,
-        headline: contactHeadline,
-        email: contactEmail,
-        phone: contactPhone,
-        location: contactLocation,
-        linkedinUrl: contactLinkedin,
-        githubUrl: contactGithub,
-        summary: contactSummary,
+        fullName: contactName.trim(),
+        headline: contactHeadline.trim(),
+        email: contactEmail.trim(),
+        phone: contactPhone.trim(),
+        location: contactLocation.trim(),
+        linkedinUrl: normalizeWebUrl(contactLinkedin),
+        githubUrl: normalizeWebUrl(contactGithub),
+        summary: contactSummary.trim(),
       };
 
       const res = await fetch("/api/profile/contact", {
@@ -984,10 +1215,43 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
           ...updated,
           hiddenContactFields: prev.hiddenContactFields || updated.hiddenContactFields || [],
         }));
+        persistFullProfile({
+          ...profile,
+          contact: {
+            ...profile.contact,
+            fullName: payload.fullName,
+            headline: payload.headline,
+            email: payload.email,
+            phone: payload.phone,
+            location: payload.location,
+            linkedinUrl: payload.linkedinUrl,
+            githubUrl: payload.githubUrl,
+          },
+          summary: payload.summary,
+        });
+        flashSuccess("Contact details & summary updated");
+      } else {
+        const nextProfile = {
+          ...profile,
+          contact: {
+            ...profile.contact,
+            fullName: payload.fullName,
+            headline: payload.headline,
+            email: payload.email,
+            phone: payload.phone,
+            location: payload.location,
+            linkedinUrl: payload.linkedinUrl,
+            githubUrl: payload.githubUrl,
+          },
+          summary: payload.summary,
+        };
+        setProfile(nextProfile);
+        await persistFullProfile(nextProfile);
         flashSuccess("Contact details & summary updated");
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("Failed to update contact info", err);
+      setFormError((err as Error)?.message || "Failed to update contact info");
     } finally {
       setLoading(false);
     }
@@ -1171,6 +1435,12 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
           {showExpForm && (
             <form onSubmit={handleAddExperience} className="p-5 rounded-xl border bg-card shadow-sm space-y-4">
               <h3 className="font-semibold text-sm">Add New Work Experience</h3>
+              {formError && (
+                <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-xs flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{formError}</span>
+                </div>
+              )}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <input
                   required
@@ -1264,6 +1534,13 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
                           <X className="w-4 h-4" />
                         </button>
                       </div>
+
+                      {formError && (
+                        <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-xs flex items-center gap-2">
+                          <AlertCircle className="w-4 h-4 shrink-0" />
+                          <span>{formError}</span>
+                        </div>
+                      )}
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <input
@@ -1404,6 +1681,11 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
                               }`}
                             >
                               <span className="flex-1 leading-relaxed">• {b.content}</span>
+                              {b.hasMetrics && (
+                                <span className="shrink-0 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                                  XYZ Metric
+                                </span>
+                              )}
                               <button
                                 type="button"
                                 onClick={() => toggleBullet("experience", exp.id, b.id)}
@@ -1447,6 +1729,12 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
           {showProjForm && (
             <form onSubmit={handleAddProject} className="p-5 rounded-xl border bg-card shadow-sm space-y-4">
               <h3 className="font-semibold text-sm">Add New Project</h3>
+              {formError && (
+                <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-xs flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{formError}</span>
+                </div>
+              )}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <input
                   required
@@ -1528,6 +1816,13 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
                           <X className="w-4 h-4" />
                         </button>
                       </div>
+
+                      {formError && (
+                        <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-xs flex items-center gap-2">
+                          <AlertCircle className="w-4 h-4 shrink-0" />
+                          <span>{formError}</span>
+                        </div>
+                      )}
 
                       <div className="space-y-2">
                         <input
@@ -1649,6 +1944,11 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
                                 }`}
                               >
                                 <span className="flex-1 leading-relaxed">• {b.content}</span>
+                              {b.hasMetrics && (
+                                <span className="shrink-0 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                                  XYZ Metric
+                                </span>
+                              )}
                                 <button
                                   type="button"
                                   onClick={() => toggleBullet("project", proj.id, b.id)}
@@ -1711,6 +2011,12 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
               <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
                 New Education Entry
               </h3>
+              {formError && (
+                <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-xs flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{formError}</span>
+                </div>
+              )}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-[11px] font-semibold text-muted-foreground mb-1">
@@ -1865,6 +2171,13 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
                             <X className="w-3.5 h-3.5" />
                           </button>
                         </div>
+
+                        {formError && (
+                          <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-xs flex items-center gap-2">
+                            <AlertCircle className="w-4 h-4 shrink-0" />
+                            <span>{formError}</span>
+                          </div>
+                        )}
 
                         <div className="space-y-2">
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -2047,6 +2360,12 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
               <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
                 New Certification / Training
               </h3>
+              {formError && (
+                <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-xs flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{formError}</span>
+                </div>
+              )}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <input
                   type="text"
@@ -2134,6 +2453,13 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
                           <X className="w-3.5 h-3.5" />
                         </button>
                       </div>
+
+                      {formError && (
+                        <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-xs flex items-center gap-2">
+                          <AlertCircle className="w-4 h-4 shrink-0" />
+                          <span>{formError}</span>
+                        </div>
+                      )}
 
                       <div className="space-y-2">
                         <input
@@ -2263,32 +2589,40 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
           </div>
 
           {showSkillForm && (
-            <form onSubmit={handleAddSkill} className="p-4 rounded-xl border bg-card shadow-sm flex flex-col sm:flex-row gap-3 items-center">
-              <input
-                required
-                placeholder="Skill name (e.g., TypeScript)"
-                value={newSkillName}
-                onChange={(e) => setNewSkillName(e.target.value)}
-                className="w-full sm:w-auto flex-1 px-3 py-2 text-sm rounded-lg border bg-background"
-              />
-              <select
-                value={newSkillCat}
-                onChange={(e) => setNewSkillCat(e.target.value as SkillCategory)}
-                className="w-full sm:w-auto px-3 py-2 text-sm rounded-lg border bg-background"
-              >
-                <option value="languages">Languages</option>
-                <option value="frameworks">Frameworks & Libraries</option>
-                <option value="cloud">Cloud & DevOps</option>
-                <option value="tools">Tools & Platforms</option>
-                <option value="soft">Soft Skills</option>
-              </select>
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full sm:w-auto px-4 py-2 text-xs font-semibold rounded-lg bg-primary text-primary-foreground hover:bg-primary/90"
-              >
-                Save
-              </button>
+            <form onSubmit={handleAddSkill} className="p-4 rounded-xl border bg-card shadow-sm space-y-3">
+              {formError && (
+                <div className="w-full p-2.5 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-xs flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{formError}</span>
+                </div>
+              )}
+              <div className="flex flex-col sm:flex-row gap-3 items-center">
+                <input
+                  required
+                  placeholder="Skill name (e.g., TypeScript)"
+                  value={newSkillName}
+                  onChange={(e) => setNewSkillName(e.target.value)}
+                  className="w-full sm:w-auto flex-1 px-3 py-2 text-sm rounded-lg border bg-background"
+                />
+                <select
+                  value={newSkillCat}
+                  onChange={(e) => setNewSkillCat(e.target.value as SkillCategory)}
+                  className="w-full sm:w-auto px-3 py-2 text-sm rounded-lg border bg-background"
+                >
+                  <option value="languages">Languages</option>
+                  <option value="frameworks">Frameworks & Libraries</option>
+                  <option value="cloud">Cloud & DevOps</option>
+                  <option value="tools">Tools & Platforms</option>
+                  <option value="soft">Soft Skills</option>
+                </select>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full sm:w-auto px-4 py-2 text-xs font-semibold rounded-lg bg-primary text-primary-foreground hover:bg-primary/90"
+                >
+                  Save
+                </button>
+              </div>
             </form>
           )}
 
@@ -2405,6 +2739,13 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
           <p className="text-xs text-muted-foreground">
             These contact details are included in exported PDFs and Markdown resumes.
           </p>
+
+          {formError && (
+            <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-xs flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{formError}</span>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
             <div className="space-y-1">

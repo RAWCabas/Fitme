@@ -7,9 +7,9 @@ export async function POST(req: NextRequest) {
   try {
     const session = await requireSession();
     const body = await req.json();
-    const { rawDescription, sourceUrl } = body;
+    const { rawDescription, sourceUrl, targetTitle } = body;
 
-    const job = await tailorService.parseJobDescription(session.userId, rawDescription, sourceUrl);
+    const job = await tailorService.parseJobDescription(session.userId, rawDescription, sourceUrl, targetTitle);
     return jsonResponse(job, 201);
   } catch (error) {
     return errorResponse(error);

@@ -46,10 +46,18 @@ export function StudioClient({
 }: StudioClientProps) {
   // Ingestion form state
   const [jdText, setJdText] = useState("");
+  const [targetRoleTitle, setTargetRoleTitle] = useState("");
   const [sourceUrl, setSourceUrl] = useState("");
   const [pageBudget, setPageBudget] = useState<PageBudget>("1_page");
   const [preset, setPreset] = useState<TypographyPreset>("cabas_executive");
   const [analyzing, setAnalyzing] = useState(false);
+  const [loadingRequestedResume, setLoadingRequestedResume] = useState(false);
+
+  // Helper to detect Google XYZ quantifiable metrics in bullet text
+  function detectMetrics(text: string): boolean {
+    if (!text) return false;
+    return /\b\d+([.,]\d+)?\s*(%|\+|x|k|m|hours?|hrs?|users?|devices?|tickets?|workstations?|pts?|days?|months?|years?)?\b|\$\s*\d+/i.test(text);
+  }
 
   // Active Tailoring state & Saved versions list
   const [resumesList, setResumesList] = useState<TailoredResume[]>(savedResumes);
@@ -162,6 +170,32 @@ export function StudioClient({
         if (matched) {
           setTailoredResume(matched);
         }
+      }
+
+      // If requestedId was explicitly specified in URL / props and not yet loaded into state, fetch on demand
+      if (requestedId && !resumesList.some((r) => r.id === requestedId)) {
+        setLoadingRequestedResume(true);
+        fetch(`/api/tailor/resumes/${requestedId}`)
+          .then((res) => (res.ok ? res.json() : null))
+          .then(async (fetchedResume: TailoredResume | null) => {
+            if (fetchedResume) {
+              setTailoredResume(fetchedResume);
+              setResumesList((prev) => [fetchedResume, ...prev.filter((r) => r.id !== fetchedResume.id)]);
+
+              if (!currentJobs[fetchedResume.jobOpportunityId]) {
+                const jobRes = await fetch(`/api/tailor/jobs/${fetchedResume.jobOpportunityId}`).catch(() => null);
+                if (jobRes && jobRes.ok) {
+                  const fetchedJob: JobOpportunity = await jobRes.json();
+                  setActiveJob(fetchedJob);
+                  setJobsMap((prev) => ({ ...prev, [fetchedJob.id]: fetchedJob }));
+                }
+              } else {
+                setActiveJob(currentJobs[fetchedResume.jobOpportunityId]);
+              }
+            }
+          })
+          .catch((err) => console.error("Failed to load requested resume", err))
+          .finally(() => setLoadingRequestedResume(false));
       }
     } catch (e) {
       console.error("Failed to load cached resumes from localStorage", e);
@@ -339,7 +373,11 @@ export function StudioClient({
       const parseRes = await fetch("/api/tailor/parse-jd", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ rawDescription: jdText, sourceUrl }),
+        body: JSON.stringify({
+          rawDescription: jdText,
+          sourceUrl,
+          targetTitle: targetRoleTitle.trim(),
+        }),
       });
       if (!parseRes.ok) throw new Error("Failed to parse Job Description");
       const job: JobOpportunity = await parseRes.json();
@@ -709,8 +747,17 @@ export function StudioClient({
 
   return (
     <div className="space-y-6">
+      {/* LOADING STATE WHEN OPENING A REQUESTED RESUME */}
+      {loadingRequestedResume && (
+        <div className="max-w-md mx-auto my-20 p-8 rounded-2xl border bg-card text-center space-y-3 shadow-sm">
+          <Loader2 className="w-8 h-8 text-primary animate-spin mx-auto" />
+          <h3 className="font-bold text-base">Opening Tailored Resume...</h3>
+          <p className="text-xs text-muted-foreground">Retrieving your tailored resume and job match data.</p>
+        </div>
+      )}
+
       {/* VIEW 1: JOB INGESTION & SETUP (When no resume is active) */}
-      {!tailoredResume && (
+      {!loadingRequestedResume && !tailoredResume && (
         <div className="max-w-3xl mx-auto p-6 md:p-8 rounded-2xl border bg-card shadow-sm space-y-6">
           <div className="space-y-1">
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold">
@@ -724,14 +771,26 @@ export function StudioClient({
           </div>
 
           <form onSubmit={handleAnalyzeAndTailor} className="space-y-4">
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium">Job Posting URL (optional)</label>
-              <input
-                placeholder="https://jobs.lever.co/... or https://linkedin.com/jobs/..."
-                value={sourceUrl}
-                onChange={(e) => setSourceUrl(e.target.value)}
-                className="w-full px-3.5 py-2 text-sm rounded-lg border bg-background"
-              />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium">Target Role Title (optional)</label>
+                <input
+                  placeholder="e.g. IT Technical Support, Computer Engineer..."
+                  value={targetRoleTitle}
+                  onChange={(e) => setTargetRoleTitle(e.target.value)}
+                  className="w-full px-3.5 py-2 text-sm rounded-lg border bg-background"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium">Job Posting URL (optional)</label>
+                <input
+                  placeholder="https://jobs.lever.co/... or https://linkedin.com/jobs/..."
+                  value={sourceUrl}
+                  onChange={(e) => setSourceUrl(e.target.value)}
+                  className="w-full px-3.5 py-2 text-sm rounded-lg border bg-background"
+                />
+              </div>
             </div>
 
             <div className="space-y-1.5">
@@ -1508,8 +1567,10 @@ export function StudioClient({
                                       onKeyDown={async (e) => {
                                         if (e.key === "Enter" && editBulletText.trim()) {
                                           e.preventDefault();
+                                          const content = editBulletText.trim();
                                           const updated = [...tailoredResume.tailoredExperiences];
-                                          updated[roleIdx].bullets[bulletIdx].content = editBulletText.trim();
+                                          updated[roleIdx].bullets[bulletIdx].content = content;
+                                          updated[roleIdx].bullets[bulletIdx].hasMetrics = detectMetrics(content);
                                           await saveResumeEdits({ tailoredExperiences: updated });
                                           setEditingBulletKey(null);
                                         }
@@ -1519,8 +1580,10 @@ export function StudioClient({
                                     <button
                                       onClick={async () => {
                                         if (!editBulletText.trim()) return;
+                                        const content = editBulletText.trim();
                                         const updated = [...tailoredResume.tailoredExperiences];
-                                        updated[roleIdx].bullets[bulletIdx].content = editBulletText.trim();
+                                        updated[roleIdx].bullets[bulletIdx].content = content;
+                                        updated[roleIdx].bullets[bulletIdx].hasMetrics = detectMetrics(content);
                                         await saveResumeEdits({ tailoredExperiences: updated });
                                         setEditingBulletKey(null);
                                       }}
@@ -1540,7 +1603,14 @@ export function StudioClient({
                                   </div>
                                 ) : (
                                   <div className="group flex items-start justify-between gap-2">
-                                    <span className="flex-1 text-foreground leading-relaxed">• {b.content}</span>
+                                    <span className="flex-1 text-foreground leading-relaxed">
+                                      • {b.content}
+                                      {b.hasMetrics && (
+                                        <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                                          XYZ
+                                        </span>
+                                      )}
+                                    </span>
                                     <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 shrink-0">
                                       <button
                                         onClick={() => {
@@ -1590,12 +1660,13 @@ export function StudioClient({
                               onKeyDown={async (e) => {
                                 if (e.key === "Enter" && newRoleBulletText.trim()) {
                                   e.preventDefault();
+                                  const content = newRoleBulletText.trim();
                                   const updated = [...tailoredResume.tailoredExperiences];
                                   updated[roleIdx].bullets.push({
                                     id: crypto.randomUUID(),
-                                    content: newRoleBulletText.trim(),
+                                    content,
                                     isHidden: false,
-                                    hasMetrics: false,
+                                    hasMetrics: detectMetrics(content),
                                   });
                                   await saveResumeEdits({ tailoredExperiences: updated });
                                   setNewRoleBulletText("");
@@ -1607,12 +1678,13 @@ export function StudioClient({
                             <button
                               onClick={async () => {
                                 if (!newRoleBulletText.trim()) return;
+                                const content = newRoleBulletText.trim();
                                 const updated = [...tailoredResume.tailoredExperiences];
                                 updated[roleIdx].bullets.push({
                                   id: crypto.randomUUID(),
-                                  content: newRoleBulletText.trim(),
+                                  content,
                                   isHidden: false,
-                                  hasMetrics: false,
+                                  hasMetrics: detectMetrics(content),
                                 });
                                 await saveResumeEdits({ tailoredExperiences: updated });
                                 setNewRoleBulletText("");

@@ -38,7 +38,7 @@ export class TailorService {
   /**
    * Parses a raw job description using Amazon Bedrock or heuristic fallback.
    */
-  async parseJobDescription(userId: string, rawDescription: string, sourceUrl = ""): Promise<JobOpportunity> {
+  async parseJobDescription(userId: string, rawDescription: string, sourceUrl = "", targetTitle = ""): Promise<JobOpportunity> {
     if (!userId) throw AppError.unauthorized();
     if (!rawDescription || rawDescription.trim().length < 10) {
       throw AppError.badRequest("Please provide a valid job description (at least 10 characters)");
@@ -55,9 +55,10 @@ Return ONLY a valid JSON object matching the requested schema.`;
       fallbackGenerator: () => this.fallbackParseJd(rawDescription),
     });
 
-    let cleanRole = (extracted.role || "").trim();
-    if (!cleanRole || cleanRole.length > 50 || cleanRole.includes("\n") || cleanRole.includes(".")) {
-      cleanRole = "IT Technical Support";
+    const specifiedTitle = targetTitle ? targetTitle.trim() : "";
+    let cleanRole = specifiedTitle || (extracted.role || "").trim();
+    if (!cleanRole || cleanRole.length > 60 || cleanRole.includes("\n") || (!specifiedTitle && cleanRole.includes("."))) {
+      cleanRole = specifiedTitle || "IT Technical Support";
     }
 
     let cleanCompany = (extracted.company || "").trim();
