@@ -15,12 +15,29 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { email, password, name } = registerSchema.parse(body);
 
-    const session = await cognitoSignUp({ email, password, name });
-    await setSessionCookie(session);
+    const result = await cognitoSignUp({ email, password, name });
 
-    return jsonResponse({ user: session }, 201);
+    if (result.userConfirmed) {
+      const session = {
+        userId: result.userId,
+        email: result.email,
+        name: result.name,
+      };
+      await setSessionCookie(session);
+      return jsonResponse({ user: session, userConfirmed: true }, 201);
+    }
+
+    return jsonResponse(
+      {
+        ok: true,
+        userConfirmed: false,
+        email: result.email,
+        destination: result.destination,
+        message: "Verification code sent to your email. Please confirm your account.",
+      },
+      201
+    );
   } catch (error) {
     return errorResponse(error);
   }
 }
-

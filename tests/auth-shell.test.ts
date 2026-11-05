@@ -5,6 +5,8 @@ import {
   cognitoSignUp,
   cognitoForgotPassword,
   cognitoConfirmForgotPassword,
+  cognitoConfirmSignUp,
+  cognitoResendConfirmationCode,
 } from "@/lib/auth/cognito";
 import { POST as loginHandler } from "@/app/api/auth/login/route";
 import { POST as registerHandler } from "@/app/api/auth/register/route";
@@ -12,6 +14,8 @@ import { POST as logoutHandler } from "@/app/api/auth/logout/route";
 import { GET as meHandler } from "@/app/api/auth/me/route";
 import { POST as forgotPasswordHandler } from "@/app/api/auth/forgot-password/route";
 import { POST as resetPasswordHandler } from "@/app/api/auth/reset-password/route";
+import { POST as confirmSignUpHandler } from "@/app/api/auth/confirm-signup/route";
+import { POST as resendCodeHandler } from "@/app/api/auth/resend-code/route";
 
 // Mock next/headers cookies
 const mockCookieStore = new Map<string, string>();
@@ -93,6 +97,29 @@ describe("Auth: Cognito Service", () => {
         newPassword: "short",
       })
     ).rejects.toThrow("Password must be at least 8 characters");
+  });
+
+  it("confirms user signup with valid code in dev mode", async () => {
+    await expect(
+      cognitoConfirmSignUp({
+        email: "newuser@fitme.dev",
+        confirmationCode: "123456",
+      })
+    ).resolves.toBeUndefined();
+  });
+
+  it("rejects signup confirmation with short code in dev mode", async () => {
+    await expect(
+      cognitoConfirmSignUp({
+        email: "newuser@fitme.dev",
+        confirmationCode: "12",
+      })
+    ).rejects.toThrow("Confirmation code must be at least 4 characters");
+  });
+
+  it("resends confirmation code in dev mode", async () => {
+    const res = await cognitoResendConfirmationCode("newuser@fitme.dev");
+    expect(res.destination).toBe("newuser@fitme.dev");
   });
 });
 
@@ -198,6 +225,47 @@ describe("Auth: API Route Handlers", () => {
     expect(validRes.status).toBe(200);
     const validBody = await validRes.json();
     expect(validBody.ok).toBe(true);
+  });
+
+  it("handles confirm-signup route with valid and invalid parameters", async () => {
+    // Missing code
+    const badReq = new NextRequest("http://localhost:3000/api/auth/confirm-signup", {
+      method: "POST",
+      body: JSON.stringify({ email: "user@example.com", confirmationCode: "" }),
+    });
+    const badRes = await confirmSignUpHandler(badReq);
+    expect(badRes.status).toBe(400);
+
+    // Valid
+    const goodReq = new NextRequest("http://localhost:3000/api/auth/confirm-signup", {
+      method: "POST",
+      body: JSON.stringify({ email: "user@example.com", confirmationCode: "123456" }),
+    });
+    const goodRes = await confirmSignUpHandler(goodReq);
+    expect(goodRes.status).toBe(200);
+    const goodBody = await goodRes.json();
+    expect(goodBody.ok).toBe(true);
+    expect(goodBody.message).toContain("confirmed successfully");
+  });
+
+  it("handles resend-code route with valid and invalid parameters", async () => {
+    // Malformed email
+    const badReq = new NextRequest("http://localhost:3000/api/auth/resend-code", {
+      method: "POST",
+      body: JSON.stringify({ email: "invalid-email" }),
+    });
+    const badRes = await resendCodeHandler(badReq);
+    expect(badRes.status).toBe(400);
+
+    // Valid
+    const goodReq = new NextRequest("http://localhost:3000/api/auth/resend-code", {
+      method: "POST",
+      body: JSON.stringify({ email: "user@example.com" }),
+    });
+    const goodRes = await resendCodeHandler(goodReq);
+    expect(goodRes.status).toBe(200);
+    const goodBody = await goodRes.json();
+    expect(goodBody.ok).toBe(true);
   });
 });
 

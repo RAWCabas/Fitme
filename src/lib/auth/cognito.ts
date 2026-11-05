@@ -1,11 +1,25 @@
 import { AppError } from "@/lib/errors";
 import { getAwsRegion } from "@/lib/config";
 import { AuthSession } from "./session";
+import { CognitoUserPool, CognitoUser, AuthenticationDetails } from "amazon-cognito-identity-js";
 
 interface CognitoAuthParams {
   email: string;
   password: string;
   name?: string;
+}
+
+export interface SignUpResult {
+  userId: string;
+  email: string;
+  name: string;
+  userConfirmed: boolean;
+  destination?: string;
+}
+
+export interface ConfirmSignUpParams {
+  email: string;
+  confirmationCode: string;
 }
 
 export interface ForgotPasswordResult {
@@ -20,60 +34,83 @@ export interface ConfirmForgotPasswordParams {
 }
 
 /**
+ * Authenticates against Cognito using SRP (Secure Remote Password) protocol.
+ * SRP is supported by all Cognito User Pool clients by default.
+ */
+function srpSignIn({
+  email,
+  password,
+  userPoolId,
+  clientId,
+}: {
+  email: string;
+  password: string;
+  userPoolId: string;
+  clientId: string;
+}): Promise<{ idToken: string; sub: string }> {
+  return new Promise((resolve, reject) => {
+    const pool = new CognitoUserPool({ UserPoolId: userPoolId, ClientId: clientId });
+    const user = new CognitoUser({ Username: email, Pool: pool });
+    const authDetails = new AuthenticationDetails({ Username: email, Password: password });
+
+    user.authenticateUser(authDetails, {
+      onSuccess: (session) => {
+        const idToken = session.getIdToken().getJwtToken();
+        const sub = session.getIdToken().payload.sub || "";
+        resolve({ idToken, sub });
+      },
+      onFailure: (err) => {
+        reject(err);
+      },
+    });
+  });
+}
+
+/**
  * Authenticates a user against Amazon Cognito User Pool.
- * If Cognito credentials are not configured, falls back to deterministic local authentication for dev/tests.
+ * Uses SRP authentication to avoid requiring USER_PASSWORD_AUTH enabled on the client.
  */
 export async function cognitoSignIn({ email, password }: CognitoAuthParams): Promise<AuthSession> {
   const userPoolId = process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID;
   const clientId = process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID;
-  const region = getAwsRegion();
 
-  if (!email || !password) {
+  const trimmedEmail = email?.trim().toLowerCase();
+  if (!trimmedEmail || !password) {
     throw AppError.badRequest("Email and password are required");
   }
 
-  // If Cognito credentials are fully configured, authenticate with AWS Cognito
+  // If Cognito credentials are fully configured, authenticate with AWS Cognito via SRP
   if (userPoolId && clientId) {
     try {
-      const response = await fetch(`https://cognito-idp.${region}.amazonaws.com/`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-amz-json-1.1",
-          "X-Amz-Target": "AWSCognitoIdentityProviderService.InitiateAuth",
-        },
-        body: JSON.stringify({
-          AuthFlow: "USER_PASSWORD_AUTH",
-          ClientId: clientId,
-          AuthParameters: {
-            USERNAME: email,
-            PASSWORD: password,
-          },
-        }),
+      const { idToken, sub } = await srpSignIn({
+        email: trimmedEmail,
+        password,
+        userPoolId,
+        clientId,
       });
 
-      const data = await response.json();
-      if (!response.ok) {
-        if (data.message && data.message.includes("USER_PASSWORD_AUTH")) {
-          throw AppError.badRequest(
-            "USER_PASSWORD_AUTH flow is not enabled for this Cognito App Client. In AWS Console: Cognito User Pool > App clients > Authentication flows > check 'ALLOW_USER_PASSWORD_AUTH' and save changes."
-          );
-        }
-        throw AppError.unauthorized(data.message || "Invalid email or password");
-      }
-
-      // Generate deterministic userId from Cognito response or email
-      const userId = data.AuthenticationResult?.IdToken
-        ? parseSubFromJwt(data.AuthenticationResult.IdToken)
-        : `cognito_${Buffer.from(email).toString("hex").slice(0, 16)}`;
+      const userId = sub || (idToken ? parseSubFromJwt(idToken) : `cognito_${Buffer.from(trimmedEmail).toString("hex").slice(0, 16)}`);
 
       return {
         userId,
-        email,
-        name: email.split("@")[0],
+        email: trimmedEmail,
+        name: trimmedEmail.split("@")[0],
       };
-    } catch (err) {
+    } catch (err: unknown) {
       if (err instanceof AppError) throw err;
-      throw AppError.unauthorized("Authentication failed. Please check your credentials.");
+      const cognitoErr = err as { name?: string; message?: string };
+      if (cognitoErr.name === "UserNotConfirmedException") {
+        throw AppError.badRequest(
+          "USER_NOT_CONFIRMED: Your account is not confirmed yet. Please verify your email with the confirmation code sent to you."
+        );
+      }
+      if (cognitoErr.name === "NotAuthorizedException") {
+        throw AppError.unauthorized("Incorrect email or password.");
+      }
+      if (cognitoErr.name === "UserNotFoundException") {
+        throw AppError.unauthorized("No account found with this email address.");
+      }
+      throw AppError.unauthorized(cognitoErr.message || "Authentication failed. Please check your credentials.");
     }
   }
 
@@ -83,21 +120,22 @@ export async function cognitoSignIn({ email, password }: CognitoAuthParams): Pro
   }
 
   return {
-    userId: `dev_user_${Buffer.from(email).toString("hex").slice(0, 12)}`,
-    email,
-    name: email.split("@")[0],
+    userId: `dev_user_${Buffer.from(trimmedEmail).toString("hex").slice(0, 12)}`,
+    email: trimmedEmail,
+    name: trimmedEmail.split("@")[0],
   };
 }
 
 /**
  * Registers a new user with Amazon Cognito User Pool.
  */
-export async function cognitoSignUp({ email, password, name }: CognitoAuthParams): Promise<AuthSession> {
+export async function cognitoSignUp({ email, password, name }: CognitoAuthParams): Promise<SignUpResult> {
   const userPoolId = process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID;
   const clientId = process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID;
   const region = getAwsRegion();
 
-  if (!email || !password) {
+  const trimmedEmail = email?.trim().toLowerCase();
+  if (!trimmedEmail || !password) {
     throw AppError.badRequest("Email and password are required");
   }
 
@@ -105,7 +143,7 @@ export async function cognitoSignUp({ email, password, name }: CognitoAuthParams
     throw AppError.badRequest("Password must be at least 8 characters");
   }
 
-  const displayName = name || email.split("@")[0];
+  const displayName = name?.trim() || trimmedEmail.split("@")[0];
 
   // If Cognito is configured, execute AWS SignUp
   if (userPoolId && clientId) {
@@ -118,10 +156,10 @@ export async function cognitoSignUp({ email, password, name }: CognitoAuthParams
         },
         body: JSON.stringify({
           ClientId: clientId,
-          Username: email,
+          Username: trimmedEmail,
           Password: password,
           UserAttributes: [
-            { Name: "email", Value: email },
+            { Name: "email", Value: trimmedEmail },
             { Name: "name", Value: displayName },
           ],
         }),
@@ -129,13 +167,23 @@ export async function cognitoSignUp({ email, password, name }: CognitoAuthParams
 
       const data = await response.json();
       if (!response.ok) {
+        if (data.__type === "InvalidPasswordException") {
+          throw AppError.badRequest(
+            "Password does not meet policy requirements: Must be at least 8 characters and include uppercase, lowercase, numbers, and symbols (e.g. !@#$%)."
+          );
+        }
+        if (data.__type === "UsernameExistsException") {
+          throw AppError.badRequest("An account with this email already exists. Please sign in instead.");
+        }
         throw AppError.badRequest(data.message || "Failed to register user with Cognito");
       }
 
       return {
-        userId: data.UserSub || `cognito_${Buffer.from(email).toString("hex").slice(0, 16)}`,
-        email,
+        userId: data.UserSub || `cognito_${Buffer.from(trimmedEmail).toString("hex").slice(0, 16)}`,
+        email: trimmedEmail,
         name: displayName,
+        userConfirmed: data.UserConfirmed === true,
+        destination: data.CodeDeliveryDetails?.Destination || trimmedEmail,
       };
     } catch (err) {
       if (err instanceof AppError) throw err;
@@ -145,10 +193,119 @@ export async function cognitoSignUp({ email, password, name }: CognitoAuthParams
 
   // Local / Mock Dev Mode
   return {
-    userId: `dev_user_${Buffer.from(email).toString("hex").slice(0, 12)}`,
-    email,
+    userId: `dev_user_${Buffer.from(trimmedEmail).toString("hex").slice(0, 12)}`,
+    email: trimmedEmail,
     name: displayName,
+    userConfirmed: true,
   };
+}
+
+/**
+ * Confirms user registration with confirmation code sent via email.
+ */
+export async function cognitoConfirmSignUp({
+  email,
+  confirmationCode,
+}: ConfirmSignUpParams): Promise<void> {
+  const userPoolId = process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID;
+  const clientId = process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID;
+  const region = getAwsRegion();
+
+  const trimmedEmail = email?.trim().toLowerCase();
+  const trimmedCode = confirmationCode?.trim();
+
+  if (!trimmedEmail || !trimmedCode) {
+    throw AppError.badRequest("Email and confirmation code are required");
+  }
+
+  if (userPoolId && clientId) {
+    try {
+      const response = await fetch(`https://cognito-idp.${region}.amazonaws.com/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-amz-json-1.1",
+          "X-Amz-Target": "AWSCognitoIdentityProviderService.ConfirmSignUp",
+        },
+        body: JSON.stringify({
+          ClientId: clientId,
+          Username: trimmedEmail,
+          ConfirmationCode: trimmedCode,
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        if (data.__type === "CodeMismatchException") {
+          throw AppError.badRequest("Invalid confirmation code. Please check your email and try again.");
+        }
+        if (data.__type === "ExpiredCodeException") {
+          throw AppError.badRequest("Confirmation code has expired. Please request a new code.");
+        }
+        if (data.__type === "NotAuthorizedException" && data.message?.includes("confirmed")) {
+          return;
+        }
+        throw AppError.badRequest(data.message || "Failed to confirm account");
+      }
+
+      return;
+    } catch (err) {
+      if (err instanceof AppError) throw err;
+      throw AppError.badRequest("Failed to verify confirmation code");
+    }
+  }
+
+  // Dev / Mock Mode:
+  if (trimmedCode.length < 4) {
+    throw AppError.badRequest("Confirmation code must be at least 4 characters");
+  }
+}
+
+/**
+ * Resends user registration confirmation code.
+ */
+export async function cognitoResendConfirmationCode(email: string): Promise<{ destination: string }> {
+  const userPoolId = process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID;
+  const clientId = process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID;
+  const region = getAwsRegion();
+
+  const trimmedEmail = email?.trim().toLowerCase();
+  if (!trimmedEmail) {
+    throw AppError.badRequest("Email is required");
+  }
+
+  if (userPoolId && clientId) {
+    try {
+      const response = await fetch(`https://cognito-idp.${region}.amazonaws.com/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-amz-json-1.1",
+          "X-Amz-Target": "AWSCognitoIdentityProviderService.ResendConfirmationCode",
+        },
+        body: JSON.stringify({
+          ClientId: clientId,
+          Username: trimmedEmail,
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        if (data.__type === "InvalidParameterException" && data.message?.includes("already confirmed")) {
+          throw AppError.badRequest("This account is already confirmed. You can sign in directly.");
+        }
+        throw AppError.badRequest(data.message || "Failed to resend confirmation code");
+      }
+
+      return {
+        destination: data.CodeDeliveryDetails?.Destination || trimmedEmail,
+      };
+    } catch (err) {
+      if (err instanceof AppError) throw err;
+      throw AppError.badRequest("Unable to resend confirmation code");
+    }
+  }
+
+  // Dev / Mock Mode:
+  return { destination: trimmedEmail };
 }
 
 function parseSubFromJwt(token: string): string {
@@ -201,6 +358,11 @@ export async function cognitoForgotPassword(email: string): Promise<ForgotPasswo
           throw AppError.badRequest("Too many password reset attempts. Please wait a few minutes before trying again.");
         }
         if (data.__type === "InvalidParameterException") {
+          if (data.message?.includes("no registered/verified email")) {
+            throw AppError.badRequest(
+              "This account has not been activated yet. Please verify your email using the confirmation code sent when you registered."
+            );
+          }
           throw AppError.badRequest(data.message || "Cannot reset password for this user");
         }
         throw AppError.badRequest(data.message || "Failed to initiate password reset");
@@ -288,4 +450,3 @@ export async function cognitoConfirmForgotPassword({
     throw AppError.badRequest("Verification code must be at least 4 characters");
   }
 }
-

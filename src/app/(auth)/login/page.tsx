@@ -53,9 +53,21 @@ export default function LoginPage() {
         </div>
 
         {error && (
-          <div className="flex items-center gap-2 p-3 text-sm rounded-lg bg-destructive/10 text-destructive border border-destructive/20">
-            <AlertCircle className="w-4 h-4 shrink-0" />
-            <span>{error}</span>
+          <div className="space-y-2 p-3 text-sm rounded-lg bg-destructive/10 text-destructive border border-destructive/20">
+            <div className="flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+              <span className="leading-snug">{error.replace("USER_NOT_CONFIRMED: ", "")}</span>
+            </div>
+            {error.toLowerCase().includes("not confirmed") && (
+              <div className="pl-6 pt-1">
+                <Link
+                  href={`/confirm?email=${encodeURIComponent(email)}`}
+                  className="inline-flex items-center gap-1 text-xs font-semibold text-primary underline hover:text-primary/80"
+                >
+                  Enter your verification code to activate account &rarr;
+                </Link>
+              </div>
+            )}
           </div>
         )}
 
