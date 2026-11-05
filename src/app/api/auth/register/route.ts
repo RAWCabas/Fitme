@@ -3,11 +3,12 @@ import { z } from "zod";
 import { errorResponse, jsonResponse } from "@/lib/http";
 import { cognitoSignUp } from "@/lib/auth/cognito";
 import { setSessionCookie } from "@/lib/auth/session";
+import { isPasswordValid, PASSWORD_POLICY_MESSAGE } from "@/lib/auth/password-policy";
 
 const registerSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(100),
   email: z.string().trim().email("Please provide a valid email"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
+  password: z.string().refine(isPasswordValid, PASSWORD_POLICY_MESSAGE),
 });
 
 export async function POST(req: NextRequest) {

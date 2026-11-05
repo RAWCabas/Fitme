@@ -11,9 +11,10 @@ import {
   AlertCircle,
   CheckCircle2,
   Mail,
-  KeyRound,
   RefreshCw,
 } from "lucide-react";
+import { PasswordInput, PasswordRequirements } from "@/components/password-field";
+import { isPasswordValid, PASSWORD_POLICY_MESSAGE } from "@/lib/auth/password-policy";
 
 type RecoveryStep = "request" | "verify" | "success";
 
@@ -87,8 +88,8 @@ export default function ForgotPasswordPage() {
     e.preventDefault();
     setError(null);
 
-    if (newPassword.length < 8) {
-      setError("Password must be at least 8 characters long.");
+    if (!isPasswordValid(newPassword)) {
+      setError(PASSWORD_POLICY_MESSAGE);
       return;
     }
 
@@ -152,7 +153,20 @@ export default function ForgotPasswordPage() {
         {error && (
           <div className="flex items-start gap-2 p-3 text-sm rounded-lg bg-destructive/10 text-destructive border border-destructive/20">
             <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-            <span className="leading-snug">{error}</span>
+            <span className="leading-snug">
+              {error}
+              {error.toLowerCase().includes("not been activated") && (
+                <>
+                  {" "}
+                  <Link
+                    href={`/confirm?email=${encodeURIComponent(email)}`}
+                    className="font-semibold underline"
+                  >
+                    Verify your account
+                  </Link>
+                </>
+              )}
+            </span>
           </div>
         )}
 
@@ -235,38 +249,25 @@ export default function ForgotPasswordPage() {
               <label className="text-xs font-medium text-foreground" htmlFor="newPassword">
                 New Password (min. 8 characters)
               </label>
-              <div className="relative">
-                <KeyRound className="w-4 h-4 absolute left-3 top-2.5 text-muted-foreground" />
-                <input
-                  id="newPassword"
-                  type="password"
-                  required
-                  minLength={8}
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full pl-9 pr-3.5 py-2 text-sm rounded-lg border bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
-                />
-              </div>
+              <PasswordInput
+                id="newPassword"
+                value={newPassword}
+                onChange={setNewPassword}
+                autoComplete="new-password"
+              />
+              <PasswordRequirements password={newPassword} />
             </div>
 
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-foreground" htmlFor="confirmPassword">
                 Confirm New Password
               </label>
-              <div className="relative">
-                <KeyRound className="w-4 h-4 absolute left-3 top-2.5 text-muted-foreground" />
-                <input
-                  id="confirmPassword"
-                  type="password"
-                  required
-                  minLength={8}
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full pl-9 pr-3.5 py-2 text-sm rounded-lg border bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
-                />
-              </div>
+              <PasswordInput
+                id="confirmPassword"
+                value={confirmPassword}
+                onChange={setConfirmPassword}
+                autoComplete="new-password"
+              />
             </div>
 
             <div className="space-y-2 pt-1">

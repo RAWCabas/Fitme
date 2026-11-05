@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Sparkles, ArrowRight, Loader2, AlertCircle } from "lucide-react";
+import { PasswordInput } from "@/components/password-field";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -99,14 +100,11 @@ export default function LoginPage() {
                 Forgot password?
               </Link>
             </div>
-            <input
+            <PasswordInput
               id="password"
-              type="password"
-              required
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              className="w-full px-3.5 py-2 text-sm rounded-lg border bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
+              onChange={setPassword}
+              autoComplete="current-password"
             />
           </div>
 
@@ -131,6 +129,15 @@ export default function LoginPage() {
           <Link href="/register" className="font-semibold text-primary hover:underline">
             Create an account
           </Link>
+          <div className="pt-2">
+            Received a verification code?{" "}
+            <Link
+              href={`/confirm${email ? `?email=${encodeURIComponent(email)}` : ""}`}
+              className="font-semibold text-primary hover:underline"
+            >
+              Verify your account
+            </Link>
+          </div>
         </div>
       </div>
     </div>

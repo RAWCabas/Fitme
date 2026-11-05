@@ -218,7 +218,7 @@ describe("Auth: API Route Handlers", () => {
       body: JSON.stringify({
         email: "valid@example.com",
         confirmationCode: "123456",
-        newPassword: "brandnewpassword123",
+        newPassword: "Brand-new_pass1",
       }),
     });
     const validRes = await resetPasswordHandler(validReq);
