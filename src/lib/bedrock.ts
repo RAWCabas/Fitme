@@ -1,4 +1,4 @@
-import { z, ZodType } from "zod";
+import { z, ZodType, ZodTypeDef } from "zod";
 import { BedrockRuntimeClient, InvokeModelCommand } from "@aws-sdk/client-bedrock-runtime";
 import { getAwsRegion, getAwsCredentials } from "./config";
 import { AppError } from "./errors";
@@ -6,7 +6,7 @@ import { AppError } from "./errors";
 interface BedrockJsonParams<T> {
   systemPrompt: string;
   userPrompt: string;
-  schema: ZodType<T>;
+  schema: ZodType<T, ZodTypeDef, unknown>;
   fallbackGenerator?: () => T;
 }
 
@@ -69,10 +69,15 @@ export async function invokeBedrockJson<T>({
       const rawObj = JSON.parse(cleanJson);
       return schema.parse(rawObj);
     } catch (err) {
+      console.warn("Bedrock call failed or output schema mismatch, falling back if available:", err);
+      if (fallbackGenerator) {
+        const fallbackData = fallbackGenerator();
+        return schema.parse(fallbackData);
+      }
       if (err instanceof z.ZodError) {
         throw AppError.badRequest(`AI output did not match expected schema: ${err.message}`);
       }
-      console.warn("Bedrock call failed, falling back if available:", err);
+      throw err;
     }
   }
 

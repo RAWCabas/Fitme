@@ -85,6 +85,9 @@ export function StudioClient({
   // Mobile navigation tabs
   const [mobileTab, setMobileTab] = useState<"job" | "ats" | "resume">("resume");
 
+  // Error state for tailoring
+  const [tailorError, setTailorError] = useState<string | null>(null);
+
   // Bullet booster modal state
   const [boostingBullet, setBoostingBullet] = useState<{ roleIndex: number; bulletIndex: number; content: string } | null>(null);
   const [boostMetrics, setBoostMetrics] = useState("");
@@ -367,6 +370,7 @@ export function StudioClient({
     e.preventDefault();
     if (!jdText.trim() || jdText.trim().length < 10) return;
     setAnalyzing(true);
+    setTailorError(null);
 
     try {
       // Step 1: Parse Job Description
@@ -379,7 +383,10 @@ export function StudioClient({
           targetTitle: targetRoleTitle.trim(),
         }),
       });
-      if (!parseRes.ok) throw new Error("Failed to parse Job Description");
+      if (!parseRes.ok) {
+        const errData = await parseRes.json().catch(() => ({}));
+        throw new Error(errData.error || "Failed to parse Job Description");
+      }
       const job: JobOpportunity = await parseRes.json();
       setActiveJob(job);
 
@@ -394,7 +401,10 @@ export function StudioClient({
           clientProfile: profile,
         }),
       });
-      if (!tailorRes.ok) throw new Error("Failed to tailor resume");
+      if (!tailorRes.ok) {
+        const errData = await tailorRes.json().catch(() => ({}));
+        throw new Error(errData.error || "Failed to tailor resume");
+      }
       const resume: TailoredResume = await tailorRes.json();
       const updatedResumes = [resume, ...resumesList.filter((r) => r.id !== resume.id)];
       const updatedJobs = { ...jobsMap, [job.id]: job };
@@ -407,8 +417,9 @@ export function StudioClient({
           localStorage.setItem(`fitme_jobs_cache_${profile.userId}`, JSON.stringify(updatedJobs));
         } catch {}
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("Tailoring failed", err);
+      setTailorError((err as Error)?.message || "Failed to analyze and tailor resume. Please try again.");
     } finally {
       setAnalyzing(false);
     }
@@ -844,6 +855,13 @@ export function StudioClient({
                 </select>
               </div>
             </div>
+
+            {tailorError && (
+              <div className="p-3 text-xs text-red-700 bg-red-500/10 border border-red-500/20 rounded-lg flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
+                <span>{tailorError}</span>
+              </div>
+            )}
 
             <button
               type="submit"

@@ -18,14 +18,31 @@ import {
   ResumeStatus 
 } from "./schema";
 
-const extractedJdSchema = z.object({
-  company: z.string(),
-  role: z.string(),
-  location: z.string(),
-  extractedSkills: z.array(z.string()),
-  mustHaves: z.array(z.string()),
-  niceToHaves: z.array(z.string()),
-});
+const extractedJdSchema = z
+  .object({
+    company: z.string().optional().default("Target Company"),
+    company_name: z.string().optional(),
+    role: z.string().optional().default("IT Technical Support"),
+    role_title: z.string().optional(),
+    location: z.string().optional().default(""),
+    extractedSkills: z.array(z.string()).optional(),
+    required_hard_skills: z.array(z.string()).optional(),
+    skills: z.array(z.string()).optional(),
+    mustHaves: z.array(z.string()).optional(),
+    must_have_requirements: z.array(z.string()).optional(),
+    must_haves: z.array(z.string()).optional(),
+    niceToHaves: z.array(z.string()).optional(),
+    nice_to_have_qualifications: z.array(z.string()).optional(),
+    nice_to_haves: z.array(z.string()).optional(),
+  })
+  .transform((data) => ({
+    company: (data.company && data.company !== "Target Company" ? data.company : data.company_name) || "Target Company",
+    role: (data.role && data.role !== "IT Technical Support" ? data.role : data.role_title) || "IT Technical Support",
+    location: data.location || "",
+    extractedSkills: (data.extractedSkills && data.extractedSkills.length > 0 ? data.extractedSkills : (data.required_hard_skills || data.skills)) || [],
+    mustHaves: (data.mustHaves && data.mustHaves.length > 0 ? data.mustHaves : (data.must_have_requirements || data.must_haves)) || [],
+    niceToHaves: (data.niceToHaves && data.niceToHaves.length > 0 ? data.niceToHaves : (data.nice_to_have_qualifications || data.nice_to_haves)) || [],
+  }));
 
 type ExtractedJd = z.infer<typeof extractedJdSchema>;
 
@@ -46,7 +63,15 @@ export class TailorService {
 
     const systemPrompt = `You are an expert technical recruiter and job description analyzer.
 Extract the company name, role title, location, required hard skills, must-have requirements, and nice-to-have qualifications from the job description.
-Return ONLY a valid JSON object matching the requested schema.`;
+Return ONLY a valid JSON object matching this exact structure:
+{
+  "company": "Company Name",
+  "role": "Target Role Title",
+  "location": "Job Location or Remote",
+  "extractedSkills": ["Skill 1", "Skill 2"],
+  "mustHaves": ["Requirement 1", "Requirement 2"],
+  "niceToHaves": ["Nice to have 1", "Nice to have 2"]
+}`;
 
     const extracted = await invokeBedrockJson<ExtractedJd>({
       systemPrompt,
