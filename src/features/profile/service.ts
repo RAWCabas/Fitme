@@ -195,11 +195,15 @@ export class ProfileService {
    */
   async updateContact(userId: string, input: unknown): Promise<Profile> {
     const profile = await this.getOrCreateProfile(userId);
-    const parsedContact = contactInfoSchema.parse(input);
+    const raw = typeof input === "object" && input !== null ? (input as Record<string, unknown>) : {};
+    
+    // Separate optional executive summary from contact fields to satisfy strict contactInfoSchema
+    const { summary, ...contactFields } = raw;
+    const parsedContact = contactInfoSchema.parse(contactFields);
 
     profile.contact = parsedContact;
-    if (typeof input === "object" && input !== null && "summary" in input) {
-      profile.summary = String((input as Record<string, unknown>).summary).trim();
+    if (summary !== undefined) {
+      profile.summary = String(summary).trim();
     }
     profile.updatedAt = nowIso();
 
