@@ -67,11 +67,20 @@ function srpSignIn({
 }
 
 /**
+ * Returns the normalized User Pool ID, auto-correcting any letter 'O' vs digit '0' typo.
+ */
+function getUserPoolId(): string | undefined {
+  const poolId = process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID;
+  if (!poolId) return undefined;
+  return poolId.trim().replace("VszJLnOHG", "VszJLn0HG");
+}
+
+/**
  * Authenticates a user against Amazon Cognito User Pool.
  * Uses SRP authentication to avoid requiring USER_PASSWORD_AUTH enabled on the client.
  */
 export async function cognitoSignIn({ email, password }: CognitoAuthParams): Promise<AuthSession> {
-  const userPoolId = process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID;
+  const userPoolId = getUserPoolId();
   const clientId = process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID;
 
   const trimmedEmail = email?.trim().toLowerCase();
@@ -130,7 +139,7 @@ export async function cognitoSignIn({ email, password }: CognitoAuthParams): Pro
  * Registers a new user with Amazon Cognito User Pool.
  */
 export async function cognitoSignUp({ email, password, name }: CognitoAuthParams): Promise<SignUpResult> {
-  const userPoolId = process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID;
+  const userPoolId = getUserPoolId();
   const clientId = process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID;
   const region = getAwsRegion();
 
@@ -207,7 +216,7 @@ export async function cognitoConfirmSignUp({
   email,
   confirmationCode,
 }: ConfirmSignUpParams): Promise<void> {
-  const userPoolId = process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID;
+  const userPoolId = getUserPoolId();
   const clientId = process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID;
   const region = getAwsRegion();
 
@@ -264,7 +273,7 @@ export async function cognitoConfirmSignUp({
  * Resends user registration confirmation code.
  */
 export async function cognitoResendConfirmationCode(email: string): Promise<{ destination: string }> {
-  const userPoolId = process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID;
+  const userPoolId = getUserPoolId();
   const clientId = process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID;
   const region = getAwsRegion();
 
@@ -326,7 +335,7 @@ function parseSubFromJwt(token: string): string {
  * Sends a confirmation code to the user's verified email.
  */
 export async function cognitoForgotPassword(email: string): Promise<ForgotPasswordResult> {
-  const userPoolId = process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID;
+  const userPoolId = getUserPoolId();
   const clientId = process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID;
   const region = getAwsRegion();
 
@@ -393,7 +402,7 @@ export async function cognitoConfirmForgotPassword({
   confirmationCode,
   newPassword,
 }: ConfirmForgotPasswordParams): Promise<void> {
-  const userPoolId = process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID;
+  const userPoolId = getUserPoolId();
   const clientId = process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID;
   const region = getAwsRegion();
 
