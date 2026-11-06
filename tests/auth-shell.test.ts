@@ -248,6 +248,35 @@ describe("Auth: API Route Handlers", () => {
     expect(goodBody.message).toContain("confirmed successfully");
   });
 
+  it("registers a new user and preserves the exact full name on login", async () => {
+    const regReq = new NextRequest("http://localhost:3000/api/auth/register", {
+      method: "POST",
+      body: JSON.stringify({
+        name: "Jane Elizabeth Doe",
+        email: "jane.doe@fitme.dev",
+        password: "SecurePass123!@",
+      }),
+    });
+
+    const regRes = await registerHandler(regReq);
+    expect(regRes.status).toBe(201);
+    const regBody = await regRes.json();
+    expect(regBody.user.name).toBe("Jane Elizabeth Doe");
+
+    // Login as Jane
+    const loginReq = new NextRequest("http://localhost:3000/api/auth/login", {
+      method: "POST",
+      body: JSON.stringify({
+        email: "jane.doe@fitme.dev",
+        password: "SecurePass123!@",
+      }),
+    });
+    const loginRes = await loginHandler(loginReq);
+    expect(loginRes.status).toBe(200);
+    const loginBody = await loginRes.json();
+    expect(loginBody.user.name).toBe("Jane Elizabeth Doe");
+  });
+
   it("handles resend-code route with valid and invalid parameters", async () => {
     // Malformed email
     const badReq = new NextRequest("http://localhost:3000/api/auth/resend-code", {
