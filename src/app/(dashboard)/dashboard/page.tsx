@@ -1,5 +1,6 @@
 import { requireSession } from "@/lib/auth/session";
 import { getTailorRepo } from "@/features/tailor/repo";
+import { profileService } from "@/features/profile/service";
 import { JobOpportunity, TailoredResume } from "@/features/tailor/schema";
 import { PipelineClient } from "./pipeline-client";
 
@@ -31,11 +32,22 @@ export default async function DashboardPage() {
     }
   }
 
+  // Fetch user profile to display real full name
+  let displayName = session.name || "Candidate";
+  try {
+    const profile = await profileService.getOrCreateProfile(session.userId, session.email, session.name);
+    if (profile?.contact?.fullName && profile.contact.fullName !== "Candidate") {
+      displayName = profile.contact.fullName;
+    }
+  } catch (err) {
+    console.error("Failed to load profile for dashboard:", err);
+  }
+
   return (
     <PipelineClient
       initialResumes={resumes}
       jobs={jobsMap}
-      userName={session.name || "Candidate"}
+      userName={displayName}
       userId={session.userId}
     />
   );

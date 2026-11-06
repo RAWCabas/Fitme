@@ -22,6 +22,24 @@ export function DashboardNav({ session }: DashboardNavProps) {
   const router = useRouter();
 
   async function handleSignOut() {
+    try {
+      if (typeof window !== "undefined") {
+        // Clear all Fitme cache keys from localStorage and sessionStorage on sign out
+        const keysToRemove: string[] = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && (key.startsWith("fitme_") || key.startsWith("fit_"))) {
+            keysToRemove.push(key);
+          }
+        }
+        for (const k of keysToRemove) {
+          localStorage.removeItem(k);
+        }
+        sessionStorage.clear();
+      }
+    } catch {
+      // Ignore browser storage exceptions
+    }
     await fetch("/api/auth/logout", { method: "POST" });
     router.push("/login");
     router.refresh();

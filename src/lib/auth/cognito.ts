@@ -47,7 +47,7 @@ function srpSignIn({
   password: string;
   userPoolId: string;
   clientId: string;
-}): Promise<{ idToken: string; sub: string }> {
+}): Promise<{ idToken: string; sub: string; name?: string }> {
   return new Promise((resolve, reject) => {
     const pool = new CognitoUserPool({ UserPoolId: userPoolId, ClientId: clientId });
     const user = new CognitoUser({ Username: email, Pool: pool });
@@ -56,8 +56,12 @@ function srpSignIn({
     user.authenticateUser(authDetails, {
       onSuccess: (session) => {
         const idToken = session.getIdToken().getJwtToken();
-        const sub = session.getIdToken().payload.sub || "";
-        resolve({ idToken, sub });
+        const payload = (typeof session.getIdToken().decodePayload === "function"
+          ? session.getIdToken().decodePayload()
+          : (session.getIdToken() as unknown as { payload?: Record<string, unknown> }).payload) || {};
+        const sub = (payload.sub as string) || "";
+        const name = ((payload.name || payload.given_name) as string) || "";
+        resolve({ idToken, sub, name });
       },
       onFailure: (err) => {
         reject(err);
@@ -91,19 +95,21 @@ export async function cognitoSignIn({ email, password }: CognitoAuthParams): Pro
   // If Cognito credentials are fully configured, authenticate with AWS Cognito via SRP
   if (userPoolId && clientId) {
     try {
-      const { idToken, sub } = await srpSignIn({
+      const { idToken, sub, name: tokenName } = await srpSignIn({
         email: trimmedEmail,
         password,
         userPoolId,
         clientId,
       });
 
-      const userId = sub || (idToken ? parseSubFromJwt(idToken) : `cognito_${Buffer.from(trimmedEmail).toString("hex").slice(0, 16)}`);
+      const claims = idToken ? parseClaimsFromJwt(idToken) : {};
+      const userId = sub || claims.sub || (idToken ? parseSubFromJwt(idToken) : `cognito_${Buffer.from(trimmedEmail).toString("hex").slice(0, 16)}`);
+      const name = tokenName?.trim() || claims.name?.trim() || trimmedEmail.split("@")[0];
 
       return {
         userId,
         email: trimmedEmail,
-        name: trimmedEmail.split("@")[0],
+        name,
       };
     } catch (err: unknown) {
       if (err instanceof AppError) throw err;
@@ -317,17 +323,25 @@ export async function cognitoResendConfirmationCode(email: string): Promise<{ de
   return { destination: trimmedEmail };
 }
 
-function parseSubFromJwt(token: string): string {
+function parseClaimsFromJwt(token: string): { sub?: string; name?: string; email?: string } {
   try {
     const parts = token.split(".");
     if (parts.length >= 2) {
       const payload = JSON.parse(Buffer.from(parts[1], "base64url").toString("utf-8"));
-      return payload.sub || "";
+      return {
+        sub: payload.sub,
+        name: payload.name || payload.given_name,
+        email: payload.email,
+      };
     }
-    return "";
+    return {};
   } catch {
-    return "";
+    return {};
   }
+}
+
+function parseSubFromJwt(token: string): string {
+  return parseClaimsFromJwt(token).sub || "";
 }
 
 /**

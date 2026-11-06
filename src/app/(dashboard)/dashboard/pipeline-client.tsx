@@ -38,19 +38,10 @@ export function PipelineClient({ initialResumes, jobs, userName, userId }: Pipel
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    // 1. Read from localStorage cache
+    // 1. Read from localStorage cache strictly for the active user
     try {
-      const keysToScan: string[] = [];
-      if (userId) keysToScan.push(`fitme_resumes_cache_${userId}`);
-      for (let i = 0; i < localStorage.length; i++) {
-        const k = localStorage.key(i);
-        if (k && k.startsWith("fitme_resumes_cache_") && !keysToScan.includes(k)) {
-          keysToScan.push(k);
-        }
-      }
-
-      for (const k of keysToScan) {
-        const cachedRaw = localStorage.getItem(k);
+      if (userId) {
+        const cachedRaw = localStorage.getItem(`fitme_resumes_cache_${userId}`);
         if (cachedRaw) {
           const cachedList: TailoredResume[] = JSON.parse(cachedRaw);
           if (Array.isArray(cachedList) && cachedList.length > 0) {
@@ -66,20 +57,9 @@ export function PipelineClient({ initialResumes, jobs, userName, userId }: Pipel
             });
           }
         }
-      }
 
-      // Restore cached jobs
-      const jobKeys: string[] = [];
-      if (userId) jobKeys.push(`fitme_jobs_cache_${userId}`);
-      for (let i = 0; i < localStorage.length; i++) {
-        const k = localStorage.key(i);
-        if (k && k.startsWith("fitme_jobs_cache_") && !jobKeys.includes(k)) {
-          jobKeys.push(k);
-        }
-      }
-
-      for (const jk of jobKeys) {
-        const rawJ = localStorage.getItem(jk);
+        // Restore cached jobs strictly for active user
+        const rawJ = localStorage.getItem(`fitme_jobs_cache_${userId}`);
         if (rawJ) {
           const parsedJobs = JSON.parse(rawJ);
           if (parsedJobs && typeof parsedJobs === "object") {

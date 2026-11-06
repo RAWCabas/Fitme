@@ -46,7 +46,6 @@ export class ProfileService {
     const existing = await this.repo.getProfile(userId);
     if (existing) {
       // Check if this profile belongs to Rhinn Cabas (or our primary candidate / dev user)
-      const isTestEnv = !!process.env.VITEST || process.env.NODE_ENV === "test";
       const isRhinnExplicit =
         defaultEmail.toLowerCase().includes("rhinn") ||
         defaultEmail.toLowerCase().includes("cabas") ||
@@ -61,13 +60,28 @@ export class ProfileService {
         existing.contact.fullName.toLowerCase().includes("rhinn") ||
         existing.contact.fullName.toLowerCase().includes("chinn");
 
-      const isRhinn =
-        isRhinnExplicit ||
-        (!isTestEnv &&
-          (existing.contact.fullName === "Candidate" ||
-            existing.contact.email === "candidate@fitme.dev"));
+      const isRhinn = isRhinnExplicit;
 
       let needsSave = false;
+
+      // If existing profile has default "Candidate" name but we now know the user's real name, update it
+      if (
+        defaultName &&
+        defaultName !== "Candidate" &&
+        (!existing.contact.fullName || existing.contact.fullName === "Candidate" || existing.contact.fullName === defaultEmail.split("@")[0])
+      ) {
+        existing.contact.fullName = defaultName;
+        needsSave = true;
+      }
+
+      if (
+        defaultEmail &&
+        defaultEmail !== "candidate@fitme.dev" &&
+        (!existing.contact.email || existing.contact.email === "candidate@fitme.dev")
+      ) {
+        existing.contact.email = defaultEmail;
+        needsSave = true;
+      }
       // Ensure backwards-compatible fields exist on legacy records
       if (!existing.education) {
         existing.education = [];
@@ -121,7 +135,6 @@ export class ProfileService {
       return existing;
     }
 
-    const isTestEnv = !!process.env.VITEST || process.env.NODE_ENV === "test";
     const isRhinnExplicit =
       defaultEmail.toLowerCase().includes("rhinn") ||
       defaultEmail.toLowerCase().includes("cabas") ||
@@ -131,9 +144,7 @@ export class ProfileService {
       userId.toLowerCase().includes("rhinn") ||
       userId === "dev_user_7268696e6e61";
 
-    const isRhinn =
-      isRhinnExplicit ||
-      (!isTestEnv && (!defaultEmail || defaultEmail === "candidate@fitme.dev"));
+    const isRhinn = isRhinnExplicit;
 
     const newProfile: Profile = isRhinn
       ? buildRhinnMasterProfile(

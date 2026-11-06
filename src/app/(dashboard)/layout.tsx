@@ -45,9 +45,16 @@ export default async function DashboardLayout({
     };
   }
 
+  const navSession = {
+    ...session,
+    name: profile?.contact?.fullName && profile.contact.fullName !== "Candidate"
+      ? profile.contact.fullName
+      : session.name,
+  };
+
   return (
     <div className="min-h-screen bg-muted/20 flex flex-col">
-      <DashboardNav session={session} />
+      <DashboardNav session={navSession} />
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 pb-24 md:pb-8">
         {children}
       </main>
