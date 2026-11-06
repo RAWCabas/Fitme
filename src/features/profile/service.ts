@@ -64,8 +64,19 @@ export class ProfileService {
 
       let needsSave = false;
 
-      // If existing profile has default "Candidate" name but we now know the user's real name, update it
-      if (
+      // Ensure Rhinn's account uses their registered full name with middle initial "D."
+      if (isRhinn) {
+        if (
+          !existing.contact.fullName ||
+          existing.contact.fullName === "Candidate" ||
+          existing.contact.fullName === "Rhinn Anthon William Cabas" ||
+          existing.contact.fullName.toLowerCase() === "rhinnanthon" ||
+          existing.contact.fullName === defaultEmail.split("@")[0]
+        ) {
+          existing.contact.fullName = "Rhinn Anthon William D. Cabas";
+          needsSave = true;
+        }
+      } else if (
         defaultName &&
         defaultName !== "Candidate" &&
         (!existing.contact.fullName || existing.contact.fullName === "Candidate" || existing.contact.fullName === defaultEmail.split("@")[0])
@@ -122,7 +133,7 @@ export class ProfileService {
         const masterName =
           existing.contact.fullName && existing.contact.fullName !== "Candidate"
             ? existing.contact.fullName
-            : defaultName || "Rhinn Anthon William Cabas";
+            : defaultName || "Rhinn Anthon William D. Cabas";
         const master = buildRhinnMasterProfile(userId, masterEmail, masterName);
         return await this.repo.saveProfile(master);
       }
@@ -150,7 +161,7 @@ export class ProfileService {
       ? buildRhinnMasterProfile(
           userId,
           defaultEmail && defaultEmail !== "candidate@fitme.dev" ? defaultEmail : "rhinnanthon@gmail.com",
-          defaultName && defaultName !== "Candidate" ? defaultName : "Rhinn Anthon William Cabas"
+          defaultName && defaultName !== "Candidate" ? defaultName : "Rhinn Anthon William D. Cabas"
         )
       : {
           userId,
@@ -185,7 +196,7 @@ export class ProfileService {
     if (!userId) throw AppError.unauthorized();
     const existing = await this.repo.getProfile(userId);
     const email = existing?.contact?.email || "rhinnanthon@gmail.com";
-    const name = "Rhinn Anthon William Cabas";
+    const name = "Rhinn Anthon William D. Cabas";
     const master = buildRhinnMasterProfile(userId, email, name);
     return await this.repo.saveProfile(master);
   }
@@ -796,12 +807,12 @@ export const profileService = new ProfileService();
 export function buildRhinnMasterProfile(
   userId: string,
   email = "rhinnanthon@gmail.com",
-  name = "Rhinn Anthon William Cabas"
+  name = "Rhinn Anthon William D. Cabas"
 ): Profile {
   return {
     userId,
     contact: {
-      fullName: name || "Rhinn Anthon William Cabas",
+      fullName: name || "Rhinn Anthon William D. Cabas",
       headline: "Computer Engineer | Embedded Systems & Edge AI | IT & Technical Support",
       email: email || "rhinnanthon@gmail.com",
       phone: "0945-350-7389",

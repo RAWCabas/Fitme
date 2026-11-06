@@ -104,7 +104,10 @@ export async function cognitoSignIn({ email, password }: CognitoAuthParams): Pro
 
       const claims = idToken ? parseClaimsFromJwt(idToken) : {};
       const userId = sub || claims.sub || (idToken ? parseSubFromJwt(idToken) : `cognito_${Buffer.from(trimmedEmail).toString("hex").slice(0, 16)}`);
-      const name = tokenName?.trim() || claims.name?.trim() || trimmedEmail.split("@")[0];
+      let name = tokenName?.trim() || claims.name?.trim() || trimmedEmail.split("@")[0];
+      if (trimmedEmail === "rhinnanthon@gmail.com" && (!tokenName || name === "rhinnanthon")) {
+        name = "Rhinn Anthon William D. Cabas";
+      }
 
       return {
         userId,
@@ -134,10 +137,11 @@ export async function cognitoSignIn({ email, password }: CognitoAuthParams): Pro
     throw AppError.badRequest("Password must be at least 6 characters");
   }
 
+  const devName = trimmedEmail === "rhinnanthon@gmail.com" ? "Rhinn Anthon William D. Cabas" : trimmedEmail.split("@")[0];
   return {
     userId: `dev_user_${Buffer.from(trimmedEmail).toString("hex").slice(0, 12)}`,
     email: trimmedEmail,
-    name: trimmedEmail.split("@")[0],
+    name: devName,
   };
 }
 

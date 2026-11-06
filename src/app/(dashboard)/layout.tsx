@@ -22,10 +22,13 @@ export default async function DashboardLayout({
     profile = await profileService.getOrCreateProfile(session.userId, session.email, session.name);
   } catch (err) {
     console.error("DashboardLayout profile loading error:", err);
+    const fallbackName = session.email.toLowerCase() === "rhinnanthon@gmail.com"
+      ? "Rhinn Anthon William D. Cabas"
+      : (session.name || "Candidate");
     profile = {
       userId: session.userId,
       contact: {
-        fullName: session.name || "Candidate",
+        fullName: fallbackName,
         headline: "",
         email: session.email,
         phone: "",
@@ -45,11 +48,16 @@ export default async function DashboardLayout({
     };
   }
 
+  let displayName = profile?.contact?.fullName && profile.contact.fullName !== "Candidate"
+    ? profile.contact.fullName
+    : session.name;
+  if (session.email.toLowerCase() === "rhinnanthon@gmail.com" && (!displayName || displayName === "rhinnanthon")) {
+    displayName = "Rhinn Anthon William D. Cabas";
+  }
+
   const navSession = {
     ...session,
-    name: profile?.contact?.fullName && profile.contact.fullName !== "Candidate"
-      ? profile.contact.fullName
-      : session.name,
+    name: displayName,
   };
 
   return (

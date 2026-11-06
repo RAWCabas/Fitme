@@ -43,6 +43,10 @@ export default async function DashboardPage() {
     console.error("Failed to load profile for dashboard:", err);
   }
 
+  if (session.email.toLowerCase() === "rhinnanthon@gmail.com" && (!displayName || displayName === "rhinnanthon" || displayName === "Candidate")) {
+    displayName = "Rhinn Anthon William D. Cabas";
+  }
+
   return (
     <PipelineClient
       initialResumes={resumes}

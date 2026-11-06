@@ -27,6 +27,10 @@ export async function POST(req: NextRequest) {
       console.warn("Could not retrieve profile during login:", profileErr);
     }
 
+    if (session.email.toLowerCase() === "rhinnanthon@gmail.com" && (!session.name || session.name === "rhinnanthon")) {
+      session.name = "Rhinn Anthon William D. Cabas";
+    }
+
     await setSessionCookie(session);
 
     return jsonResponse({ user: session });

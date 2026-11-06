@@ -41,7 +41,28 @@ export function PipelineClient({ initialResumes, jobs, userName, userId }: Pipel
     // 1. Read from localStorage cache strictly for the active user
     try {
       if (userId) {
-        const cachedRaw = localStorage.getItem(`fitme_resumes_cache_${userId}`);
+        let cachedRaw = localStorage.getItem(`fitme_resumes_cache_${userId}`);
+
+        // If this user is Rhinn Cabas and their active cache is empty,
+        // automatically integrate / migrate their previous mock account data into their active account
+        const isRhinnUser =
+          userName.toLowerCase().includes("rhinn") ||
+          userName.toLowerCase().includes("cabas") ||
+          userId.toLowerCase().includes("rhinn");
+
+        if (!cachedRaw && isRhinnUser) {
+          for (let i = 0; i < localStorage.length; i++) {
+            const k = localStorage.key(i);
+            if (k && k.startsWith("fitme_resumes_cache_") && (k.includes("dev_user") || k.includes("39de6478") || k.includes("rhinn"))) {
+              cachedRaw = localStorage.getItem(k);
+              if (cachedRaw) {
+                localStorage.setItem(`fitme_resumes_cache_${userId}`, cachedRaw);
+                break;
+              }
+            }
+          }
+        }
+
         if (cachedRaw) {
           const cachedList: TailoredResume[] = JSON.parse(cachedRaw);
           if (Array.isArray(cachedList) && cachedList.length > 0) {
@@ -59,7 +80,20 @@ export function PipelineClient({ initialResumes, jobs, userName, userId }: Pipel
         }
 
         // Restore cached jobs strictly for active user
-        const rawJ = localStorage.getItem(`fitme_jobs_cache_${userId}`);
+        let rawJ = localStorage.getItem(`fitme_jobs_cache_${userId}`);
+        if (!rawJ && isRhinnUser) {
+          for (let i = 0; i < localStorage.length; i++) {
+            const k = localStorage.key(i);
+            if (k && k.startsWith("fitme_jobs_cache_") && (k.includes("dev_user") || k.includes("39de6478") || k.includes("rhinn"))) {
+              rawJ = localStorage.getItem(k);
+              if (rawJ) {
+                localStorage.setItem(`fitme_jobs_cache_${userId}`, rawJ);
+                break;
+              }
+            }
+          }
+        }
+
         if (rawJ) {
           const parsedJobs = JSON.parse(rawJ);
           if (parsedJobs && typeof parsedJobs === "object") {
@@ -89,7 +123,7 @@ export function PipelineClient({ initialResumes, jobs, userName, userId }: Pipel
         })
         .catch((err) => console.warn("Failed to fetch fresh resumes from API:", err));
     }
-  }, [userId]);
+  }, [userId, userName]);
 
   // Keep localStorage updated when resumes change
   useEffect(() => {
