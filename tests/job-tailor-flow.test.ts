@@ -44,5 +44,23 @@ Experience Range Range (Years)
     expect(tailored.fitScore.score).toBeGreaterThanOrEqual(0);
     expect(tailored.tailoredExperiences.length).toBeGreaterThan(0);
   });
+
+  it("handles and clamps overly long skill and requirement strings from AI without throwing schema errors", async () => {
+    const userId = "test_user_long_strings";
+    const longJdText = `Familiar with different complex distributed operating systems and legacy enterprise workstation environments (Windows 11, MacOS Sequoia, Ubuntu Linux Server LTS)
+Extensive hands-on troubleshooting experience resolving network connectivity and TCP/IP routing incidents in multi-region environments
+Excellent client satisfaction and customer relationship management skills across international corporate accounts`;
+
+    const job = await tailorService.parseJobDescription(userId, longJdText, "", "Lead Support Specialist");
+    expect(job.id).toBeDefined();
+    // Verify all extracted skills satisfy schema bound (max 50 chars)
+    for (const skill of job.extractedSkills) {
+      expect(skill.length).toBeLessThanOrEqual(50);
+    }
+    // Verify all must-haves satisfy schema bound (max 200 chars)
+    for (const req of job.mustHaves) {
+      expect(req.length).toBeLessThanOrEqual(200);
+    }
+  });
 });
 

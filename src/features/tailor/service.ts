@@ -68,9 +68,9 @@ Return ONLY a valid JSON object matching this exact structure:
   "company": "Company Name",
   "role": "Target Role Title",
   "location": "Job Location or Remote",
-  "extractedSkills": ["Skill 1", "Skill 2"],
-  "mustHaves": ["Requirement 1", "Requirement 2"],
-  "niceToHaves": ["Nice to have 1", "Nice to have 2"]
+  "extractedSkills": ["Concise Skill 1 (e.g. TCP/IP, Linux, Windows - max 40 chars)", "Skill 2"],
+  "mustHaves": ["Requirement 1 (max 180 chars)", "Requirement 2"],
+  "niceToHaves": ["Nice to have 1 (max 180 chars)", "Nice to have 2"]
 }`;
 
     const extracted = await invokeBedrockJson<ExtractedJd>({
@@ -82,26 +82,51 @@ Return ONLY a valid JSON object matching this exact structure:
 
     const specifiedTitle = targetTitle ? targetTitle.trim() : "";
     let cleanRole = specifiedTitle || (extracted.role || "").trim();
-    if (!cleanRole || cleanRole.length > 60 || cleanRole.includes("\n") || (!specifiedTitle && cleanRole.includes("."))) {
+    if (!cleanRole || cleanRole.length > 120 || cleanRole.includes("\n") || (!specifiedTitle && cleanRole.includes("."))) {
       cleanRole = specifiedTitle || "IT Technical Support";
     }
+    cleanRole = cleanRole.slice(0, 120);
 
     let cleanCompany = (extracted.company || "").trim();
-    if (!cleanCompany || cleanCompany.length > 50 || cleanCompany.includes("\n")) {
+    if (!cleanCompany || cleanCompany.length > 120 || cleanCompany.includes("\n")) {
       cleanCompany = "Target Company";
     }
+    cleanCompany = cleanCompany.slice(0, 120);
+
+    const cleanLocation = (extracted.location || "").trim().slice(0, 120);
+
+    // Sanitize and clamp extracted skill keywords to satisfy schema max(50)
+    const cleanSkills = (extracted.extractedSkills || [])
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .map((s) => (s.length > 50 ? s.slice(0, 50).trim() : s))
+      .filter((s) => s.length > 0);
+
+    // Clamp must-haves to satisfy schema max(200)
+    const cleanMustHaves = (extracted.mustHaves || [])
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .map((s) => (s.length > 200 ? s.slice(0, 200).trim() : s))
+      .filter((s) => s.length > 0);
+
+    // Clamp nice-to-haves to satisfy schema max(200)
+    const cleanNiceToHaves = (extracted.niceToHaves || [])
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .map((s) => (s.length > 200 ? s.slice(0, 200).trim() : s))
+      .filter((s) => s.length > 0);
 
     const job: JobOpportunity = {
       id: crypto.randomUUID(),
       userId,
       company: cleanCompany,
       role: cleanRole,
-      location: extracted.location || "",
+      location: cleanLocation,
       sourceUrl,
       rawDescription,
-      extractedSkills: extracted.extractedSkills || [],
-      mustHaves: extracted.mustHaves || [],
-      niceToHaves: extracted.niceToHaves || [],
+      extractedSkills: cleanSkills,
+      mustHaves: cleanMustHaves,
+      niceToHaves: cleanNiceToHaves,
       createdAt: nowIso(),
     };
 
