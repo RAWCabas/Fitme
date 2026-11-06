@@ -145,7 +145,7 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
     setTimeout(() => setSuccessMessage(null), 3000);
   }
 
-  // Restore cached edits & hidden toggles on mount
+  // Restore cached edits & hidden toggles on mount and sync to database
   useEffect(() => {
     if (typeof window === "undefined" || !profile.userId) return;
     try {
@@ -153,21 +153,27 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
       if (cachedRaw) {
         const cached: Profile = JSON.parse(cachedRaw);
         if (cached && (cached.experiences?.length || cached.skills?.length || cached.contact?.fullName)) {
-          setProfile((curr) => ({
-            ...curr,
+          const merged: Profile = {
+            ...profile,
             ...cached,
-            contact: { ...curr.contact, ...cached.contact },
-            experiences: cached.experiences || curr.experiences,
-            projects: cached.projects || curr.projects,
-            education: cached.education || curr.education,
-            certifications: cached.certifications || curr.certifications,
-            skills: cached.skills || curr.skills,
-          }));
+            contact: { ...profile.contact, ...cached.contact },
+            summary: cached.summary !== undefined ? cached.summary : profile.summary,
+            hiddenContactFields: cached.hiddenContactFields !== undefined ? cached.hiddenContactFields : (profile.hiddenContactFields || []),
+            experiences: cached.experiences || profile.experiences,
+            projects: cached.projects || profile.projects,
+            education: cached.education || profile.education,
+            certifications: cached.certifications || profile.certifications,
+            skills: cached.skills || profile.skills,
+          };
+          setProfile(merged);
+          // Sync cached changes back to DynamoDB in case database missed updates
+          persistFullProfile(merged);
         }
       }
     } catch (e) {
       console.error("Failed to restore vault cache", e);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile.userId]);
 
   // Persist profile edits and hidden toggles to localStorage
@@ -245,18 +251,16 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
     }
   }
 
-  // Toggle Experience Visibility (Optimistic + Fallback to Full Profile Persistence)
+  // Toggle Experience Visibility (Optimistic + Full Profile Persistence)
   async function toggleExperience(id: string) {
     const nextExperiences = profile.experiences.map((e) => (e.id === id ? { ...e, isHidden: !e.isHidden } : e));
     const nextProfile = { ...profile, experiences: nextExperiences };
     setProfile(nextProfile);
+    await persistFullProfile(nextProfile);
     try {
-      const res = await fetch(`/api/profile/experiences/${id}/toggle`, { method: "PATCH" });
-      if (!res.ok) {
-        await persistFullProfile(nextProfile);
-      }
-    } catch {
-      await persistFullProfile(nextProfile);
+      await fetch(`/api/profile/experiences/${id}/toggle`, { method: "PATCH" });
+    } catch (e) {
+      console.warn("Patch toggle failed, full profile already persisted", e);
     }
   }
 
@@ -285,13 +289,11 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
       nextProfile = { ...profile, projects: nextProjects };
     }
     setProfile(nextProfile);
+    await persistFullProfile(nextProfile);
     try {
-      const res = await fetch(`/api/profile/${parentType === "experience" ? "experiences" : "projects"}/${parentId}/bullets/${bulletId}/toggle`, { method: "PATCH" });
-      if (!res.ok) {
-        await persistFullProfile(nextProfile);
-      }
-    } catch {
-      await persistFullProfile(nextProfile);
+      await fetch(`/api/profile/${parentType === "experience" ? "experiences" : "projects"}/${parentId}/bullets/${bulletId}/toggle`, { method: "PATCH" });
+    } catch (e) {
+      console.warn("Patch bullet toggle failed, full profile already persisted", e);
     }
   }
 
@@ -307,17 +309,15 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
       hiddenContactFields: nextHidden,
     };
     setProfile(nextProfile);
+    await persistFullProfile(nextProfile);
     try {
-      const res = await fetch("/api/profile/contact/toggle", {
+      await fetch("/api/profile/contact/toggle", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ field: fieldName }),
       });
-      if (!res.ok) {
-        await persistFullProfile(nextProfile);
-      }
-    } catch {
-      await persistFullProfile(nextProfile);
+    } catch (e) {
+      console.warn("Patch contact toggle failed, full profile already persisted", e);
     }
   }
 
@@ -327,10 +327,12 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
     try {
       const res = await fetch(`/api/profile/experiences/${id}`, { method: "DELETE" });
       if (res.ok) {
-        setProfile((prev) => ({
-          ...prev,
-          experiences: prev.experiences.filter((e) => e.id !== id),
-        }));
+        const nextProfile = {
+          ...profile,
+          experiences: profile.experiences.filter((e) => e.id !== id),
+        };
+        setProfile(nextProfile);
+        await persistFullProfile(nextProfile);
         flashSuccess("Experience removed");
       }
     } catch (err) {
@@ -441,18 +443,16 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
     }
   }
 
-  // Toggle Project Visibility (Optimistic + Fallback)
+  // Toggle Project Visibility (Optimistic + Full Profile Persistence)
   async function toggleProject(id: string) {
     const nextProjects = profile.projects.map((p) => (p.id === id ? { ...p, isHidden: !p.isHidden } : p));
     const nextProfile = { ...profile, projects: nextProjects };
     setProfile(nextProfile);
+    await persistFullProfile(nextProfile);
     try {
-      const res = await fetch(`/api/profile/projects/${id}/toggle`, { method: "PATCH" });
-      if (!res.ok) {
-        await persistFullProfile(nextProfile);
-      }
-    } catch {
-      await persistFullProfile(nextProfile);
+      await fetch(`/api/profile/projects/${id}/toggle`, { method: "PATCH" });
+    } catch (e) {
+      console.warn("Patch project toggle failed, full profile already persisted", e);
     }
   }
 
@@ -462,10 +462,12 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
     try {
       const res = await fetch(`/api/profile/projects/${id}`, { method: "DELETE" });
       if (res.ok) {
-        setProfile((prev) => ({
-          ...prev,
-          projects: prev.projects.filter((p) => p.id !== id),
-        }));
+        const nextProfile = {
+          ...profile,
+          projects: profile.projects.filter((p) => p.id !== id),
+        };
+        setProfile(nextProfile);
+        await persistFullProfile(nextProfile);
         flashSuccess("Project removed");
       }
     } catch (err) {
@@ -550,18 +552,16 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
     }
   }
 
-  // Toggle Education Visibility (Optimistic + Fallback)
+  // Toggle Education Visibility (Optimistic + Full Profile Persistence)
   async function toggleEducation(id: string) {
     const nextEducation = (profile.education || []).map((e) => (e.id === id ? { ...e, isHidden: !e.isHidden } : e));
     const nextProfile = { ...profile, education: nextEducation };
     setProfile(nextProfile);
+    await persistFullProfile(nextProfile);
     try {
-      const res = await fetch(`/api/profile/education/${id}/toggle`, { method: "PATCH" });
-      if (!res.ok) {
-        await persistFullProfile(nextProfile);
-      }
-    } catch {
-      await persistFullProfile(nextProfile);
+      await fetch(`/api/profile/education/${id}/toggle`, { method: "PATCH" });
+    } catch (e) {
+      console.warn("Patch education toggle failed, full profile already persisted", e);
     }
   }
 
@@ -571,10 +571,12 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
     try {
       const res = await fetch(`/api/profile/education/${id}`, { method: "DELETE" });
       if (res.ok) {
-        setProfile((prev) => ({
-          ...prev,
-          education: (prev.education || []).filter((e) => e.id !== id),
-        }));
+        const nextProfile = {
+          ...profile,
+          education: (profile.education || []).filter((e) => e.id !== id),
+        };
+        setProfile(nextProfile);
+        await persistFullProfile(nextProfile);
         flashSuccess("Education record removed");
       }
     } catch (err) {
@@ -660,18 +662,16 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
     }
   }
 
-  // Toggle Certification Visibility (Optimistic + Fallback)
+  // Toggle Certification Visibility (Optimistic + Full Profile Persistence)
   async function toggleCertification(id: string) {
     const nextCerts = (profile.certifications || []).map((c) => (c.id === id ? { ...c, isHidden: !c.isHidden } : c));
     const nextProfile = { ...profile, certifications: nextCerts };
     setProfile(nextProfile);
+    await persistFullProfile(nextProfile);
     try {
-      const res = await fetch(`/api/profile/certifications/${id}/toggle`, { method: "PATCH" });
-      if (!res.ok) {
-        await persistFullProfile(nextProfile);
-      }
-    } catch {
-      await persistFullProfile(nextProfile);
+      await fetch(`/api/profile/certifications/${id}/toggle`, { method: "PATCH" });
+    } catch (e) {
+      console.warn("Patch cert toggle failed, full profile already persisted", e);
     }
   }
 
@@ -681,10 +681,12 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
     try {
       const res = await fetch(`/api/profile/certifications/${id}`, { method: "DELETE" });
       if (res.ok) {
-        setProfile((prev) => ({
-          ...prev,
-          certifications: (prev.certifications || []).filter((c) => c.id !== id),
-        }));
+        const nextProfile = {
+          ...profile,
+          certifications: (profile.certifications || []).filter((c) => c.id !== id),
+        };
+        setProfile(nextProfile);
+        await persistFullProfile(nextProfile);
         flashSuccess("Certification removed");
       }
     } catch (err) {
@@ -763,18 +765,16 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
     }
   }
 
-  // Toggle Skill Visibility (Optimistic + Fallback)
+  // Toggle Skill Visibility (Optimistic + Full Profile Persistence)
   async function toggleSkill(id: string) {
     const nextSkills = profile.skills.map((s) => (s.id === id ? { ...s, isHidden: !s.isHidden } : s));
     const nextProfile = { ...profile, skills: nextSkills };
     setProfile(nextProfile);
+    await persistFullProfile(nextProfile);
     try {
-      const res = await fetch(`/api/profile/skills/${id}/toggle`, { method: "PATCH" });
-      if (!res.ok) {
-        await persistFullProfile(nextProfile);
-      }
-    } catch {
-      await persistFullProfile(nextProfile);
+      await fetch(`/api/profile/skills/${id}/toggle`, { method: "PATCH" });
+    } catch (e) {
+      console.warn("Patch skill toggle failed, full profile already persisted", e);
     }
   }
 
@@ -783,10 +783,12 @@ export function VaultClient({ initialProfile }: VaultClientProps) {
     try {
       const res = await fetch(`/api/profile/skills/${id}`, { method: "DELETE" });
       if (res.ok) {
-        setProfile((prev) => ({
-          ...prev,
-          skills: prev.skills.filter((s) => s.id !== id),
-        }));
+        const nextProfile = {
+          ...profile,
+          skills: profile.skills.filter((s) => s.id !== id),
+        };
+        setProfile(nextProfile);
+        await persistFullProfile(nextProfile);
       }
     } catch (err) {
       console.error("Failed to delete skill", err);
