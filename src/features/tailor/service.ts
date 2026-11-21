@@ -6,16 +6,16 @@ import { invokeBedrockJson } from "@/lib/bedrock";
 import { Profile, WorkExperience, Project, EducationItem, Certification, SkillItem } from "@/features/profile/schema";
 import { profileService as defaultProfileService, ProfileService, buildRhinnMasterProfile } from "@/features/profile/service";
 import { getTailorRepo } from "./repo";
-import { 
-  JobOpportunity, 
-  jobOpportunitySchema, 
-  TailoredResume, 
-  tailoredResumeSchema, 
-  FitScore, 
-  KeywordMatch, 
-  PageBudget, 
-  TypographyPreset, 
-  ResumeStatus 
+import {
+  JobOpportunity,
+  jobOpportunitySchema,
+  TailoredResume,
+  tailoredResumeSchema,
+  FitScore,
+  KeywordMatch,
+  PageBudget,
+  TypographyPreset,
+  ResumeStatus
 } from "./schema";
 
 const extractedJdSchema = z
@@ -50,7 +50,7 @@ export class TailorService {
   constructor(
     private repo = getTailorRepo(),
     private profService: ProfileService = defaultProfileService
-  ) {}
+  ) { }
 
   /**
    * Parses a raw job description using Amazon Bedrock or heuristic fallback.
@@ -305,9 +305,8 @@ Return ONLY a valid JSON object matching this exact structure:
     const maxBulletsPerRole = pageBudget === "1_page" ? 3 : 5;
     const maxProjects = pageBudget === "1_page" ? 2 : 4;
 
-    const baseSummary = `Results-oriented ${job.role} with demonstrated hands-on experience in ${
-      job.extractedSkills.slice(0, 3).join(", ") || "software solutions, systems troubleshooting, and cloud technologies"
-    }. Proven track record of delivering reliable technical solutions, optimizing system performance, and architecting resilient systems aligned with ${job.company}'s mission.`;
+    const baseSummary = `Results-oriented ${job.role} with demonstrated hands-on experience in ${job.extractedSkills.slice(0, 3).join(", ") || "software solutions, systems troubleshooting, and cloud technologies"
+      }. Proven track record of delivering reliable technical solutions, optimizing system performance, and architecting resilient systems aligned with ${job.company}'s mission.`;
 
     const aiSchema = z.object({
       roleSubtitle: z.string().optional(),
