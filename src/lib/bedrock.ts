@@ -21,7 +21,7 @@ export async function invokeBedrockJson<T>({
   fallbackGenerator,
 }: BedrockJsonParams<T>): Promise<T> {
   const provider = (process.env.AI_PROVIDER || "").toLowerCase().trim();
-  const geminiApiKey = process.env.GEMINI_API_KEY;
+  const geminiApiKey = process.env.GEMINI_API_KEY || process.env.GEMINI_AI_KEY;
   const credentials = getAwsCredentials();
   const region = getAwsRegion();
   const modelId = process.env.BEDROCK_MODEL_ID || "anthropic.claude-3-5-haiku-20241022-v1:0";
