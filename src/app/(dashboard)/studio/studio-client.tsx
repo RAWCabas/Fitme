@@ -49,7 +49,8 @@ export function StudioClient({
   const [targetRoleTitle, setTargetRoleTitle] = useState("");
   const [sourceUrl, setSourceUrl] = useState("");
   const [pageBudget, setPageBudget] = useState<PageBudget>("1_page");
-  const [preset, setPreset] = useState<TypographyPreset>("cabas_executive");
+  const [preset, setPreset] = useState<TypographyPreset>("harvard_classic");
+  const [customInstructions, setCustomInstructions] = useState("");
   const [analyzing, setAnalyzing] = useState(false);
   const [loadingRequestedResume, setLoadingRequestedResume] = useState(false);
 
@@ -399,6 +400,7 @@ export function StudioClient({
           pageBudget,
           preset,
           clientProfile: profile,
+          customInstructions: customInstructions.trim(),
         }),
       });
       if (!tailorRes.ok) {
@@ -494,6 +496,7 @@ export function StudioClient({
           pageBudget: newBudget,
           preset,
           clientProfile: profile,
+          customInstructions: customInstructions.trim(),
         }),
       });
       if (tailorRes.ok) {
@@ -816,6 +819,19 @@ export function StudioClient({
               />
             </div>
 
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium flex items-center justify-between">
+                <span>Tailoring Focus / Special Instructions (optional)</span>
+                <span className="text-[11px] text-muted-foreground">e.g. &quot;Highlight AWS &amp; SQL&quot; or &quot;Focus on PCB fabrication &amp; 3D printing&quot;</span>
+              </label>
+              <input
+                placeholder="e.g. Emphasize my experience with AWS Amplify, DynamoDB, Cognito and SQL troubleshooting..."
+                value={customInstructions}
+                onChange={(e) => setCustomInstructions(e.target.value)}
+                className="w-full px-3.5 py-2 text-sm rounded-lg border bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
+              />
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
               <div className="space-y-1.5">
                 <label className="text-xs font-medium">Page Length Budget</label>
@@ -848,6 +864,7 @@ export function StudioClient({
                   onChange={(e) => setPreset(e.target.value as TypographyPreset)}
                   className="w-full px-3 py-2 text-xs sm:text-sm rounded-lg border bg-background"
                 >
+                  <option value="harvard_classic">Harvard Classic (Ivy Serif &amp; Clean Dividers)</option>
                   <option value="cabas_executive">Cabas Executive (Exact PDF Template)</option>
                   <option value="modern_standard">Modern Standard (Inter / Sans)</option>
                   <option value="classic_ivy">Classic Ivy (Garamond / Serif)</option>
@@ -1116,6 +1133,7 @@ export function StudioClient({
                 className="px-2.5 py-1.5 text-xs font-semibold rounded-lg border bg-background"
                 title="ATS Typography Preset"
               >
+                <option value="harvard_classic">Harvard Classic</option>
                 <option value="cabas_executive">Cabas Executive</option>
                 <option value="modern_standard">Modern Standard</option>
                 <option value="classic_ivy">Classic Ivy</option>

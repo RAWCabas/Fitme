@@ -4,7 +4,7 @@ import { workExperienceSchema, projectSchema, educationItemSchema, certification
 const text = (max: number) => z.string().trim().max(max);
 
 export const RESUME_STATUSES = ["draft", "sent", "interview", "job_offer", "rejected"] as const;
-export const TYPOGRAPHY_PRESETS = ["modern_standard", "classic_ivy", "tech_minimalist", "cabas_executive"] as const;
+export const TYPOGRAPHY_PRESETS = ["modern_standard", "classic_ivy", "tech_minimalist", "cabas_executive", "harvard_classic"] as const;
 export const PAGE_BUDGETS = ["1_page", "2_pages"] as const;
 
 export const resumeStatusSchema = z.enum(RESUME_STATUSES);

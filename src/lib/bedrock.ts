@@ -11,7 +11,7 @@ interface BedrockJsonParams<T> {
 }
 
 /**
- * Invokes Amazon Bedrock (Claude 3.5 Haiku) for structured JSON generation.
+ * Invokes Google Gemini or Amazon Bedrock (Claude 3.5 Haiku / Nova) for structured JSON generation.
  * Enforces Zod schema validation on the extracted payload.
  */
 export async function invokeBedrockJson<T>({
@@ -20,11 +20,46 @@ export async function invokeBedrockJson<T>({
   schema,
   fallbackGenerator,
 }: BedrockJsonParams<T>): Promise<T> {
+  const geminiApiKey = process.env.GEMINI_API_KEY;
   const credentials = getAwsCredentials();
   const region = getAwsRegion();
-  const modelId = process.env.BEDROCK_MODEL_ID || "amazon.nova-lite-v1:0";
+  const modelId = process.env.BEDROCK_MODEL_ID || "anthropic.claude-3-5-haiku-20241022-v1:0";
 
-  // If AWS credentials are provided, invoke Amazon Bedrock
+  // 1. Google Gemini Provider (Primary high-speed LLM if configured)
+  if (geminiApiKey) {
+    try {
+      const { GoogleGenAI } = await import("@google/genai");
+      const ai = new GoogleGenAI({ apiKey: geminiApiKey });
+      const geminiModel = process.env.GEMINI_MODEL_ID || "gemini-2.0-flash";
+      const jsonSystemPrompt = `${systemPrompt}\n\nIMPORTANT: You must respond ONLY with a valid JSON object matching the requested schema. Do not enclose in markdown blocks.`;
+
+      const response = await ai.models.generateContent({
+        model: geminiModel,
+        contents: userPrompt,
+        config: {
+          systemInstruction: jsonSystemPrompt,
+          responseMimeType: "application/json",
+          temperature: 0.2,
+        },
+      });
+
+      const textContent = response.text || "";
+      const cleanJson = extractJsonSubstring(textContent);
+      const rawObj = JSON.parse(cleanJson);
+      return schema.parse(rawObj);
+    } catch (err) {
+      console.warn("Gemini call failed or schema mismatch, checking fallback/Bedrock:", err);
+      if (err instanceof z.ZodError) {
+        throw AppError.badRequest(`AI output did not match expected schema: ${err.message}`);
+      }
+      if (!credentials && fallbackGenerator) {
+        const fallbackData = fallbackGenerator();
+        return schema.parse(fallbackData);
+      }
+    }
+  }
+
+  // 2. Amazon Bedrock Provider (Claude 3.5 Haiku / Nova)
   if (credentials) {
     try {
       const client = new BedrockRuntimeClient({
@@ -87,8 +122,10 @@ export async function invokeBedrockJson<T>({
     return schema.parse(fallbackData);
   }
 
-  throw AppError.internal("Amazon Bedrock is not configured and no fallback is available.");
+  throw AppError.internal("No AI provider (Gemini or Amazon Bedrock) is configured and no fallback is available.");
 }
+
+export const invokeAiJson = invokeBedrockJson;
 
 /**
  * Extracts a JSON object from raw LLM output even if surrounded by commentary or backticks.

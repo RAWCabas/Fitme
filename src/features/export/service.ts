@@ -351,6 +351,122 @@ export class ExportService {
           break-inside: avoid !important;
         }
       `,
+      harvard_classic: `
+        body {
+          font-family: "Times New Roman", Times, "Merriweather", Garamond, Georgia, serif !important;
+          color: #000000 !important;
+          line-height: 1.34 !important;
+        }
+        .header-container {
+          text-align: center !important;
+          margin-bottom: 2pt !important;
+        }
+        h1 {
+          font-family: "Times New Roman", Times, "Merriweather", Garamond, Georgia, serif !important;
+          font-size: 20.5pt !important;
+          font-weight: 800 !important;
+          letter-spacing: 0.03em !important;
+          text-transform: uppercase !important;
+          margin: 0 0 2pt 0 !important;
+          color: #000000 !important;
+          text-align: center !important;
+          line-height: 1.1 !important;
+        }
+        .headline {
+          font-family: "Times New Roman", Times, "Merriweather", Garamond, Georgia, serif !important;
+          font-size: 9.5pt !important;
+          font-weight: 700 !important;
+          letter-spacing: 0.03em !important;
+          text-transform: uppercase !important;
+          margin-bottom: 2.5pt !important;
+          text-align: center !important;
+          color: #000000 !important;
+          line-height: 1.2 !important;
+        }
+        .contact-row {
+          font-family: "Times New Roman", Times, "Merriweather", Garamond, Georgia, serif !important;
+          font-size: 9pt !important;
+          color: #000000 !important;
+          text-align: center !important;
+          display: flex !important;
+          flex-wrap: wrap !important;
+          justify-content: center !important;
+          align-items: center !important;
+          gap: 2pt 8pt !important;
+          line-height: 1.25 !important;
+          margin-bottom: 3pt !important;
+        }
+        .contact-row a {
+          color: #000000 !important;
+          text-decoration: none !important;
+        }
+        .header-divider {
+          display: none !important;
+        }
+        h2 {
+          font-family: "Times New Roman", Times, "Merriweather", Garamond, Georgia, serif !important;
+          font-size: 10pt !important;
+          font-weight: 800 !important;
+          text-transform: uppercase !important;
+          letter-spacing: 0.03em !important;
+          color: #000000 !important;
+          border-bottom: 1.5px solid #000000 !important;
+          padding-bottom: 1pt !important;
+          margin-top: 5pt !important;
+          margin-bottom: 3pt !important;
+        }
+        .item-header {
+          font-family: "Times New Roman", Times, "Merriweather", Garamond, Georgia, serif !important;
+          display: flex !important;
+          justify-content: space-between !important;
+          font-size: 9.5pt !important;
+          font-weight: 700 !important;
+          color: #000000 !important;
+          margin-top: 2pt !important;
+        }
+        .item-sub {
+          font-family: "Times New Roman", Times, "Merriweather", Garamond, Georgia, serif !important;
+          display: flex !important;
+          justify-content: space-between !important;
+          font-size: 9pt !important;
+          font-style: italic !important;
+          color: #000000 !important;
+          margin-bottom: 1.5pt !important;
+        }
+        ul {
+          margin: 1.5pt 0 2.5pt 0 !important;
+          padding-left: 14pt !important;
+        }
+        li {
+          font-family: "Times New Roman", Times, "Merriweather", Garamond, Georgia, serif !important;
+          font-size: 8.75pt !important;
+          color: #000000 !important;
+          line-height: 1.34 !important;
+          margin-bottom: 1.5pt !important;
+        }
+        .summary-text {
+          font-family: "Times New Roman", Times, "Merriweather", Garamond, Georgia, serif !important;
+          font-size: 8.75pt !important;
+          color: #000000 !important;
+          line-height: 1.35 !important;
+          text-align: justify !important;
+        }
+        .skills-category-row {
+          font-family: "Times New Roman", Times, "Merriweather", Garamond, Georgia, serif !important;
+          font-size: 8.75pt !important;
+          color: #000000 !important;
+          margin-bottom: 2pt !important;
+          line-height: 1.35 !important;
+        }
+        .skills-category-label {
+          font-weight: 700 !important;
+          color: #000000 !important;
+        }
+        .experience-item, .project-item, .education-item {
+          page-break-inside: avoid !important;
+          break-inside: avoid !important;
+        }
+      `,
       classic_ivy: `
         body {
           font-family: "Garamond", "Georgia", "Baskerville", "Times New Roman", serif;
@@ -638,15 +754,87 @@ export class ExportService {
       (p) => !p.isHidden && !hiddenProjIds.has(p.id) && !hiddenProjNames.has(p.name.toLowerCase().trim())
     );
 
-    const isCabasTemplate = isRhinn || preset === "cabas_executive";
+    const isHarvard = preset === "harvard_classic";
+    const isCabasTemplate = !isHarvard && (isRhinn || preset === "cabas_executive");
     const isOnePage = resume.pageBudget === "1_page";
 
-    // Strict titles matching Image 2
-    const expTitle = isCabasTemplate ? "EXPERIENCE" : "Work Experience";
-    const skillsTitle = isCabasTemplate ? "TECHNICAL SKILLS" : "Core Competencies";
-    const summaryTitle = isCabasTemplate ? "PROFESSIONAL PROFILE" : "Professional Summary";
-    const eduTitle = isCabasTemplate ? "EDUCATION" : "Education";
-    const certsTitle = isCabasTemplate ? "TESDA TRAININGS AND CERTIFICATES" : "TESDA Trainings and Certificates";
+    // Strict titles matching Image 1 & 2
+    const expTitle = isHarvard ? "EXPERIENCE" : (isCabasTemplate ? "EXPERIENCE" : "Work Experience");
+    const skillsTitle = isHarvard ? "SKILLS" : (isCabasTemplate ? "TECHNICAL SKILLS" : "Core Competencies");
+    const summaryTitle = isHarvard ? "SUMMARY" : (isCabasTemplate ? "PROFESSIONAL PROFILE" : "Professional Summary");
+    const eduTitle = isHarvard ? "EDUCATION" : (isCabasTemplate ? "EDUCATION" : "Education");
+    const certsTitle = isHarvard ? "CERTIFICATIONS & TRAINING" : (isCabasTemplate ? "TESDA TRAININGS AND CERTIFICATES" : "TESDA Trainings and Certificates");
+
+    // Dynamic categorizer for Harvard preset matching sample PDFs
+    if (isHarvard) {
+      const hasCloudOrWeb = activeSkills.some((s) => {
+        const l = s.name.toLowerCase();
+        return (
+          l.includes("aws") ||
+          l.includes("cloud") ||
+          l.includes("sql") ||
+          l.includes("database") ||
+          l.includes("dynamo") ||
+          l.includes("cognito") ||
+          l.includes("rest") ||
+          l.includes("api") ||
+          l.includes("json") ||
+          l.includes("xml")
+        );
+      });
+
+      const cat1 = hasCloudOrWeb ? "Cloud, Databases & Web" : "Hardware & Prototyping";
+      const cat2 = hasCloudOrWeb ? "Programming, Analysis & Tools" : "Software, AI & Tools";
+      const harvardMap: Record<string, string[]> = { [cat1]: [], [cat2]: [] };
+
+      for (const skill of activeSkills) {
+        const l = skill.name.toLowerCase();
+        if (hasCloudOrWeb) {
+          if (
+            l.includes("aws") ||
+            l.includes("dynamo") ||
+            l.includes("cognito") ||
+            l.includes("sql") ||
+            l.includes("database") ||
+            l.includes("json") ||
+            l.includes("xml") ||
+            l.includes("html") ||
+            l.includes("css") ||
+            l.includes("rest") ||
+            l.includes("websocket") ||
+            l.includes("cloud")
+          ) {
+            harvardMap[cat1].push(skill.name);
+          } else {
+            harvardMap[cat2].push(skill.name);
+          }
+        } else {
+          if (
+            l.includes("pcb") ||
+            l.includes("solder") ||
+            l.includes("wiring") ||
+            l.includes("multimeter") ||
+            l.includes("arduino") ||
+            l.includes("esp32") ||
+            l.includes("sensor") ||
+            l.includes("fusion") ||
+            l.includes("3d print") ||
+            l.includes("assembly") ||
+            l.includes("hardware") ||
+            l.includes("diagnostic")
+          ) {
+            harvardMap[cat1].push(skill.name);
+          } else {
+            harvardMap[cat2].push(skill.name);
+          }
+        }
+      }
+
+      // Clear default categorizedSkills and assign harvardMap
+      Object.keys(categorizedSkills).forEach((k) => delete categorizedSkills[k]);
+      if (harvardMap[cat1].length > 0) categorizedSkills[cat1] = harvardMap[cat1];
+      if (harvardMap[cat2].length > 0) categorizedSkills[cat2] = harvardMap[cat2];
+    }
 
     // Dynamic 1-page scaling so content gracefully fits down to the bottom margin on 1 page only
     const totalExp = activeExperiences.length;
@@ -674,7 +862,29 @@ export class ExportService {
     const showGithub = !hiddenContact.has("githubUrl") && !isCabasTemplate && Boolean(c.githubUrl);
     const showSummary = !hiddenContact.has("summary") && Boolean(resume.tailoredSummary || profile.summary);
 
-    const fontStyles = isCabasTemplate
+    const hasWebProject = activeProjects.some(
+      (p) => p.name.toLowerCase().includes("fitme") || p.name.toLowerCase().includes("web") || p.name.toLowerCase().includes("cloud")
+    );
+    const projectsTitle = isHarvard
+      ? (hasWebProject ? "SOFTWARE & ENGINEERING PROJECTS" : "ACADEMIC RESEARCH & ENGINEERING PROJECT")
+      : "Technical Projects";
+
+    const fontStyles = isHarvard
+      ? {
+          name: `font-family: 'Times New Roman', Times, 'Merriweather', Garamond, Georgia, serif; font-size: ${nameFontSize}; font-weight: 800; letter-spacing: 0.03em; text-transform: uppercase; margin: 0 0 2pt 0; color: #000000; text-align: center; line-height: 1.1;`,
+          headline: `font-family: 'Times New Roman', Times, 'Merriweather', Garamond, Georgia, serif; font-size: ${titleFontSize}; color: #000000; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; margin-bottom: 2.5pt; text-align: center; line-height: 1.2;`,
+          contact: `font-family: 'Times New Roman', Times, 'Merriweather', Garamond, Georgia, serif; font-size: ${contactFontSize}; color: #000000; text-align: center; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 2pt 8pt; line-height: 1.25; margin-bottom: 3pt;`,
+          divider: `border-top: 1.5px solid #000000; margin: ${dividerMargin};`,
+          h2: `font-family: 'Times New Roman', Times, 'Merriweather', Garamond, Georgia, serif; font-size: ${headerFontSize}; font-weight: 800; text-transform: uppercase; letter-spacing: 0.03em; color: #000000; border-bottom: 1.5px solid #000000; padding-bottom: 1pt; margin-top: 5pt; margin-bottom: 3pt;`,
+          summary: `font-family: 'Times New Roman', Times, 'Merriweather', Garamond, Georgia, serif; font-size: ${bodyFontSize}; color: #000000; line-height: ${bodyLineHeight}; text-align: justify;`,
+          itemHeader: `font-family: 'Times New Roman', Times, 'Merriweather', Garamond, Georgia, serif; display: flex; justify-content: space-between; font-size: ${bodyFontSize}; font-weight: 700; color: #000000; margin-top: 2pt;`,
+          itemSub: `font-family: 'Times New Roman', Times, 'Merriweather', Garamond, Georgia, serif; display: flex; justify-content: space-between; font-size: ${bodyFontSize}; font-style: normal; color: #000000; margin-bottom: 1.5pt;`,
+          itemSubItalic: `font-family: 'Times New Roman', Times, 'Merriweather', Garamond, Georgia, serif; display: flex; justify-content: space-between; font-size: ${bodyFontSize}; font-style: italic; color: #000000; margin-bottom: 1.5pt;`,
+          li: `font-family: 'Times New Roman', Times, 'Merriweather', Garamond, Georgia, serif; font-size: ${bodyFontSize}; color: #000000; line-height: ${bodyLineHeight}; margin-bottom: 1.5pt;`,
+          skillsLi: `font-family: 'Times New Roman', Times, 'Merriweather', Garamond, Georgia, serif; font-size: ${bodyFontSize}; color: #000000; line-height: ${bodyLineHeight}; margin-bottom: 1.5pt;`,
+          dateSpan: `font-weight: normal; font-size: ${bodyFontSize};`,
+        }
+      : isCabasTemplate
       ? {
           name: `font-family: 'Arimo', Arial, 'Helvetica Neue', Helvetica, sans-serif; font-size: ${nameFontSize}; font-weight: 900; letter-spacing: 0.02em; text-transform: uppercase; margin: 0 0 2pt 0; color: #000000; line-height: 1.1;`,
           headline: `font-family: 'Arimo', Arial, 'Helvetica Neue', Helvetica, sans-serif; font-size: ${titleFontSize}; color: #111827; font-weight: 700; letter-spacing: 0.02em; text-transform: uppercase; margin-bottom: 3.5pt; line-height: 1.2;`,
@@ -705,6 +915,224 @@ export class ExportService {
         };
 
     const sectionDivider = isCabasTemplate ? `<div class="section-divider" style="${fontStyles.divider}"></div>` : "";
+
+    if (isHarvard) {
+      return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>${escapeHtml(c.fullName)} - Resume (Harvard)</title>
+  <style>
+    @page {
+      size: letter portrait;
+      margin: 0.5in 0.6in;
+    }
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      padding: 0;
+      background: #ffffff;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    @media print {
+      @page {
+        size: letter portrait;
+        margin: 0.5in 0.6in;
+      }
+      body {
+        padding: 0 !important;
+        margin: 0 !important;
+      }
+      .no-print {
+        display: none !important;
+      }
+      a {
+        text-decoration: none;
+        color: inherit;
+      }
+    }
+    ${activePresetCss}
+  </style>
+</head>
+<body data-preset="harvard_classic">
+  <div class="no-print" style="margin: 0 0 10px 0; background: #f8fafc; border-bottom: 1px solid #e2e8f0; padding: 8px 14px; font-family: -apple-system, sans-serif; font-size: 12px; color: #475569; display: flex; justify-content: space-between; align-items: center;">
+    <span>💡 <strong>Tip:</strong> In Chrome's print dialog, choose <strong>Save as PDF</strong> for a pixel-perfect 1-page Harvard Resume.</span>
+    <button onclick="window.print()" style="background: #111827; color: #ffffff; border: none; padding: 5px 14px; border-radius: 4px; font-size: 12px; font-weight: 600; cursor: pointer;">Print / Save PDF</button>
+  </div>
+
+  <div id="printable-resume" style="width: 100%; max-width: 800px; margin: 0 auto; background: #ffffff; color: #000000; box-sizing: border-box; font-family: 'Times New Roman', Times, 'Merriweather', Garamond, Georgia, serif;">
+    <header class="header-container" style="text-align: center; margin-bottom: 3pt;">
+      <h1 style="${fontStyles.name}">
+        ${escapeHtml(c.fullName.toUpperCase())}
+      </h1>
+      ${
+        showHeadline
+          ? `<div class="headline" style="${fontStyles.headline}">
+              ${escapeHtml(c.headline.toUpperCase())}
+            </div>`
+          : ""
+      }
+      <div class="contact-row" style="${fontStyles.contact}">
+        ${showLocation ? `<span>${escapeHtml(c.location)}</span>` : ""}
+        ${showLocation && showPhone ? `<span>•</span>` : ""}
+        ${showPhone ? `<span>${escapeHtml(c.phone)}</span>` : ""}
+        ${(showLocation || showPhone) && showEmail ? `<span>•</span>` : ""}
+        ${showEmail ? `<a href="mailto:${escapeHtml(c.email)}" style="color: inherit; text-decoration: none;">${escapeHtml(c.email)}</a>` : ""}
+        ${showLinkedin && c.linkedinUrl ? `<span>•</span><a href="${escapeHtml(c.linkedinUrl)}" style="color: inherit; text-decoration: none;">LinkedIn</a>` : ""}
+        ${showGithub && c.githubUrl ? `<span>•</span><a href="${escapeHtml(c.githubUrl)}" style="color: inherit; text-decoration: none;">GitHub</a>` : ""}
+      </div>
+    </header>
+
+    ${
+      showSummary
+        ? `<section style="margin-bottom: 3pt;">
+      <h2 style="${fontStyles.h2}">
+        ${summaryTitle}
+      </h2>
+      <div class="summary-text" style="${fontStyles.summary}">
+        ${escapeHtml(resume.tailoredSummary || profile.summary)}
+      </div>
+    </section>`
+        : ""
+    }
+
+    ${
+      activeExperiences.length > 0
+        ? `<section style="margin-bottom: 3pt;">
+      <h2 style="${fontStyles.h2}">
+        ${expTitle}
+      </h2>
+      ${activeExperiences
+        .map(
+          (exp) => {
+            const visibleBullets = exp.bullets.filter((b) => !b.isHidden);
+            const displayBullets = maxBulletsPerExp ? visibleBullets.slice(0, maxBulletsPerExp) : visibleBullets;
+            return `
+        <div class="experience-item" style="margin-top: 2pt; margin-bottom: 2.5pt;">
+          <div class="item-header" style="${fontStyles.itemHeader}">
+            <span>${escapeHtml(exp.company)}</span>
+            <span>${escapeHtml(exp.location || "Cebu City, Philippines")}</span>
+          </div>
+          <div class="item-sub" style="${fontStyles.itemSubItalic}">
+            <span>${escapeHtml(exp.role)}</span>
+            <span>${escapeHtml(exp.startDate?.slice(0, 4) || exp.endDate?.slice(0, 4) || "2026")}</span>
+          </div>
+          <ul style="margin: 1.5pt 0 2.5pt 0; padding-left: 14pt;">
+            ${displayBullets.map((b) => `<li style="${fontStyles.li}">${escapeHtml(b.content)}</li>`).join("\n            ")}
+          </ul>
+        </div>`;
+          }
+        )
+        .join("")}
+    </section>`
+        : ""
+    }
+
+    ${
+      activeProjects.length > 0
+        ? `<section style="margin-bottom: 3pt;">
+      <h2 style="${fontStyles.h2}">
+        ${projectsTitle}
+      </h2>
+      ${activeProjects
+        .slice(0, isOnePage ? 2 : undefined)
+        .map(
+          (p) => `
+        <div class="project-item" style="margin-top: 2pt; margin-bottom: 2.5pt;">
+          <div class="item-header" style="${fontStyles.itemHeader}">
+            <span>${escapeHtml(p.name.toUpperCase())}</span>
+          </div>
+          <div class="item-sub" style="${fontStyles.itemSubItalic}">
+            <span>${escapeHtml(p.description ? p.description.split(".")[0] : "Undergraduate Thesis Researcher & Hardware Developer")}</span>
+          </div>
+          ${
+            p.bullets.filter((b) => !b.isHidden).length > 0
+              ? `<ul style="margin: 1.5pt 0 2.5pt 0; padding-left: 14pt;">
+            ${p.bullets.filter((b) => !b.isHidden).slice(0, isOnePage ? 2 : undefined).map((b) => `<li style="${fontStyles.li}">${escapeHtml(b.content)}</li>`).join("\n            ")}
+          </ul>`
+              : ""
+          }
+        </div>`
+        )
+        .join("")}
+    </section>`
+        : ""
+    }
+
+    ${
+      activeEdu.length > 0
+        ? `<section style="margin-bottom: 3pt;">
+      <h2 style="${fontStyles.h2}">
+        ${eduTitle}
+      </h2>
+      ${activeEdu
+        .map(
+          (edu) => `
+        <div class="education-item" style="margin-top: 2pt; margin-bottom: 2.5pt;">
+          <div class="item-header" style="${fontStyles.itemHeader}">
+            <span>${escapeHtml(edu.institution.toUpperCase())}</span>
+            <span>Cebu City, Philippines</span>
+          </div>
+          <div class="item-sub" style="${fontStyles.itemSubItalic}">
+            <span>${escapeHtml(edu.degree || edu.fieldOfStudy)}</span>
+            <span>${escapeHtml([edu.startDate || "2022", edu.endDate || "2026"].join("- "))}</span>
+          </div>
+        </div>`
+        )
+        .join("")}
+    </section>`
+        : ""
+    }
+
+    ${
+      activeCerts.length > 0
+        ? `<section style="margin-bottom: 3pt;">
+      <h2 style="${fontStyles.h2}">
+        ${certsTitle}
+      </h2>
+      <ul style="margin: 1.5pt 0 2.5pt 0; padding-left: 14pt;">
+        ${activeCerts
+          .map(
+            (cert) => `
+          <li style="${fontStyles.li}">
+            ${escapeHtml(cert.name)}${cert.issuer ? ` – ${escapeHtml(cert.issuer)}` : ""}${cert.hours ? ` (${escapeHtml(cert.hours)})` : ""}
+          </li>`
+          )
+          .join("")}
+      </ul>
+    </section>`
+        : ""
+    }
+
+    ${
+      Object.keys(categorizedSkills).length > 0
+        ? `<section style="margin-bottom: 3pt;">
+      <h2 style="${fontStyles.h2}">
+        ${skillsTitle}
+      </h2>
+      <div class="skills-list">
+        <ul style="margin: 1.5pt 0 2.5pt 0; padding-left: 14pt;">
+          ${Object.entries(categorizedSkills)
+            .map(
+              ([cat, skills]) => `
+            <li class="skills-category-row" style="${fontStyles.skillsLi}">
+              <strong style="color: #000000;">${escapeHtml(cat)}:</strong> ${escapeHtml(skills.join(", "))}
+            </li>`
+            )
+            .join("")}
+        </ul>
+      </div>
+    </section>`
+        : ""
+    }
+  </div>
+</body>
+</html>`;
+    }
 
     return `<!DOCTYPE html>
 <html lang="en">

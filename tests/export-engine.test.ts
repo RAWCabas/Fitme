@@ -308,6 +308,14 @@ describe("ATS Export Engine: Service", () => {
     expect(html).toContain("TypeScript");
     expect(html).not.toContain("Ruby on Rails");
   });
+
+  it("renders the harvard_classic preset with Times New Roman typography and clean dividers", () => {
+    const html = exportService.generateHtmlDocument(mockResume, mockProfile, "harvard_classic");
+    expect(html).toContain("harvard_classic");
+    expect(html).toContain("Times New Roman");
+    expect(html).toContain("EXPERIENCE");
+    expect(html).toContain("SUMMARY");
+  });
 });
 
 describe("ATS Export Engine: API Routes", () => {

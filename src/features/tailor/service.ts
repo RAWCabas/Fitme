@@ -273,7 +273,8 @@ Return ONLY a valid JSON object matching this exact structure:
     preset: TypographyPreset = "modern_standard",
     userEmail = "",
     userName = "",
-    clientProfile?: Profile
+    clientProfile?: Profile,
+    customInstructions = ""
   ): Promise<TailoredResume> {
     let profile = clientProfile;
     if (!profile || profile.experiences.length === 0) {
@@ -299,31 +300,166 @@ Return ONLY a valid JSON object matching this exact structure:
     const activeCertifications = (profile.certifications || []).filter((c) => !c.isHidden);
     const activeSkills = profile.skills.filter((s) => !s.isHidden);
 
-    // 3. Page Budget Curation
+    // 3. Page Budget Curation Bounds
     const maxRoles = pageBudget === "1_page" ? 3 : 6;
     const maxBulletsPerRole = pageBudget === "1_page" ? 3 : 5;
     const maxProjects = pageBudget === "1_page" ? 2 : 4;
 
-    const curatedExperiences: WorkExperience[] = activeExperiences.slice(0, maxRoles).map((exp) => ({
-      ...exp,
-      bullets: exp.bullets
-        .filter((b) => !b.isHidden)
-        .slice(0, maxBulletsPerRole)
-        .map((b) => ({
-          ...b,
-          // Boost bullet phrasing to align with JD keywords
-          content: this.tailorBulletText(b.content, job),
-          hasMetrics: true,
+    const baseSummary = `Results-oriented ${job.role} with demonstrated hands-on experience in ${
+      job.extractedSkills.slice(0, 3).join(", ") || "software solutions, systems troubleshooting, and cloud technologies"
+    }. Proven track record of delivering reliable technical solutions, optimizing system performance, and architecting resilient systems aligned with ${job.company}'s mission.`;
+
+    const aiSchema = z.object({
+      roleSubtitle: z.string().optional(),
+      tailoredSummary: z.string(),
+      tailoredExperiences: z
+        .array(
+          z.object({
+            role: z.string().optional(),
+            company: z.string().optional(),
+            bullets: z.array(z.string()),
+          })
+        )
+        .optional(),
+      tailoredProjects: z
+        .array(
+          z.object({
+            name: z.string().optional(),
+            bullets: z.array(z.string()),
+          })
+        )
+        .optional(),
+      prioritizedSkillNames: z.array(z.string()).optional(),
+    });
+
+    type AiTailorResponse = z.infer<typeof aiSchema>;
+
+    const systemPrompt = `You are a world-class executive resume strategist and ATS optimization expert.
+Tailor the candidate's resume for the target job opportunity.
+Your goal is to position the candidate as the ideal applicant by aligning their real experiences, technical projects, and skills to the job requirements.
+Guidelines:
+1. Target Headline/Subtitle: Craft a concise, high-impact role title/domain subtitle (e.g. "COMPUTER ENGINEER | SOFTWARE SOLUTIONS, CLOUD & SYSTEMS INTEGRATION" or "COMPUTER ENGINEER | PCB FABRICATION | EMBEDDED SYSTEMS").
+2. Professional Summary: Write a compelling 3-4 sentence summary highlighting the candidate's core strengths, degree, hands-on experience, and direct relevance to ${job.company} and the ${job.role} role.
+3. Experiences: For each experience, select up to ${maxBulletsPerRole} bullet points and rephrase them using Google's XYZ formula ("Accomplished [X] as measured by [Y] by doing [Z]"). Highlight tools, data flow, troubleshooting, or engineering rigor. Never fabricate fake companies or dates.
+4. Projects: Select the top ${maxProjects} most relevant projects. Reframe their descriptions and bullets to emphasize skills required by the job (e.g. APIs, database, automation, testing, or hardware/CAD).
+5. Prioritized Skills: Select the candidate's active skills that best match the job.
+
+Return ONLY a valid JSON object matching the requested schema.`;
+
+    const userPrompt = `Target Job Opportunity:
+Role: ${job.role}
+Company: ${job.company}
+Location: ${job.location || "Remote / Cebu"}
+Key Extracted Skills: ${job.extractedSkills.join(", ")}
+Must Haves: ${job.mustHaves.join("; ")}
+Nice To Haves: ${job.niceToHaves.join("; ")}
+${customInstructions ? `\nSPECIAL USER CUSTOM INSTRUCTIONS / EMPHASIS:\n"${customInstructions}"\n` : ""}
+
+Candidate Master Vault Profile:
+Name: ${profile.contact.fullName}
+Active Work Experiences:
+${activeExperiences.map((e, idx) => `[Exp ${idx + 1}] Role: ${e.role} at ${e.company} (${e.startDate || ""} - ${e.endDate || "Present"})\nOriginal Bullets:\n${e.bullets.map((b) => `- ${b.content}`).join("\n")}`).join("\n\n")}
+
+Active Technical & Engineering Projects:
+${activeProjects.map((p, idx) => `[Proj ${idx + 1}] Name: ${p.name} | Tech: ${p.technologies.join(", ")}\nDescription: ${p.description}\nOriginal Bullets:\n${p.bullets.map((b) => `- ${b.content}`).join("\n")}`).join("\n\n")}
+
+Candidate Skills:
+${activeSkills.map((s) => s.name).join(", ")}`;
+
+    let aiResult: AiTailorResponse;
+    try {
+      aiResult = await invokeBedrockJson<AiTailorResponse>({
+        systemPrompt,
+        userPrompt,
+        schema: aiSchema,
+        fallbackGenerator: () => ({
+          roleSubtitle: profile.contact.headline || `COMPUTER ENGINEER | ${job.role.toUpperCase()}`,
+          tailoredSummary: baseSummary,
+          tailoredExperiences: activeExperiences.slice(0, maxRoles).map((exp) => ({
+            role: exp.role,
+            company: exp.company,
+            bullets: exp.bullets.filter((b) => !b.isHidden).slice(0, maxBulletsPerRole).map((b) => this.tailorBulletText(b.content, job)),
+          })),
+          tailoredProjects: activeProjects.slice(0, maxProjects).map((proj) => ({
+            name: proj.name,
+            bullets: proj.bullets.filter((b) => !b.isHidden).slice(0, 2).map((b) => b.content),
+          })),
+          prioritizedSkillNames: activeSkills.map((s) => s.name),
+        }),
+      });
+    } catch {
+      aiResult = {
+        roleSubtitle: profile.contact.headline || `COMPUTER ENGINEER | ${job.role.toUpperCase()}`,
+        tailoredSummary: baseSummary,
+        tailoredExperiences: activeExperiences.slice(0, maxRoles).map((exp) => ({
+          role: exp.role,
+          company: exp.company,
+          bullets: exp.bullets.filter((b) => !b.isHidden).slice(0, maxBulletsPerRole).map((b) => this.tailorBulletText(b.content, job)),
         })),
-    }));
+        tailoredProjects: activeProjects.slice(0, maxProjects).map((proj) => ({
+          name: proj.name,
+          bullets: proj.bullets.filter((b) => !b.isHidden).slice(0, 2).map((b) => b.content),
+        })),
+        prioritizedSkillNames: activeSkills.map((s) => s.name),
+      };
+    }
 
-    const curatedProjects: Project[] = activeProjects.slice(0, maxProjects).map((proj) => ({
-      ...proj,
-      bullets: proj.bullets.filter((b) => !b.isHidden),
-    }));
+    // Merge AI result with existing experiences and projects preserving IDs
+    const curatedExperiences: WorkExperience[] = activeExperiences.slice(0, maxRoles).map((exp, expIdx) => {
+      const aiExp = aiResult.tailoredExperiences?.[expIdx];
+      const bullets = exp.bullets.filter((b) => !b.isHidden);
+      const tailoredBullets = bullets.slice(0, maxBulletsPerRole).map((b, bIdx) => {
+        const aiBullet = aiExp?.bullets?.[bIdx];
+        return {
+          ...b,
+          content: aiBullet || this.tailorBulletText(b.content, job),
+          hasMetrics: true,
+        };
+      });
 
-    // Prioritize skills that match the target JD
+      return {
+        ...exp,
+        bullets: tailoredBullets,
+      };
+    });
+
+    // Pick projects prioritizing those surfaced by the AI or matching the job
+    const curatedProjects: Project[] = [];
+    const aiProjList = aiResult.tailoredProjects || [];
+    for (const aiProj of aiProjList) {
+      if (curatedProjects.length >= maxProjects) break;
+      const matched = activeProjects.find(
+        (p) => p.name.toLowerCase().includes((aiProj.name || "").toLowerCase()) || (aiProj.name || "").toLowerCase().includes(p.name.toLowerCase())
+      );
+      if (matched && !curatedProjects.some((p) => p.id === matched.id)) {
+        curatedProjects.push({
+          ...matched,
+          bullets: matched.bullets.filter((b) => !b.isHidden).slice(0, 2).map((b, bIdx) => ({
+            ...b,
+            content: aiProj.bullets?.[bIdx] || b.content,
+          })),
+        });
+      }
+    }
+    // Fill remaining project slots if any
+    for (const p of activeProjects) {
+      if (curatedProjects.length >= maxProjects) break;
+      if (!curatedProjects.some((cp) => cp.id === p.id)) {
+        curatedProjects.push({
+          ...p,
+          bullets: p.bullets.filter((b) => !b.isHidden).slice(0, 2),
+        });
+      }
+    }
+
+    // Prioritize skills
+    const prioritizedNames = new Set((aiResult.prioritizedSkillNames || []).map((s) => s.toLowerCase().trim()));
     const sortedSkills: SkillItem[] = [...activeSkills].sort((a, b) => {
+      const aPrioritized = prioritizedNames.has(a.name.toLowerCase().trim());
+      const bPrioritized = prioritizedNames.has(b.name.toLowerCase().trim());
+      if (aPrioritized && !bPrioritized) return -1;
+      if (!aPrioritized && bPrioritized) return 1;
+
       const aMatched = fitScore.keywords.some((k) => k.keyword.toLowerCase() === a.name.toLowerCase() && k.status === "matched");
       const bMatched = fitScore.keywords.some((k) => k.keyword.toLowerCase() === b.name.toLowerCase() && k.status === "matched");
       if (aMatched && !bMatched) return -1;
@@ -331,8 +467,7 @@ Return ONLY a valid JSON object matching this exact structure:
       return 0;
     });
 
-    // 4. Draft Tailored Summary
-    const tailoredSummary = `Results-oriented ${job.role} with demonstrated expertise in ${job.extractedSkills.slice(0, 3).join(", ") || "scalable software engineering"}. Proven track record of delivering high-impact solutions, optimizing system performance, and architecting resilient applications aligned with ${job.company}'s mission.`;
+    const tailoredSummary = aiResult.tailoredSummary || baseSummary;
 
     // 5. Versioning
     const previousVersions = await this.repo.listTailoredResumes(userId, jobId);
@@ -594,6 +729,7 @@ Start with a strong action verb (e.g. Engineered, Spearheaded, Architected, Acce
       role = roleMatch[1].trim();
     } else {
       const candidateRoles = [
+        "Cloud Systems Engineer", "Cloud Engineer", "Solutions Specialist", "Solution Specialist",
         "IT Associate", "IT Support Associate", "IT Technical Support", "Technical Support Specialist",
         "Systems & Network Engineer", "Computer Engineer", "Hardware Support Specialist",
         "POS Specialist", "Systems Administrator", "Network Administrator", "Helpdesk Support",

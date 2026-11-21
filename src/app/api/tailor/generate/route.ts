@@ -8,7 +8,7 @@ export async function POST(req: NextRequest) {
   try {
     const session = await requireSession();
     const body = await req.json();
-    const { jobId, pageBudget, preset, clientProfile } = body;
+    const { jobId, pageBudget, preset, clientProfile, customInstructions } = body;
 
     const tailoredResume = await tailorService.tailorResume(
       session.userId,
@@ -17,7 +17,8 @@ export async function POST(req: NextRequest) {
       preset as TypographyPreset,
       session.email,
       session.name,
-      clientProfile
+      clientProfile,
+      customInstructions
     );
 
     return jsonResponse(tailoredResume, 201);
