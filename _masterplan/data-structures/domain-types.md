@@ -212,6 +212,7 @@ export const tailoredResumeSchema = z.object({
   tailoredEducation: z.array(educationItemSchema).default([]),
   tailoredCertifications: z.array(certificationSchema).default([]),
   selectedSkills: z.array(skillItemSchema),
+  skillCategories: z.record(z.string(), z.array(z.string())).optional(),
   pdfS3Key: z.string().nullable().default(null),
   pdfPresignedUrl: z.string().nullable().default(null),
   markdownContent: z.string().default(""),

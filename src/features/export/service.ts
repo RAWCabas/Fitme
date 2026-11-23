@@ -768,73 +768,82 @@ export class ExportService {
 
     // Dynamic categorizer for Harvard preset matching sample PDFs
     if (isHarvard) {
-      const hasCloudOrWeb = activeSkills.some((s) => {
-        const l = s.name.toLowerCase();
-        return (
-          l.includes("aws") ||
-          l.includes("cloud") ||
-          l.includes("sql") ||
-          l.includes("database") ||
-          l.includes("dynamo") ||
-          l.includes("cognito") ||
-          l.includes("rest") ||
-          l.includes("api") ||
-          l.includes("json") ||
-          l.includes("xml")
-        );
-      });
-
-      const cat1 = hasCloudOrWeb ? "Cloud, Databases & Web" : "Hardware & Prototyping";
-      const cat2 = hasCloudOrWeb ? "Programming, Analysis & Tools" : "Software, AI & Tools";
-      const harvardMap: Record<string, string[]> = { [cat1]: [], [cat2]: [] };
-
-      for (const skill of activeSkills) {
-        const l = skill.name.toLowerCase();
-        if (hasCloudOrWeb) {
-          if (
-            l.includes("aws") ||
-            l.includes("dynamo") ||
-            l.includes("cognito") ||
-            l.includes("sql") ||
-            l.includes("database") ||
-            l.includes("json") ||
-            l.includes("xml") ||
-            l.includes("html") ||
-            l.includes("css") ||
-            l.includes("rest") ||
-            l.includes("websocket") ||
-            l.includes("cloud")
-          ) {
-            harvardMap[cat1].push(skill.name);
-          } else {
-            harvardMap[cat2].push(skill.name);
-          }
-        } else {
-          if (
-            l.includes("pcb") ||
-            l.includes("solder") ||
-            l.includes("wiring") ||
-            l.includes("multimeter") ||
-            l.includes("arduino") ||
-            l.includes("esp32") ||
-            l.includes("sensor") ||
-            l.includes("fusion") ||
-            l.includes("3d print") ||
-            l.includes("assembly") ||
-            l.includes("hardware") ||
-            l.includes("diagnostic")
-          ) {
-            harvardMap[cat1].push(skill.name);
-          } else {
-            harvardMap[cat2].push(skill.name);
+      if (resume.skillCategories && Object.keys(resume.skillCategories).length > 0) {
+        Object.keys(categorizedSkills).forEach((k) => delete categorizedSkills[k]);
+        for (const [cat, skills] of Object.entries(resume.skillCategories)) {
+          if (Array.isArray(skills) && skills.length > 0) {
+            categorizedSkills[cat] = skills;
           }
         }
-      }
+      } else {
+        const hasCloudOrWeb = activeSkills.some((s) => {
+          const l = s.name.toLowerCase();
+          return (
+            l.includes("aws") ||
+            l.includes("cloud") ||
+            l.includes("sql") ||
+            l.includes("database") ||
+            l.includes("dynamo") ||
+            l.includes("cognito") ||
+            l.includes("rest") ||
+            l.includes("api") ||
+            l.includes("json") ||
+            l.includes("xml")
+          );
+        });
 
-      // Clear default categorizedSkills and assign harvardMap
-      Object.keys(categorizedSkills).forEach((k) => delete categorizedSkills[k]);
-      if (harvardMap[cat1].length > 0) categorizedSkills[cat1] = harvardMap[cat1];
-      if (harvardMap[cat2].length > 0) categorizedSkills[cat2] = harvardMap[cat2];
+        const cat1 = hasCloudOrWeb ? "Cloud, Databases & Web" : "Hardware & Prototyping";
+        const cat2 = hasCloudOrWeb ? "Programming, Analysis & Tools" : "Software, AI & Tools";
+        const harvardMap: Record<string, string[]> = { [cat1]: [], [cat2]: [] };
+
+        for (const skill of activeSkills) {
+          const l = skill.name.toLowerCase();
+          if (hasCloudOrWeb) {
+            if (
+              l.includes("aws") ||
+              l.includes("dynamo") ||
+              l.includes("cognito") ||
+              l.includes("sql") ||
+              l.includes("database") ||
+              l.includes("json") ||
+              l.includes("xml") ||
+              l.includes("html") ||
+              l.includes("css") ||
+              l.includes("rest") ||
+              l.includes("websocket") ||
+              l.includes("cloud")
+            ) {
+              harvardMap[cat1].push(skill.name);
+            } else {
+              harvardMap[cat2].push(skill.name);
+            }
+          } else {
+            if (
+              l.includes("pcb") ||
+              l.includes("solder") ||
+              l.includes("wiring") ||
+              l.includes("multimeter") ||
+              l.includes("arduino") ||
+              l.includes("esp32") ||
+              l.includes("sensor") ||
+              l.includes("fusion") ||
+              l.includes("3d print") ||
+              l.includes("assembly") ||
+              l.includes("hardware") ||
+              l.includes("diagnostic")
+            ) {
+              harvardMap[cat1].push(skill.name);
+            } else {
+              harvardMap[cat2].push(skill.name);
+            }
+          }
+        }
+
+        // Clear default categorizedSkills and assign harvardMap
+        Object.keys(categorizedSkills).forEach((k) => delete categorizedSkills[k]);
+        if (harvardMap[cat1].length > 0) categorizedSkills[cat1] = harvardMap[cat1];
+        if (harvardMap[cat2].length > 0) categorizedSkills[cat2] = harvardMap[cat2];
+      }
     }
 
     // Dynamic 1-page scaling so content gracefully fits down to the bottom margin on 1 page only
@@ -1046,9 +1055,11 @@ export class ExportService {
         <div class="project-item" style="margin-top: 2pt; margin-bottom: 2.5pt;">
           <div class="item-header" style="${fontStyles.itemHeader}">
             <span>${escapeHtml(p.name.toUpperCase())}</span>
+            <span>Cebu City, Philippines</span>
           </div>
           <div class="item-sub" style="${fontStyles.itemSubItalic}">
-            <span>${escapeHtml(p.description ? p.description.split(".")[0] : "Undergraduate Thesis Researcher & Hardware Developer")}</span>
+            <span>${escapeHtml(p.description ? p.description.split(".")[0] : "Systems Developer & Technical Documentation")}</span>
+            <span>2026</span>
           </div>
           ${
             p.bullets.filter((b) => !b.isHidden).length > 0
@@ -1100,7 +1111,10 @@ export class ExportService {
           .map(
             (cert) => `
           <li style="${fontStyles.li}">
-            ${escapeHtml(cert.name)}${cert.issuer ? ` – ${escapeHtml(cert.issuer)}` : ""}${cert.hours ? ` (${escapeHtml(cert.hours)})` : ""}
+            <span style="display: flex; justify-content: space-between; width: 100%;">
+              <span>${escapeHtml(cert.name)}${cert.issuer ? ` – ${escapeHtml(cert.issuer)}` : ""}${cert.hours ? ` (${escapeHtml(cert.hours)})` : ""}</span>
+              <span style="white-space: nowrap; margin-left: 12pt;">Cebu City</span>
+            </span>
           </li>`
           )
           .join("")}

@@ -293,13 +293,8 @@ Return ONLY a valid JSON object matching this exact structure:
     // 1. Calculate ATS Fit Score
     const fitScore = this.calculateFitScore(profile, job);
 
-    // 2. Filter out items where isHidden === true, suppressing non-technical fast food roles for engineering jobs
-    const isTechJob = !job.role.toLowerCase().includes("crew") && !job.role.toLowerCase().includes("cashier");
-    let activeExperiences = profile.experiences.filter((e) => {
-      if (e.isHidden) return false;
-      if (isTechJob && e.company.toLowerCase().includes("mcdonald")) return false;
-      return true;
-    });
+    // 2. Filter out items where isHidden === true
+    let activeExperiences = profile.experiences.filter((e) => !e.isHidden);
     if (activeExperiences.length === 0) {
       const master = buildRhinnMasterProfile(userId);
       activeExperiences = master.experiences.filter((e) => !e.isHidden);
@@ -315,9 +310,9 @@ Return ONLY a valid JSON object matching this exact structure:
     const activeSkills = profile.skills.filter((s) => !s.isHidden);
 
     // 3. Page Budget Curation Bounds
-    const maxRoles = pageBudget === "1_page" ? (activeExperiences.length <= 1 ? 1 : 2) : 6;
-    const maxBulletsPerRole = pageBudget === "1_page" ? (activeExperiences.length <= 1 ? 4 : 3) : 5;
-    const maxProjects = pageBudget === "1_page" ? 2 : 4;
+    const maxRoles = pageBudget === "1_page" ? (activeExperiences.length >= 3 ? 3 : (activeExperiences.length === 2 ? 2 : 1)) : 6;
+    const maxBulletsPerRole = pageBudget === "1_page" ? 4 : 5;
+    const maxProjects = pageBudget === "1_page" ? (activeExperiences.length >= 3 ? 1 : 2) : 4;
 
     const baseSummary = `Results-oriented ${job.role} with demonstrated hands-on experience in ${job.extractedSkills.slice(0, 3).join(", ") || "software solutions, systems troubleshooting, and cloud technologies"
       }. Proven track record of delivering reliable technical solutions, optimizing system performance, and architecting resilient systems aligned with ${job.company}'s mission.`;
@@ -343,19 +338,24 @@ Return ONLY a valid JSON object matching this exact structure:
         )
         .optional(),
       prioritizedSkillNames: z.array(z.string()).optional(),
+      skillCategories: z.record(z.string(), z.array(z.string())).optional(),
     });
 
     type AiTailorResponse = z.infer<typeof aiSchema>;
 
     const systemPrompt = `You are a world-class executive resume strategist and ATS optimization expert.
-Tailor the candidate's resume for the target job opportunity.
+Tailor the candidate's resume for the target job opportunity into a single-page Harvard College format.
 Your goal is to position the candidate as the ideal applicant by aligning their real experiences, technical projects, and skills to the job requirements.
-Guidelines:
-1. Target Headline/Subtitle: Craft a concise, high-impact role title/domain subtitle (e.g. "COMPUTER ENGINEER | SOFTWARE SOLUTIONS, CLOUD & SYSTEMS INTEGRATION" or "COMPUTER ENGINEER | PCB FABRICATION | EMBEDDED SYSTEMS").
+
+Strict Single-Page A4 Budget Guidelines:
+1. Target Headline/Subtitle: Craft a concise, high-impact role title/domain subtitle (e.g. "COMPUTER ENGINEER | PROJECT COORDINATION, TECHNICAL DOCUMENTATION & SYSTEMS VALIDATION" or "COMPUTER ENGINEER | SOFTWARE SOLUTIONS, CLOUD & SYSTEMS INTEGRATION").
 2. Professional Summary: Write a compelling 3-4 sentence summary highlighting the candidate's core strengths, degree, hands-on experience, and direct relevance to ${job.company} and the ${job.role} role.
-3. Experiences: For each experience, select up to ${maxBulletsPerRole} bullet points and rephrase them using Google's XYZ formula ("Accomplished [X] as measured by [Y] by doing [Z]"). Highlight tools, data flow, troubleshooting, or engineering rigor. Never fabricate fake companies or dates.
-4. Projects: Select the top ${maxProjects} most relevant projects. Reframe their descriptions and bullets to emphasize skills required by the job (e.g. APIs, database, automation, testing, or hardware/CAD).
-5. Prioritized Skills: Select the candidate's active skills that best match the job.
+3. Experiences: Select relevant experiences from the candidate's vault. Reframe each bullet to highlight competencies required by the job (e.g. SOPs, technical documentation, testing/validation, coordination, or engineering rigor).
+   - If 3 roles are included, provide 3 bullets for role 1, 2 bullets for role 2, and 1 bullet for role 3.
+   - Never fabricate fake companies or dates.
+4. Projects: Reframe project bullets to emphasize skills required by the job (e.g. documentation, technical manuals, APIs, database, automation, or testing). Provide 2 high-impact bullets.
+5. Skills: Organize the candidate's active skills into 2 tailored category lines that directly align with the job's priorities (e.g. "Documentation & Coordination" and "Technical & Productivity Tools", or "Cloud, Databases & Web" and "Programming, Analysis & Tools").
+6. Ensure the tailored content fills the single A4 page cleanly without overflowing.
 
 Return ONLY a valid JSON object matching the requested schema.`;
 
@@ -421,7 +421,17 @@ ${activeSkills.map((s) => s.name).join(", ")}`;
     const curatedExperiences: WorkExperience[] = activeExperiences.slice(0, maxRoles).map((exp, expIdx) => {
       const aiExp = aiResult.tailoredExperiences?.[expIdx];
       const bullets = exp.bullets.filter((b) => !b.isHidden);
-      const tailoredBullets = bullets.slice(0, maxBulletsPerRole).map((b, bIdx) => {
+      let roleBulletLimit = maxBulletsPerRole;
+      if (pageBudget === "1_page") {
+        if (maxRoles >= 3) {
+          roleBulletLimit = expIdx === 0 ? 3 : (expIdx === 1 ? 2 : 1);
+        } else if (maxRoles === 2) {
+          roleBulletLimit = expIdx === 0 ? 3 : 2;
+        } else {
+          roleBulletLimit = 4;
+        }
+      }
+      const tailoredBullets = bullets.slice(0, roleBulletLimit).map((b, bIdx) => {
         const aiBullet = aiExp?.bullets?.[bIdx];
         return {
           ...b,
@@ -513,6 +523,7 @@ ${activeSkills.map((s) => s.name).join(", ")}`;
       tailoredEducation: activeEducation,
       tailoredCertifications: activeCertifications,
       selectedSkills: sortedSkills,
+      skillCategories: aiResult.skillCategories || undefined,
       pdfS3Key: null,
       pdfPresignedUrl: null,
       markdownContent,

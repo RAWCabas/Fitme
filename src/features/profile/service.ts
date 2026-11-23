@@ -139,6 +139,16 @@ export class ProfileService {
           return await this.repo.saveProfile(master);
         }
 
+        // Ensure SK Secretary experience exists
+        const hasSk = existing.experiences.some((e) => e.company.toLowerCase().includes("sangguniang") || e.company.toLowerCase().includes("cubacub"));
+        if (!hasSk) {
+          const skExp = master.experiences.find((e) => e.company.toLowerCase().includes("sangguniang") || e.company.toLowerCase().includes("cubacub"));
+          if (skExp) {
+            existing.experiences.push(skExp);
+            needsSave = true;
+          }
+        }
+
         // Backfill projects if empty or lacking modern projects
         const hasModernProjects = existing.projects?.some((p) =>
           p.name.toUpperCase().includes("FITME") || p.name.toUpperCase().includes("AGRI-3D")
@@ -901,12 +911,37 @@ export function buildRhinnMasterProfile(
       },
       {
         id: crypto.randomUUID(),
+        company: "Barangay Cubacub - Sangguniang Kabataan",
+        role: "Sangguniang Kabataan Secretary",
+        location: "Mandaue City, Philippines",
+        startDate: "2023-01-01",
+        endDate: null,
+        isHidden: false,
+        bullets: [
+          {
+            id: crypto.randomUUID(),
+            content:
+              "Drafted formal policies, standard operating guidelines, resolutions, and official administrative records with strict attention to formatting and accuracy.",
+            isHidden: false,
+            hasMetrics: false,
+          },
+          {
+            id: crypto.randomUUID(),
+            content:
+              "Facilitated clear communication and scheduling among council members, local officials, and community stakeholders to keep programs on track.",
+            isHidden: false,
+            hasMetrics: false,
+          },
+        ],
+      },
+      {
+        id: crypto.randomUUID(),
         company: "McDonald's Philippines",
         role: "Customer Service Crew",
         location: "Cebu, Philippines",
         startDate: "2022-01-01",
         endDate: "2022-12-31",
-        isHidden: true,
+        isHidden: false,
         bullets: [
           {
             id: crypto.randomUUID(),
