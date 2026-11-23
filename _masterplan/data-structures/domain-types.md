@@ -160,24 +160,43 @@ export type TypographyPreset = z.infer<typeof typographyPresetSchema>;
 export type PageBudget = z.infer<typeof pageBudgetSchema>;
 
 /** Keyword Matching Breakdown */
-export const keywordMatchSchema = z.strictObject({
-  keyword: z.string(),
-  status: z.enum(["matched", "transferable", "missing"]),
-  occurrencesInJD: z.number().int().default(1),
-  notes: z.string().default(""),
-});
+export const keywordMatchSchema = z
+  .object({
+    keyword: z.string(),
+    status: z.enum(["matched", "transferable", "missing"]).optional(),
+    occurrencesInJD: z.number().int().optional(),
+    notes: z.string().optional().default(""),
+    // Support legacy records stored in DynamoDB
+    category: z.string().optional(),
+    count: z.number().optional(),
+    presentInResume: z.boolean().optional(),
+  })
+  .transform((data) => ({
+    keyword: data.keyword,
+    status: data.status || (data.presentInResume ? "matched" : "missing"),
+    occurrencesInJD: data.occurrencesInJD ?? data.count ?? 1,
+    notes: data.notes || "",
+  }));
 
 /** Fit Score Breakdown */
-export const fitScoreSchema = z.strictObject({
-  score: z.number().min(0).max(100),
-  matchedCount: z.number().int(),
-  missingCount: z.number().int(),
-  keywords: z.array(keywordMatchSchema),
-  summaryEvaluation: z.string(),
-});
+export const fitScoreSchema = z
+  .object({
+    score: z.number().min(0).max(100),
+    matchedCount: z.number().int().optional(),
+    missingCount: z.number().int().optional(),
+    keywords: z.array(keywordMatchSchema).default([]),
+    summaryEvaluation: z.string().optional().default(""),
+  })
+  .transform((data) => ({
+    score: data.score,
+    matchedCount: data.matchedCount ?? data.keywords.filter((k) => k.status === "matched").length,
+    missingCount: data.missingCount ?? data.keywords.filter((k) => k.status === "missing").length,
+    keywords: data.keywords,
+    summaryEvaluation: data.summaryEvaluation || "Match analysis complete.",
+  }));
 
 /** Tailored Resume Record */
-export const tailoredResumeSchema = z.strictObject({
+export const tailoredResumeSchema = z.object({
   id: z.string().uuid(),
   userId: z.string().min(1),
   jobOpportunityId: z.string().uuid(),
@@ -198,6 +217,7 @@ export const tailoredResumeSchema = z.strictObject({
   markdownContent: z.string().default(""),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
+  customInstructions: z.string().optional(),
 });
 
 export type KeywordMatch = z.infer<typeof keywordMatchSchema>;

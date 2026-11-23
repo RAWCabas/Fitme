@@ -101,7 +101,12 @@ export class DynamoTailorRepo implements TailorRepo {
     const { PK, SK, entityType, GSI1PK, GSI1SK, ...domainData } = matched;
     void PK; void SK; void entityType; void GSI1PK; void GSI1SK;
 
-    return tailoredResumeSchema.parse(domainData);
+    const parsed = tailoredResumeSchema.safeParse(domainData);
+    if (!parsed.success) {
+      console.warn("Failed to parse tailored resume from DynamoDB:", parsed.error);
+      return null;
+    }
+    return parsed.data;
   }
 
   async listTailoredResumes(userId: string, jobId?: string): Promise<TailoredResume[]> {
@@ -117,11 +122,17 @@ export class DynamoTailorRepo implements TailorRepo {
 
     if (!queryResult.Items) return [];
 
-    const resumes: TailoredResume[] = queryResult.Items.map((item) => {
+    const resumes: TailoredResume[] = [];
+    for (const item of queryResult.Items) {
       const { PK, SK, entityType, GSI1PK, GSI1SK, ...domainData } = item;
       void PK; void SK; void entityType; void GSI1PK; void GSI1SK;
-      return tailoredResumeSchema.parse(domainData);
-    });
+      const parsed = tailoredResumeSchema.safeParse(domainData);
+      if (parsed.success) {
+        resumes.push(parsed.data);
+      } else {
+        console.warn("Skipping unparseable or legacy tailored resume from DynamoDB:", parsed.error);
+      }
+    }
 
     return resumes.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
   }
