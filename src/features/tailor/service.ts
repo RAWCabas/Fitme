@@ -293,9 +293,23 @@ Return ONLY a valid JSON object matching this exact structure:
     // 1. Calculate ATS Fit Score
     const fitScore = this.calculateFitScore(profile, job);
 
-    // 2. Filter out items where isHidden === true
-    const activeExperiences = profile.experiences.filter((e) => !e.isHidden);
-    const activeProjects = profile.projects.filter((p) => !p.isHidden);
+    // 2. Filter out items where isHidden === true, suppressing non-technical fast food roles for engineering jobs
+    const isTechJob = !job.role.toLowerCase().includes("crew") && !job.role.toLowerCase().includes("cashier");
+    let activeExperiences = profile.experiences.filter((e) => {
+      if (e.isHidden) return false;
+      if (isTechJob && e.company.toLowerCase().includes("mcdonald")) return false;
+      return true;
+    });
+    if (activeExperiences.length === 0) {
+      const master = buildRhinnMasterProfile(userId);
+      activeExperiences = master.experiences.filter((e) => !e.isHidden);
+    }
+
+    let activeProjects = profile.projects.filter((p) => !p.isHidden);
+    if (activeProjects.length === 0) {
+      const master = buildRhinnMasterProfile(userId);
+      activeProjects = master.projects.filter((p) => !p.isHidden);
+    }
     const activeEducation = (profile.education || []).filter((e) => !e.isHidden);
     const activeCertifications = (profile.certifications || []).filter((c) => !c.isHidden);
     const activeSkills = profile.skills.filter((s) => !s.isHidden);

@@ -119,23 +119,59 @@ export class ProfileService {
         needsSave = true;
       }
 
-      // If user profile is completely empty (brand new initialization for Rhinn)
-      if (
-        isRhinn &&
-        existing.experiences.length === 0 &&
-        existing.projects.length === 0 &&
-        existing.skills.length === 0
-      ) {
+      // If Rhinn Cabas: ensure modern projects, 4 technical bullets, and hide non-technical jobs
+      if (isRhinn) {
         const masterEmail =
           existing.contact.email && existing.contact.email !== "candidate@fitme.dev"
             ? existing.contact.email
             : defaultEmail || "rhinnanthon@gmail.com";
         const masterName =
           existing.contact.fullName && existing.contact.fullName !== "Candidate"
-            ? existing.contact.fullName
-            : defaultName || "Rhinn Anthon William D. Cabas";
+            ? existing.contact.fullName.replace("D. Cabas", "Cabas")
+            : defaultName || "Rhinn Anthon William Cabas";
         const master = buildRhinnMasterProfile(userId, masterEmail, masterName);
-        return await this.repo.saveProfile(master);
+
+        if (
+          existing.experiences.length === 0 &&
+          existing.projects.length === 0 &&
+          existing.skills.length === 0
+        ) {
+          return await this.repo.saveProfile(master);
+        }
+
+        // Backfill projects if empty or lacking modern projects
+        const hasModernProjects = existing.projects?.some((p) =>
+          p.name.toUpperCase().includes("FITME") || p.name.toUpperCase().includes("AGRI-3D")
+        );
+        if (!hasModernProjects) {
+          existing.projects = master.projects;
+          needsSave = true;
+        }
+
+        // Hide non-technical jobs like McDonald's for engineering track
+        for (const exp of existing.experiences) {
+          if (exp.company.toLowerCase().includes("mcdonald") && !exp.isHidden) {
+            exp.isHidden = true;
+            needsSave = true;
+          }
+          if (exp.company.toLowerCase().includes("sustainable") && exp.bullets.length < 4) {
+            const masterExp = master.experiences.find((e) => e.company.toLowerCase().includes("sustainable"));
+            if (masterExp) {
+              exp.bullets = masterExp.bullets;
+              needsSave = true;
+            }
+          }
+        }
+
+        // Polish contact details if legacy
+        if (existing.contact.fullName.includes("D. Cabas")) {
+          existing.contact.fullName = "Rhinn Anthon William Cabas";
+          needsSave = true;
+        }
+        if (existing.contact.location?.includes("Deca Homes")) {
+          existing.contact.location = "Cubacub, Mandaue City, Cebu";
+          needsSave = true;
+        }
       }
 
       if (needsSave) {
