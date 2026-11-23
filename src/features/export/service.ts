@@ -849,7 +849,7 @@ export class ExportService {
     const titleFontSize = isDense ? "10pt" : (isOnePage ? "10.5pt" : "11pt");
     const contactFontSize = isDense ? "9pt" : (isOnePage ? "9.5pt" : "10pt");
     const dividerMargin = isDense ? "6pt 0 3.5pt 0" : (isOnePage ? "6.5pt 0 4pt 0" : "7.5pt 0 5pt 0");
-    const maxBulletsPerExp = isOnePage && totalExp > 1 ? 2 : (isOnePage ? 3 : undefined);
+    const maxBulletsPerExp = isOnePage && totalExp > 1 ? 2 : (isOnePage ? (isHarvard ? 4 : 3) : undefined);
 
     const activePresetCss = presetStyles[preset] || presetStyles.modern_standard;
 
@@ -871,18 +871,18 @@ export class ExportService {
 
     const fontStyles = isHarvard
       ? {
-          name: `font-family: 'Times New Roman', Times, 'Merriweather', Garamond, Georgia, serif; font-size: ${nameFontSize}; font-weight: 800; letter-spacing: 0.03em; text-transform: uppercase; margin: 0 0 2pt 0; color: #000000; text-align: center; line-height: 1.1;`,
-          headline: `font-family: 'Times New Roman', Times, 'Merriweather', Garamond, Georgia, serif; font-size: ${titleFontSize}; color: #000000; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; margin-bottom: 2.5pt; text-align: center; line-height: 1.2;`,
-          contact: `font-family: 'Times New Roman', Times, 'Merriweather', Garamond, Georgia, serif; font-size: ${contactFontSize}; color: #000000; text-align: center; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 2pt 8pt; line-height: 1.25; margin-bottom: 3pt;`,
+          name: `font-family: 'Times New Roman', Times, 'Merriweather', Garamond, Georgia, serif; font-size: 20pt; font-weight: 800; letter-spacing: 0.03em; text-transform: uppercase; margin: 0 0 2pt 0; color: #000000; text-align: center; line-height: 1.1;`,
+          headline: `font-family: 'Times New Roman', Times, 'Merriweather', Garamond, Georgia, serif; font-size: 9.5pt; color: #000000; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; margin-bottom: 2.5pt; text-align: center; line-height: 1.2;`,
+          contact: `font-family: 'Times New Roman', Times, 'Merriweather', Garamond, Georgia, serif; font-size: 9pt; color: #000000; text-align: center; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 2pt 8pt; line-height: 1.25; margin-bottom: 3pt;`,
           divider: `border-top: 1.5px solid #000000; margin: ${dividerMargin};`,
-          h2: `font-family: 'Times New Roman', Times, 'Merriweather', Garamond, Georgia, serif; font-size: ${headerFontSize}; font-weight: 800; text-transform: uppercase; letter-spacing: 0.03em; color: #000000; border-bottom: 1.5px solid #000000; padding-bottom: 1pt; margin-top: 5pt; margin-bottom: 3pt;`,
-          summary: `font-family: 'Times New Roman', Times, 'Merriweather', Garamond, Georgia, serif; font-size: ${bodyFontSize}; color: #000000; line-height: ${bodyLineHeight}; text-align: justify;`,
-          itemHeader: `font-family: 'Times New Roman', Times, 'Merriweather', Garamond, Georgia, serif; display: flex; justify-content: space-between; font-size: ${bodyFontSize}; font-weight: 700; color: #000000; margin-top: 2pt;`,
-          itemSub: `font-family: 'Times New Roman', Times, 'Merriweather', Garamond, Georgia, serif; display: flex; justify-content: space-between; font-size: ${bodyFontSize}; font-style: normal; color: #000000; margin-bottom: 1.5pt;`,
-          itemSubItalic: `font-family: 'Times New Roman', Times, 'Merriweather', Garamond, Georgia, serif; display: flex; justify-content: space-between; font-size: ${bodyFontSize}; font-style: italic; color: #000000; margin-bottom: 1.5pt;`,
-          li: `font-family: 'Times New Roman', Times, 'Merriweather', Garamond, Georgia, serif; font-size: ${bodyFontSize}; color: #000000; line-height: ${bodyLineHeight}; margin-bottom: 1.5pt;`,
-          skillsLi: `font-family: 'Times New Roman', Times, 'Merriweather', Garamond, Georgia, serif; font-size: ${bodyFontSize}; color: #000000; line-height: ${bodyLineHeight}; margin-bottom: 1.5pt;`,
-          dateSpan: `font-weight: normal; font-size: ${bodyFontSize};`,
+          h2: `font-family: 'Times New Roman', Times, 'Merriweather', Garamond, Georgia, serif; font-size: 10.5pt; font-weight: 800; text-transform: uppercase; letter-spacing: 0.03em; color: #000000; border-bottom: 1.5px solid #000000; padding-bottom: 1.5pt; margin-top: 6.5pt; margin-bottom: 3.5pt;`,
+          summary: `font-family: 'Times New Roman', Times, 'Merriweather', Garamond, Georgia, serif; font-size: 9.25pt; color: #000000; line-height: 1.36; text-align: justify;`,
+          itemHeader: `font-family: 'Times New Roman', Times, 'Merriweather', Garamond, Georgia, serif; display: flex; justify-content: space-between; font-size: 9.5pt; font-weight: 700; color: #000000; margin-top: 2.5pt; margin-bottom: 1pt;`,
+          itemSub: `font-family: 'Times New Roman', Times, 'Merriweather', Garamond, Georgia, serif; display: flex; justify-content: space-between; font-size: 9pt; font-style: normal; color: #000000; margin-bottom: 1.5pt;`,
+          itemSubItalic: `font-family: 'Times New Roman', Times, 'Merriweather', Garamond, Georgia, serif; display: flex; justify-content: space-between; font-size: 9pt; font-style: italic; color: #000000; margin-bottom: 1.5pt;`,
+          li: `font-family: 'Times New Roman', Times, 'Merriweather', Garamond, Georgia, serif; font-size: 9.25pt; color: #000000; line-height: 1.36; margin-bottom: 1.5pt;`,
+          skillsLi: `font-family: 'Times New Roman', Times, 'Merriweather', Garamond, Georgia, serif; font-size: 9.25pt; color: #000000; line-height: 1.36; margin-bottom: 1.5pt;`,
+          dateSpan: `font-weight: normal; font-size: 9pt;`,
         }
       : isCabasTemplate
       ? {
@@ -925,8 +925,8 @@ export class ExportService {
   <title>${escapeHtml(c.fullName)} - Resume (Harvard)</title>
   <style>
     @page {
-      size: letter portrait;
-      margin: 0.5in 0.6in;
+      size: A4 portrait;
+      margin: 10mm 14mm 10mm 14mm;
     }
     *, *::before, *::after {
       box-sizing: border-box;
@@ -940,8 +940,8 @@ export class ExportService {
     }
     @media print {
       @page {
-        size: letter portrait;
-        margin: 0.5in 0.6in;
+        size: A4 portrait;
+        margin: 10mm 14mm 10mm 14mm;
       }
       body {
         padding: 0 !important;
@@ -1014,7 +1014,7 @@ export class ExportService {
             return `
         <div class="experience-item" style="margin-top: 2pt; margin-bottom: 2.5pt;">
           <div class="item-header" style="${fontStyles.itemHeader}">
-            <span>${escapeHtml(exp.company)}</span>
+            <span>${escapeHtml(exp.company.toUpperCase())}</span>
             <span>${escapeHtml(exp.location || "Cebu City, Philippines")}</span>
           </div>
           <div class="item-sub" style="${fontStyles.itemSubItalic}">
@@ -1303,7 +1303,7 @@ export class ExportService {
         </ul>
       </div>
     </section>
-    ${(activeCerts.length > 0 || (activeProjects.length > 0 && (!isOnePage || (totalExp <= 1 && totalCerts <= 2)))) ? sectionDivider : ""}`
+    ${(activeCerts.length > 0 || activeProjects.length > 0) ? sectionDivider : ""}`
         : ""
     }
 
@@ -1324,12 +1324,12 @@ export class ExportService {
           .join("")}
       </ul>
     </section>
-    ${(activeProjects.length > 0 && (!isOnePage || (totalExp <= 1 && totalCerts <= 2))) ? sectionDivider : ""}`
+    ${activeProjects.length > 0 ? sectionDivider : ""}`
         : ""
     }
 
     ${
-      activeProjects.length > 0 && (!isOnePage || (totalExp <= 1 && totalCerts <= 2))
+      activeProjects.length > 0
         ? `<section style="margin-bottom: 3pt;">
       <h2 style="${fontStyles.h2}">
         Technical Projects

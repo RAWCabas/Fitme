@@ -301,8 +301,8 @@ Return ONLY a valid JSON object matching this exact structure:
     const activeSkills = profile.skills.filter((s) => !s.isHidden);
 
     // 3. Page Budget Curation Bounds
-    const maxRoles = pageBudget === "1_page" ? 3 : 6;
-    const maxBulletsPerRole = pageBudget === "1_page" ? 3 : 5;
+    const maxRoles = pageBudget === "1_page" ? (activeExperiences.length <= 1 ? 1 : 2) : 6;
+    const maxBulletsPerRole = pageBudget === "1_page" ? (activeExperiences.length <= 1 ? 4 : 3) : 5;
     const maxProjects = pageBudget === "1_page" ? 2 : 4;
 
     const baseSummary = `Results-oriented ${job.role} with demonstrated hands-on experience in ${job.extractedSkills.slice(0, 3).join(", ") || "software solutions, systems troubleshooting, and cloud technologies"
@@ -634,7 +634,8 @@ Start with a strong action verb (e.g. Engineered, Spearheaded, Architected, Acce
     }
     const targetSkill = job.extractedSkills[0];
     if (targetSkill && !original.toLowerCase().includes(targetSkill.toLowerCase())) {
-      return `${original}, leveraging ${targetSkill} for enhanced reliability`;
+      const clean = original.replace(/[.,;]+$/, "");
+      return `${clean}, leveraging ${targetSkill} for enhanced reliability.`;
     }
     return original;
   }
@@ -705,6 +706,8 @@ Start with a strong action verb (e.g. Engineered, Spearheaded, Architected, Acce
       const low = l.toLowerCase();
       return (
         !low.startsWith("about the job") &&
+        !low.startsWith("about the role") &&
+        !low.startsWith("about the opportunity") &&
         !low.startsWith("about us") &&
         !low.startsWith("job description") &&
         !low.startsWith("overview")
@@ -752,14 +755,20 @@ Start with a strong action verb (e.g. Engineered, Spearheaded, Architected, Acce
 
     // 2. Company Detection
     let company = "Target Company";
+    const isAMatch = raw.match(/^([A-Z][A-Za-z0-9&., ]{2,30})\s+is\s+(?:a|an)\b/m);
     const joinMatch = raw.match(/(?:We in|We at|Join)\s+([A-Z][A-Za-z0-9&., ]{2,35})/);
     const compMatch = raw.match(/(?:company|organization)\s*[:\-–]?\s*([A-Z][A-Za-z0-9&., ]{2,40})/);
-    if (joinMatch && joinMatch[1]?.trim() && !joinMatch[1].toLowerCase().includes("job")) {
+    if (isAMatch && isAMatch[1]?.trim() && !isAMatch[1].toLowerCase().includes("job") && !isAMatch[1].toLowerCase().includes("role")) {
+      company = isAMatch[1].trim();
+    } else if (joinMatch && joinMatch[1]?.trim() && !joinMatch[1].toLowerCase().includes("job") && !joinMatch[1].toLowerCase().includes("role")) {
       company = joinMatch[1].trim();
-    } else if (compMatch && compMatch[1]?.trim() && !compMatch[1].toLowerCase().includes("job")) {
+    } else if (compMatch && compMatch[1]?.trim() && !compMatch[1].toLowerCase().includes("job") && !compMatch[1].toLowerCase().includes("role")) {
       company = compMatch[1].trim();
-    } else if (meaningfulLines.length > 1 && meaningfulLines[0].length < 40 && meaningfulLines[0] !== role) {
-      company = meaningfulLines[0];
+    } else {
+      const candidate = meaningfulLines.find(
+        (l) => l.length < 40 && l !== role && !l.toLowerCase().startsWith("about") && !l.includes(".")
+      );
+      if (candidate) company = candidate;
     }
 
     // 3. Location Detection

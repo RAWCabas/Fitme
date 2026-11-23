@@ -807,28 +807,28 @@ export const profileService = new ProfileService();
 export function buildRhinnMasterProfile(
   userId: string,
   email = "rhinnanthon@gmail.com",
-  name = "Rhinn Anthon William D. Cabas"
+  name = "Rhinn Anthon William Cabas"
 ): Profile {
   return {
     userId,
     contact: {
-      fullName: name || "Rhinn Anthon William D. Cabas",
-      headline: "Computer Engineer | Embedded Systems & Edge AI | IT & Technical Support",
+      fullName: name || "Rhinn Anthon William Cabas",
+      headline: "Computer Engineer | Software Solutions, Cloud & Systems Integration",
       email: email || "rhinnanthon@gmail.com",
       phone: "0945-350-7389",
-      location: "Deca Homes, Cubacub, Mandaue City, Cebu",
+      location: "Cubacub, Mandaue City, Cebu",
       portfolioUrl: "https://github.com/RAWCabas",
       linkedinUrl: "https://linkedin.com/in/rhinnanthon",
       githubUrl: "https://github.com/RAWCabas",
     },
     summary:
-      "Analytical Computer Engineering graduate specializing in smart automation, embedded systems, and machine learning integration alongside strong foundations in hardware maintenance, systems troubleshooting, and network operations. Demonstrates hands-on expertise in hardware prototyping, 3D mechanical modeling, deploying Edge AI and computer vision solutions, and delivering dependable on-site and remote technical support across distributed teams and enterprise systems.",
+      "Analytical Computer Engineering graduate with hands-on experience in cloud application deployment (AWS Amplify, DynamoDB, Cognito), database querying, structured data formats (JSON/CSV), and end-to-end systems troubleshooting. Skilled in gathering user requirements, documenting technical workflows, and coordinating cross-functional testing to deliver reliable software solutions and responsive customer support.",
     experiences: [
       {
         id: crypto.randomUUID(),
         company: "Sustainable Center for Engineering and Next-Generation Technology",
         role: "Project Research Assistant (Internship)",
-        location: "Cebu, Philippines",
+        location: "Cebu City, Philippines",
         startDate: "2026-01-01",
         endDate: null,
         isHidden: false,
@@ -836,21 +836,28 @@ export function buildRhinnMasterProfile(
           {
             id: crypto.randomUUID(),
             content:
-              "Engineered detailed 3D designs and mechanical modeling for project hardware, optimizing structural integrity for physical enclosures.",
+              "Assisted in custom printed circuit board (PCB) fabrication, circuit layout verification, and precision soldering of electronic components, headers, and wiring harnesses for embedded prototypes.",
             isHidden: false,
             hasMetrics: true,
           },
           {
             id: crypto.randomUUID(),
             content:
-              "Collaborated closely on embedded programming and machine learning model training utilizing Edge Impulse for real-time edge computing deployment.",
+              "Designed 3D mechanical enclosures and mounts in Autodesk Fusion 360 and fabricated parts via FDM 3D printing (PETG) to protect microcontrollers, voltage regulators, and sensor modules.",
             isHidden: false,
             hasMetrics: true,
           },
           {
             id: crypto.randomUUID(),
             content:
-              "Conducted system-level diagnostics, hardware assembly, and sensor integration for IoT embedded prototypes.",
+              "Developed mobile monitoring interfaces and performed image data annotation in Edge Impulse to train computer vision models for real-time edge deployment.",
+            isHidden: false,
+            hasMetrics: true,
+          },
+          {
+            id: crypto.randomUUID(),
+            content:
+              "Conducted hardware diagnostics, sensor calibration, and troubleshooting across dual-microcontroller (ESP32 and Arduino) systems to maintain signal and power stability.",
             isHidden: false,
             hasMetrics: false,
           },
@@ -863,7 +870,7 @@ export function buildRhinnMasterProfile(
         location: "Cebu, Philippines",
         startDate: "2022-01-01",
         endDate: "2022-12-31",
-        isHidden: false,
+        isHidden: true,
         bullets: [
           {
             id: crypto.randomUUID(),
@@ -879,44 +886,38 @@ export function buildRhinnMasterProfile(
             isHidden: false,
             hasMetrics: false,
           },
-          {
-            id: crypto.randomUUID(),
-            content:
-              "Demonstrated reliable punctuality, active communication, and dispute resolution under operational pressure.",
-            isHidden: false,
-            hasMetrics: false,
-          },
         ],
       },
     ],
     projects: [
       {
         id: crypto.randomUUID(),
-        name: "Edge AI & Hardware Prototyping (SCENG)",
+        name: "FITME - CLOUD-BASED WEB APPLICATION",
         description:
-          "Embedded machine learning deployment utilizing Edge Impulse and physical enclosure design.",
+          "Full-Stack Developer: Built and deployed a cloud-hosted web application using AWS Amplify, configuring Amazon Cognito and DynamoDB.",
         technologies: [
-          "Edge Impulse",
-          "Embedded C/C++",
-          "Autodesk Fusion 360",
-          "Arduino IDE",
-          "Computer Vision",
+          "AWS Amplify",
+          "Amazon DynamoDB",
+          "Amazon Cognito",
+          "Next.js",
+          "TypeScript",
+          "REST APIs",
         ],
-        liveUrl: "https://github.com/RAWCabas",
+        liveUrl: "https://main.d2bjope0w4o8og.amplifyapp.com",
         repoUrl: "https://github.com/RAWCabas",
         isHidden: false,
         bullets: [
           {
             id: crypto.randomUUID(),
             content:
-              "Engineered detailed 3D mechanical models and physical enclosures for edge computing hardware.",
+              "Built and deployed a cloud-hosted web application using AWS Amplify, configuring Amazon Cognito for user authentication and Amazon DynamoDB for structured NoSQL data storage and retrieval.",
             isHidden: false,
             hasMetrics: true,
           },
           {
             id: crypto.randomUUID(),
             content:
-              "Trained and deployed real-time machine learning inference models using Edge Impulse.",
+              "Designed front-end user workflows, tested end-to-end data flows across cloud services, and resolved configuration and deployment bugs to ensure smooth user performance.",
             isHidden: false,
             hasMetrics: true,
           },
@@ -924,15 +925,16 @@ export function buildRhinnMasterProfile(
       },
       {
         id: crypto.randomUUID(),
-        name: "Computer Systems Servicing & Network Infrastructure",
+        name: "PROJECT AGRI-3D: IOT-BASED WEATHER-ADAPTIVE SENSOR-FUSION CARTESIAN GANTRY SYSTEM",
         description:
-          "Workstation hardware diagnostics, operating system installations, and small-office LAN/WAN deployment.",
+          "Undergraduate Thesis Researcher & Hardware Developer: Automated XYZ Cartesian gantry system with WebSocket telemetry and TinyML.",
         technologies: [
-          "Hardware Diagnostics",
-          "Windows OS",
-          "LAN/WAN",
-          "TCP/IP",
-          "Wi-Fi & Router Configuration",
+          "WebSocket",
+          "REST APIs",
+          "JSON",
+          "ESP32",
+          "TinyML",
+          "Fusion 360",
         ],
         liveUrl: "https://github.com/RAWCabas",
         repoUrl: "https://github.com/RAWCabas",
@@ -941,16 +943,16 @@ export function buildRhinnMasterProfile(
           {
             id: crypto.randomUUID(),
             content:
-              "Diagnosed hardware faults, assembled custom PC units, and configured Windows OS workstations with peripheral support.",
+              "Developed a mobile monitoring dashboard with real-time WebSocket data sync, REST API integration (Open-Meteo JSON), and automated local database logging for continuous system tracking.",
             isHidden: false,
-            hasMetrics: false,
+            hasMetrics: true,
           },
           {
             id: crypto.randomUUID(),
             content:
-              "Set up network switches, configured Wi-Fi routers with WPA security, and performed packet troubleshooting with TCP/IP utilities.",
+              "Executed 100-trial system validation and error analysis, documenting operational rules and configuration parameters to ensure consistent end-to-end performance.",
             isHidden: false,
-            hasMetrics: false,
+            hasMetrics: true,
           },
         ],
       },
@@ -958,11 +960,11 @@ export function buildRhinnMasterProfile(
     education: [
       {
         id: crypto.randomUUID(),
-        institution: "Cebu Technological University- Main Campus",
+        institution: "Cebu Technological University - Main Campus",
         degree: "Bachelor of Science in Computer Engineering",
         fieldOfStudy: "Computer Engineering",
-        startDate: "2020",
-        endDate: "2024",
+        startDate: "2022",
+        endDate: "2026",
         level: "college",
         honors: "",
         isHidden: false,
